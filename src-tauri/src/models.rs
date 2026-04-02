@@ -1,6 +1,8 @@
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
+// ── Shared ──────────────────────────────────────────────────────────────────
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DbConfig {
     pub host: String,
@@ -22,35 +24,44 @@ pub struct InvoiceRow {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GenerateParams {
-    pub db_config: DbConfig,
-    pub start_date: String,            // Start date in YYYYMMDD format
-    pub end_date: String,              // End date in YYYYMMDD format
-    pub round: u32,                    // Batch/round number (รอบ) within the period e.g. 1, 2, ...
-    pub budget_total: f64,             // Total allocated budget e.g. 5843812.60
-    pub previous_balance: f64,         // Remaining budget from previous period
-    pub start_po_no: u32,              // Starting PO number e.g. 253
-    pub start_reg_no: String,          // Starting register number e.g. "69ภ12"
-    pub start_running: u32,            // Starting running receipt number
-    pub output_dir: String,            // Directory to save generated files
-    pub approval_date: Option<String>, // Date of approval
+pub struct PreviewData {
+    pub invoices: Vec<InvoiceRow>,
+    pub total_amount: f64,
+    pub row_count: usize,
 }
 
-// For invoice submission list (ส่งหนี้เบิกยา)
+/// Carry-forward values for the next round (returned with every GenerateResult)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CarryForward {
+    pub next_reg_no: String,    // e.g. "69ภ13"
+    pub next_running: u32,      // next available slot (0–9) within register
+    pub next_po_no: u32,        // next PO number (meaningful only for ReceivingSummary)
+    pub remaining_balance: f64, // (meaningful only for CoverLetters)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GenerateResult {
+    pub files: Vec<String>,
+    pub total_rows: usize,
+    pub total_amount: f64,
+    pub carry_forward: CarryForward,
+}
+
+// ── Intermediate row types ────────────────────────────────────────────────
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InvoiceSubmissionRow {
     pub seq: u32,
-    pub receive_date: String, // Formatted Thai date
+    pub receive_date: String,
     pub invoice_no: String,
-    pub reg_no: String,       // e.g. "69ภ12"
-    pub running_in_reg: u32,  // running number within register
-    pub invoice_date: String, // Same as receive date
+    pub reg_no: String,
+    pub running_in_reg: u32,
+    pub invoice_date: String,
     pub company_name: String,
     pub category: String,
     pub total_amount: f64,
 }
 
-// For receiving summary (สรุปรับยา)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReceivingSummaryRow {
     pub approval_date: String,
@@ -62,16 +73,15 @@ pub struct ReceivingSummaryRow {
     pub reg_no: String,
     pub running_in_reg: u32,
     pub invoice_no: String,
-    pub request_no: u32, // ขอซื้อ (PO request)
-    pub report_no: u32,  // รายงาน/อนุมัติ
-    pub po_no: u32,      // ใบสั่งซื้อ
+    pub request_no: u32,
+    pub report_no: u32,
+    pub po_no: u32,
 }
 
-// For cover letter (เบิกยาปะหน้า)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverLetterPage {
     pub company_name: String,
-    pub category: String, // "ยา" or "วัสดุเภสัชกรรม"
+    pub category: String,
     pub budget_total: f64,
     pub previous_spent: f64,
     pub previous_balance: f64,
@@ -81,16 +91,77 @@ pub struct CoverLetterPage {
     pub date_text: String,
 }
 
+// ── Per-report params ─────────────────────────────────────────────────────
+
+/// Params for ส่งหนี้เบิกยา
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GenerateResult {
-    pub files: Vec<String>, // paths to generated PDF files
-    pub total_rows: usize,
-    pub total_amount: f64,
+pub struct InvoiceSubmissionParams {
+    pub db_config: DbConfig,
+    pub date_from: String, // YYYYMMDD Gregorian
+    pub date_to: String,   // YYYYMMDD Gregorian
+    pub year: i32,         // Buddhist year for display/filename e.g. 2568
+    pub month: u32,        // 1–12
+    pub round: u32,
+    pub start_reg_no: String, // e.g. "69ภ12"
+    pub start_running: u32,   // 0–9
+    pub output_dir: String,
 }
 
+/// Params for สรุปรับยา
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PreviewData {
-    pub invoices: Vec<InvoiceRow>,
+pub struct ReceivingSummaryParams {
+    pub db_config: DbConfig,
+    pub date_from: String,
+    pub date_to: String,
+    pub year: i32,
+    pub month: u32,
+    pub round: u32,
+    pub start_po_no: u32,
+    pub start_reg_no: String,
+    pub start_running: u32,
+    pub approval_date: Option<String>,
+    pub output_dir: String,
+}
+
+/// Params for เบิกยาปะหน้า
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoverLettersParams {
+    pub db_config: DbConfig,
+    pub date_from: String,
+    pub date_to: String,
+    pub year: i32,
+    pub month: u32,
+    pub round: u32,
+    pub budget_total: f64,
+    pub previous_balance: f64,
+    pub approval_date: Option<String>,
+    pub output_dir: String,
+}
+
+// ── Round history ─────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RoundHistoryEntry {
+    pub id: String,       // unique id (timestamp-based)
+    pub label: String,    // e.g. "ม.ค. 2568 รอบ 1"
+    pub fiscal_year: i32, // Buddhist year
+    pub month: u32,
+    pub round: u32,
+    pub date_from: String, // YYYYMMDD
+    pub date_to: String,   // YYYYMMDD
+    // Carry-forward for NEXT round
+    pub next_reg_no: String,
+    pub next_running: u32,
+    pub next_po_no: u32,
+    pub remaining_balance: f64,
+    // Summary
+    pub budget_total: f64,
     pub total_amount: f64,
-    pub row_count: usize,
+    pub invoice_count: u32,
+    pub created_at: String, // ISO datetime
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct RoundHistory {
+    pub entries: Vec<RoundHistoryEntry>,
 }

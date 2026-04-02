@@ -1,0 +1,494 @@
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import { invoke } from "@tauri-apps/api/core";
+
+interface DbConfig {
+    host: string;
+    port: number;
+    database: string;
+    username: string;
+    password: string;
+}
+
+interface InvoiceRow {
+    invoice_no: string;
+    vendor_code: string;
+    company_name: string;
+    company_keyword: string;
+    total_cost: number;
+    receive_date: string;
+    category: string;
+}
+
+interface PreviewData {
+    invoices: InvoiceRow[];
+    total_amount: number;
+    row_count: number;
+}
+
+interface CarryForward {
+    next_reg_no: string;
+    next_running: number;
+    next_po_no: number;
+    remaining_balance: number;
+}
+
+interface GenerateResult {
+    files: string[];
+    total_rows: number;
+    total_amount: number;
+    carry_forward: CarryForward;
+}
+
+interface RoundHistoryEntry {
+    id: string;
+    label: string;
+    fiscal_year: number;
+    month: number;
+    round: number;
+    date_from: string;
+    date_to: string;
+    next_reg_no: string;
+    next_running: number;
+    next_po_no: number;
+    remaining_balance: number;
+    budget_total: number;
+    total_amount: number;
+    invoice_count: number;
+    created_at: string;
+}
+
+const props = defineProps<{
+    dbConfig: DbConfig;
+    dateFrom: string;
+    dateTo: string;
+    year: number;
+    month: number;
+    round: number;
+    outputDir: string;
+    previewData: PreviewData | null;
+    budgetTotal: number;
+    previousBalance: number;
+    approvalDate: string;
+    r2Carry: { next_reg_no: string; next_running: number; next_po_no: number } | null;
+}>();
+
+const emit = defineEmits<{
+    (e: "update:budgetTotal", v: number): void;
+    (e: "update:previousBalance", v: number): void;
+    (e: "update:approvalDate", v: string): void;
+    (e: "saveHistory", entry: RoundHistoryEntry): void;
+}>();
+
+const loading = ref(false);
+const error = ref("");
+const result = ref<GenerateResult | null>(null);
+
+const THAI_MONTHS = [
+    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
+];
+
+const THAI_MONTHS_SHORT = [
+    "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+    "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
+];
+
+const periodText = computed(() => {
+    if (!props.year || !props.month) return "ยังไม่ได้เลือกช่วงวันที่";
+    return `${THAI_MONTHS[props.month - 1]} ${props.year} รอบ ${props.round}`;
+});
+
+const canGenerate = computed(
+    () =>
+        props.previewData !== null &&
+        props.previewData.row_count > 0 &&
+        props.dateFrom !== "" &&
+        props.dateTo !== "" &&
+        props.budgetTotal > 0
+);
+
+// Preview of budget calculation for first invoice
+const previewBalance = computed(() => {
+    if (!props.previewData || props.previewData.row_count === 0) return null;
+    const firstAmount = props.previewData.invoices[0]?.total_cost ?? 0;
+    return props.previousBalance - firstAmount;
+});
+
+function formatMoney(n: number): string {
+    return n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fileName(path: string): string {
+    return path.split(/[\\/]/).pop() ?? path;
+}
+
+async function generate() {
+    if (!canGenerate.value) return;
+    loading.value = true;
+    error.value = "";
+    result.value = null;
+
+    try {
+        const res = await invoke<GenerateResult>("generate_cover_letters", {
+            params: {
+                db_config: { ...props.dbConfig },
+                date_from: props.dateFrom,
+                date_to: props.dateTo,
+                year: props.year,
+                month: props.month,
+                round: props.round,
+                budget_total: props.budgetTotal,
+                previous_balance: props.previousBalance,
+                approval_date: props.approvalDate.trim() || null,
+                output_dir: props.outputDir,
+            },
+        });
+        result.value = res;
+    } catch (e) {
+        error.value = String(e);
+    } finally {
+        loading.value = false;
+    }
+}
+
+function saveToHistory() {
+    if (!result.value) return;
+    const now = new Date().toISOString();
+    const monthShort = THAI_MONTHS_SHORT[props.month - 1] ?? "";
+    // Use carry-forward from Report 2 for reg/po numbers (more accurate),
+    // fall back to Report 3's carry-forward if Report 2 wasn't run yet.
+    const regNo = props.r2Carry?.next_reg_no || result.value.carry_forward.next_reg_no || "";
+    const running = props.r2Carry?.next_running ?? result.value.carry_forward.next_running ?? 0;
+    const poNo = props.r2Carry?.next_po_no ?? result.value.carry_forward.next_po_no ?? 0;
+    const entry: RoundHistoryEntry = {
+        id: now,
+        label: `${monthShort} ${props.year} รอบ ${props.round}`,
+        fiscal_year: props.year,
+        month: props.month,
+        round: props.round,
+        date_from: props.dateFrom,
+        date_to: props.dateTo,
+        next_reg_no: regNo,
+        next_running: running,
+        next_po_no: poNo,
+        remaining_balance: result.value.carry_forward.remaining_balance,
+        budget_total: props.budgetTotal,
+        total_amount: result.value.total_amount,
+        invoice_count: result.value.total_rows,
+        created_at: now,
+    };
+    emit("saveHistory", entry);
+}
+</script>
+
+<template>
+<div class="report-wrap">
+    <!-- ── Info banner ── -->
+    <div class="card info-banner">
+        <div class="banner-title">📄 เบิกยาปะหน้า (Disbursement Cover Letters)</div>
+        <div class="banner-desc">
+            สร้างบันทึกข้อความขออนุมัติเบิกเงิน — A4 Portrait PDF รวมทุกฉบับในไฟล์เดียว (1 หน้า/บิล)
+        </div>
+    </div>
+
+    <!-- ── Data summary ── -->
+    <div class="card">
+        <div class="card-title">📊 ข้อมูลที่จะใช้สร้างรายงาน</div>
+
+        <div v-if="!previewData" class="no-data">
+            ⚠️ ยังไม่มีข้อมูล — กรุณาไปที่แท็บ 🔍 ดึงข้อมูล ก่อน
+        </div>
+        <div v-else>
+            <div class="preview-summary">
+                <div class="summary-stat">
+                    <span class="summary-stat-label">ช่วงเวลา</span>
+                    <span class="summary-stat-value period">{{ periodText }}</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-stat-label">จำนวนบิล (หน้า)</span>
+                    <span class="summary-stat-value">{{ previewData.row_count }} หน้า</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="summary-stat-label">ยอดเบิกจ่ายรอบนี้</span>
+                    <span class="summary-stat-value money">{{ formatMoney(previewData.total_amount) }} บาท</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Budget params ── -->
+    <div class="card">
+        <div class="card-title">💰 ตั้งค่างบประมาณ</div>
+        <div class="card-desc">
+            ยอดงบประมาณจะคำนวณแบบ running ต่อกันทุกบิล — โหลดค่าก่อนหน้าจากประวัติรอบได้
+        </div>
+
+        <div class="section-label">📋 ข้อมูลงวด</div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>ปีงบประมาณ</label>
+                <input type="text" :value="year > 0 ? String(year) : '—'" readonly />
+            </div>
+            <div class="form-group">
+                <label>เดือน</label>
+                <input type="text" :value="month > 0 ? THAI_MONTHS[month - 1] : '—'" readonly />
+            </div>
+            <div class="form-group">
+                <label>รอบที่</label>
+                <input type="text" :value="round" readonly />
+            </div>
+        </div>
+
+        <div class="section-label" style="margin-top:16px">💰 งบประมาณ</div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>ยอดเงินจัดสรรทั้งปี (บาท)</label>
+                <input type="number" step="0.01" min="0" :value="budgetTotal"
+                    @input="emit('update:budgetTotal', parseFloat(($event.target as HTMLInputElement).value) || 0)"
+                    placeholder="5843812.60" />
+                <span class="field-hint">งบประมาณที่ได้รับจัดสรรทั้งปีงบประมาณ</span>
+            </div>
+            <div class="form-group">
+                <label>ยอดคงเหลือก่อนรอบนี้ (บาท)</label>
+                <input type="number" step="0.01" min="0" :value="previousBalance"
+                    @input="emit('update:previousBalance', parseFloat(($event.target as HTMLInputElement).value) || 0)"
+                    placeholder="ยอดที่เหลือจากรอบที่แล้ว" />
+                <span class="field-hint">ยอดคงเหลือสุดท้ายจากรอบก่อนหน้า (โหลดจากประวัติรอบได้)</span>
+            </div>
+            <div class="form-group">
+                <label>วันที่ขออนุมัติ (แสดงบนเอกสาร)</label>
+                <input type="text" :value="approvalDate"
+                    @input="emit('update:approvalDate', ($event.target as HTMLInputElement).value)"
+                    placeholder="เช่น 6 พ.ย. 68" />
+                <span class="field-hint">ปล่อยว่าง = ใช้วันที่รับของจากบิลแรก</span>
+            </div>
+        </div>
+
+        <!-- Budget preview calculation -->
+        <div v-if="previewData && previewData.row_count > 0" class="budget-preview">
+            <div class="budget-preview-title">🔢 ตัวอย่างการคำนวณ (บิลแรก)</div>
+            <div class="budget-row">
+                <span class="budget-label">ยอดเงินจัดสรร</span>
+                <span class="budget-val">{{ formatMoney(budgetTotal) }}</span>
+            </div>
+            <div class="budget-row">
+                <span class="budget-label">ยอดคงเหลือก่อนรอบนี้</span>
+                <span class="budget-val">{{ formatMoney(previousBalance) }}</span>
+            </div>
+            <div class="budget-row highlight">
+                <span class="budget-label">เบิกจ่ายครั้งนี้ (บิลแรก)</span>
+                <span class="budget-val debit">− {{ formatMoney(previewData.invoices[0]?.total_cost ?? 0) }}</span>
+            </div>
+            <div class="budget-row total">
+                <span class="budget-label">ยอดคงเหลือหลังบิลแรก</span>
+                <span class="budget-val" :class="(previewBalance ?? 0) < 0 ? 'negative' : 'positive'">
+                    {{ formatMoney(previewBalance ?? 0) }}
+                </span>
+            </div>
+        </div>
+
+        <div class="info-box">
+            💡 ระบบจะคำนวณยอดงบประมาณแบบ Running ต่อเนื่องทุกบิล:
+            ยอดคงเหลือ[i] = ยอดคงเหลือ[i-1] − เบิกจ่ายครั้งนี้[i]
+            ทุกค่าเป็นตัวเลขคงที่ใน PDF ไม่มีสูตร (ไม่เกิด #REF!)
+        </div>
+
+        <!-- Generate button -->
+        <div class="actions">
+            <button class="btn btn-primary btn-lg" :disabled="!canGenerate || loading" @click="generate">
+                <span v-if="loading" class="spinner"></span>
+                {{ loading ? "กำลังสร้าง PDF..." : "📄 สร้าง PDF เบิกยาปะหน้า" }}
+            </button>
+        </div>
+
+        <div v-if="error" class="status-msg status-error" style="margin-top:12px">
+            ❌ {{ error }}
+        </div>
+    </div>
+
+    <!-- ── Result ── -->
+    <div v-if="result" class="card">
+        <div class="card-title">✅ สร้าง PDF สำเร็จ</div>
+
+        <div class="result-card">
+            <div class="result-card-title">📄 ไฟล์ที่สร้าง</div>
+            <ul class="file-list">
+                <li v-for="f in result.files" :key="f">
+                    📄 <code>{{ fileName(f) }}</code>
+                    <span class="file-path">{{ f }}</span>
+                </li>
+            </ul>
+            <div class="result-stats">
+                <span class="stat-chip">📦 {{ result.total_rows }} หน้า/บิล</span>
+                <span class="stat-chip money">💰 {{ formatMoney(result.total_amount) }} บาท</span>
+            </div>
+        </div>
+
+        <!-- Carry-forward info -->
+        <div class="carry-box" style="margin-top:16px">
+            <div class="carry-box-title">➡️ ค่าสำหรับรอบถัดไป (Carry-Forward)</div>
+            <div class="carry-grid">
+                <div class="carry-item">
+                    <span class="carry-label">ยอดงบประมาณที่จัดสรร</span>
+                    <span class="carry-val">{{ formatMoney(budgetTotal) }}</span>
+                </div>
+                <div class="carry-item">
+                    <span class="carry-label">ยอดคงเหลือหลังรอบนี้</span>
+                    <span class="carry-val">{{ formatMoney(result.carry_forward.remaining_balance) }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="save-actions" style="margin-top:16px">
+            <button class="btn btn-success" @click="saveToHistory">
+                💾 บันทึกรอบนี้สู่ประวัติ
+            </button>
+        </div>
+    </div>
+</div>
+</template>
+
+<style scoped>
+.report-wrap {
+    max-width: 800px;
+}
+
+.info-banner {
+    background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%);
+    border-color: #e9d5ff;
+}
+
+.banner-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #6b21a8;
+    margin-bottom: 4px;
+}
+
+.banner-desc {
+    font-size: 13px;
+    color: #9333ea;
+}
+
+.no-data {
+    text-align: center;
+    padding: 20px;
+    color: var(--c-warn);
+    font-size: 14px;
+    background: var(--c-warn-bg);
+    border-radius: var(--radius);
+}
+
+.period {
+    color: var(--c-primary) !important;
+}
+
+.actions {
+    margin-top: 20px;
+}
+
+/* Budget preview table */
+.budget-preview {
+    background: #f8fafc;
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin: 16px 0;
+}
+
+.budget-preview-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--c-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 10px;
+}
+
+.budget-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--c-border);
+    font-size: 13px;
+}
+
+.budget-row:last-child {
+    border-bottom: none;
+}
+
+.budget-row.highlight {
+    background: #fef3c7;
+    margin: 0 -4px;
+    padding: 5px 4px;
+    border-radius: 4px;
+}
+
+.budget-row.total {
+    font-weight: 700;
+    font-size: 14px;
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 2px solid var(--c-border);
+    border-bottom: none;
+}
+
+.budget-label {
+    color: var(--c-text-muted);
+}
+
+.budget-val {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
+.budget-val.debit {
+    color: #dc2626;
+}
+
+.budget-val.positive {
+    color: #059669;
+}
+
+.budget-val.negative {
+    color: #dc2626;
+}
+
+/* Result */
+.file-path {
+    font-size: 10px;
+    color: var(--c-text-muted);
+    word-break: break-all;
+    display: block;
+    margin-top: 2px;
+    padding-left: 20px;
+}
+
+.result-stats {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.stat-chip {
+    background: #d1fae5;
+    color: #065f46;
+    border-radius: 999px;
+    padding: 3px 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.stat-chip.money {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.save-actions {
+    display: flex;
+    gap: 8px;
+}
+</style>

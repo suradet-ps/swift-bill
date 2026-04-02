@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import { ref, reactive, computed } from "vue";
+import { ref, reactive, computed, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import TabSettings from "./components/TabSettings.vue";
+import TabQuery from "./components/TabQuery.vue";
+import TabReport1 from "./components/TabReport1.vue";
+import TabReport2 from "./components/TabReport2.vue";
+import TabReport3 from "./components/TabReport3.vue";
+import TabHistory from "./components/TabHistory.vue";
 
-// --- Types matching Rust backend ---
-interface DbConfig {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface DbConfig {
     host: string;
     port: number;
     database: string;
@@ -11,7 +18,7 @@ interface DbConfig {
     password: string;
 }
 
-interface InvoiceRow {
+export interface InvoiceRow {
     invoice_no: string;
     vendor_code: string;
     company_name: string;
@@ -21,35 +28,48 @@ interface InvoiceRow {
     category: string;
 }
 
-interface GenerateParams {
-    db_config: DbConfig;
-    start_date: string;
-    end_date: string;
-    round: number;
-    budget_total: number;
-    previous_balance: number;
-    start_po_no: number;
-    start_reg_no: string;
-    start_running: number;
-    output_dir: string;
-    approval_date: string | null;
-}
-
-interface PreviewData {
+export interface PreviewData {
     invoices: InvoiceRow[];
     total_amount: number;
     row_count: number;
 }
 
-interface GenerateResult {
+export interface CarryForward {
+    next_reg_no: string;
+    next_running: number;
+    next_po_no: number;
+    remaining_balance: number;
+}
+
+export interface GenerateResult {
     files: string[];
     total_rows: number;
     total_amount: number;
+    carry_forward: CarryForward;
 }
 
-// --- State ---
-type TabName = "settings" | "generate" | "preview";
-const activeTab = ref<TabName>("settings");
+export interface RoundHistoryEntry {
+    id: string;
+    label: string;
+    fiscal_year: number;
+    month: number;
+    round: number;
+    date_from: string;
+    date_to: string;
+    next_reg_no: string;
+    next_running: number;
+    next_po_no: number;
+    remaining_balance: number;
+    budget_total: number;
+    total_amount: number;
+    invoice_count: number;
+    created_at: string;
+}
+
+// ─── Shared State ─────────────────────────────────────────────────────────────
+
+type TabId = "settings" | "query" | "report1" | "report2" | "report3" | "history";
+const activeTab = ref<TabId>("settings");
 
 const dbConfig = reactive<DbConfig>({
     host: "localhost",
@@ -59,479 +79,174 @@ const dbConfig = reactive<DbConfig>({
     password: "",
 });
 
-const connectionStatus = ref<"idle" | "testing" | "success" | "error">("idle");
-const connectionMessage = ref("");
+// Query / shared period state
+const startDateHtml = ref(""); // YYYY-MM-DD (HTML date input format)
+const endDateHtml = ref("");
+const outputDir = ref("");
+const previewData = ref<PreviewData | null>(null);
 
-const generateForm = reactive({
-    startDate: "",
-    endDate: "",
-    round: 1,
-    budgetTotal: 5843812.60,
-    previousBalance: 5843812.60,
+const dateFrom = computed(() => startDateHtml.value.replace(/-/g, ""));
+const dateTo = computed(() => endDateHtml.value.replace(/-/g, ""));
+const year = computed(() =>
+    startDateHtml.value ? parseInt(startDateHtml.value.substring(0, 4)) + 543 : 0
+);
+const month = computed(() =>
+    startDateHtml.value ? parseInt(startDateHtml.value.substring(5, 7)) : 0
+);
+
+// Shared round number (applies to all 3 reports)
+const round = ref(1);
+
+// Per-report unique fields
+const r1Form = reactive({ startRegNo: "69ภ1", startRunning: 0 });
+const r2Form = reactive({
     startPoNo: 1,
     startRegNo: "69ภ1",
     startRunning: 0,
-    outputDir: "",
+    approvalDate: "",
+});
+const r3Form = reactive({
+    budgetTotal: 5843812.6,
+    previousBalance: 5843812.6,
     approvalDate: "",
 });
 
-const isGenerating = ref(false);
-const generateMessage = ref("");
-const generateStatus = ref<"idle" | "success" | "error">("idle");
-const generateResult = ref<GenerateResult | null>(null);
+// History
+const historyEntries = ref<RoundHistoryEntry[]>([]);
 
-const isPreviewing = ref(false);
-const previewData = ref<PreviewData | null>(null);
-const previewError = ref("");
+// Carry-forward results stored from each report tab (for combined history save)
+const r2Carry = ref<{
+    next_reg_no: string;
+    next_running: number;
+    next_po_no: number;
+} | null>(null);
 
-// --- Computed ---
-const monthNames = [
-    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
-    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
+// ─── Lifecycle ────────────────────────────────────────────────────────────────
+
+onMounted(async () => {
+    try {
+        historyEntries.value = await invoke<RoundHistoryEntry[]>("load_round_history");
+    } catch (_) {
+        /* ignore on fresh install */
+    }
+});
+
+// ─── History handlers ─────────────────────────────────────────────────────────
+
+async function refreshHistory() {
+    try {
+        historyEntries.value = await invoke<RoundHistoryEntry[]>("load_round_history");
+    } catch (_) { }
+}
+
+async function saveEntry(entry: RoundHistoryEntry) {
+    await invoke("save_round_entry", { entry });
+    await refreshHistory();
+}
+
+async function deleteEntry(id: string) {
+    await invoke("delete_round_entry", { id });
+    await refreshHistory();
+}
+
+function handleR2Carry(carry: { next_reg_no: string; next_running: number; next_po_no: number }) {
+    r2Carry.value = carry;
+}
+
+function applyHistoryEntry(entry: RoundHistoryEntry) {
+    // Pre-fill shared state
+    round.value = entry.round + 1;
+
+    // Pre-fill report 1 form
+    r1Form.startRegNo = entry.next_reg_no;
+    r1Form.startRunning = entry.next_running;
+
+    // Pre-fill report 2 form
+    r2Form.startPoNo = entry.next_po_no;
+    r2Form.startRegNo = entry.next_reg_no;
+    r2Form.startRunning = entry.next_running;
+
+    // Pre-fill report 3 form
+    r3Form.budgetTotal = entry.budget_total;
+    r3Form.previousBalance = entry.remaining_balance;
+
+    // Switch to query tab so user can pick the new date range
+    activeTab.value = "query";
+}
+
+// ─── Tabs meta ────────────────────────────────────────────────────────────────
+
+const tabs: { id: TabId; icon: string; label: string }[] = [
+    { id: "settings", icon: "⚙️", label: "ฐานข้อมูล" },
+    { id: "query", icon: "🔍", label: "ดึงข้อมูล" },
+    { id: "report1", icon: "📋", label: "ส่งหนี้เบิกยา" },
+    { id: "report2", icon: "📊", label: "สรุปรับยา" },
+    { id: "report3", icon: "📄", label: "เบิกยาปะหน้า" },
+    { id: "history", icon: "📁", label: "ประวัติรอบ" },
 ];
-
-const periodLabel = computed(() => {
-    if (!generateForm.startDate || !generateForm.endDate) {
-        return `รอบ ${generateForm.round}`;
-    }
-    // Parse dates in YYYY-MM-DD format and display in Thai format
-    const startYear = parseInt(generateForm.startDate.substring(0, 4)) + 543;
-    const startMonth = parseInt(generateForm.startDate.substring(5, 7));
-    const startDay = parseInt(generateForm.startDate.substring(8, 10));
-    const endYear = parseInt(generateForm.endDate.substring(0, 4)) + 543;
-    const endMonth = parseInt(generateForm.endDate.substring(5, 7));
-    const endDay = parseInt(generateForm.endDate.substring(8, 10));
-
-    const startMonthName = monthNames[startMonth - 1] || "";
-    const endMonthName = monthNames[endMonth - 1] || "";
-
-    if (startMonth === endMonth && startYear === endYear) {
-        return `${startDay}-${endDay} ${startMonthName} ${startYear} รอบ ${generateForm.round}`;
-    } else {
-        return `${startDay} ${startMonthName} - ${endDay} ${endMonthName} ${endYear} รอบ ${generateForm.round}`;
-    }
-});
-
-const isDbConfigValid = computed(() => {
-    return (
-        dbConfig.host.trim() !== "" &&
-        dbConfig.port > 0 &&
-        dbConfig.database.trim() !== "" &&
-        dbConfig.username.trim() !== "" &&
-        dbConfig.password.trim() !== ""
-    );
-});
-
-// Separate cover-letter files from summary files
-const coverLetterFiles = computed(() => {
-    if (!generateResult.value) return [];
-    return generateResult.value.files.filter(f => f.includes("เบิกยาปะหน้า"));
-});
-
-const summaryFiles = computed(() => {
-    if (!generateResult.value) return [];
-    return generateResult.value.files.filter(f => !f.includes("เบิกยาปะหน้า"));
-});
-
-// --- Methods ---
-function formatNumber(n: number): string {
-    return n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-// Extract filename from full path
-function fileName(path: string): string {
-    return path.split(/[\\/]/).pop() ?? path;
-}
-
-async function testConnection() {
-    if (!isDbConfigValid.value) {
-        connectionMessage.value = "กรุณากรอกข้อมูลการเชื่อมต่อให้ครบถ้วน";
-        connectionStatus.value = "error";
-        return;
-    }
-    connectionStatus.value = "testing";
-    connectionMessage.value = "กำลังทดสอบการเชื่อมต่อ...";
-    try {
-        const msg = await invoke<string>("test_connection", {
-            config: { ...dbConfig },
-        });
-        connectionStatus.value = "success";
-        connectionMessage.value = msg;
-    } catch (e) {
-        connectionStatus.value = "error";
-        connectionMessage.value = String(e);
-    }
-}
-
-function buildParams(): GenerateParams {
-    return {
-        db_config: { ...dbConfig },
-        start_date: generateForm.startDate,
-        end_date: generateForm.endDate,
-        round: generateForm.round,
-        budget_total: generateForm.budgetTotal,
-        previous_balance: generateForm.previousBalance,
-        start_po_no: generateForm.startPoNo,
-        start_reg_no: generateForm.startRegNo,
-        start_running: generateForm.startRunning,
-        output_dir: generateForm.outputDir.trim() || ".",
-        approval_date: generateForm.approvalDate.trim() || null,
-    };
-}
-
-async function previewInvoices() {
-    if (!isDbConfigValid.value) {
-        previewError.value = "กรุณาตั้งค่าการเชื่อมต่อฐานข้อมูลก่อน";
-        return;
-    }
-    isPreviewing.value = true;
-    previewError.value = "";
-    previewData.value = null;
-    try {
-        const data = await invoke<PreviewData>("preview_data", {
-            params: buildParams(),
-        });
-        previewData.value = data;
-        activeTab.value = "preview";
-    } catch (e) {
-        previewError.value = String(e);
-    } finally {
-        isPreviewing.value = false;
-    }
-}
-
-async function generateReports() {
-    if (!isDbConfigValid.value) {
-        generateMessage.value = "กรุณาตั้งค่าการเชื่อมต่อฐานข้อมูลก่อน";
-        generateStatus.value = "error";
-        return;
-    }
-    isGenerating.value = true;
-    generateMessage.value = "กำลังดึงข้อมูลและสร้างรายงาน...";
-    generateStatus.value = "idle";
-    generateResult.value = null;
-    try {
-        const result = await invoke<GenerateResult>("generate_reports", {
-            params: buildParams(),
-        });
-        generateResult.value = result;
-        generateStatus.value = "success";
-        generateMessage.value = `สร้างรายงานสำเร็จ! (${result.total_rows} รายการ, รวม ${formatNumber(result.total_amount)} บาท) — ${result.files.length} ไฟล์ PDF`;
-    } catch (e) {
-        generateStatus.value = "error";
-        generateMessage.value = String(e);
-    } finally {
-        isGenerating.value = false;
-    }
-}
 </script>
 
 <template>
-    <div class="app-root">
-        <!-- Header -->
-        <header class="app-header">
-            <div class="header-content">
-                <h1 class="app-title">
-                    <span class="title-icon">📋</span>
-                    Swift Bill
-                </h1>
-                <p class="app-subtitle">ระบบสร้างรายงานเบิกจ่ายยาและเวชภัณฑ์ — โรงพยาบาลสระโบสถ์</p>
+<div class="app-root">
+    <!-- ── Header ───────────────────────────────────────────────────────── -->
+    <header class="app-header">
+        <div class="header-inner">
+            <span class="header-icon">💊</span>
+            <div>
+                <h1 class="app-title">Swift Bill</h1>
+                <p class="app-subtitle">ระบบจัดการบิลยา · โรงพยาบาลสระโบสถ์</p>
             </div>
-        </header>
+            <div class="header-badge" v-if="previewData">
+                <span class="badge-dot"></span>
+                ข้อมูล {{ previewData.row_count }} รายการ
+            </div>
+        </div>
+    </header>
 
-        <!-- Tab Navigation -->
-        <nav class="tab-nav">
-            <button :class="['tab-btn', { active: activeTab === 'settings' }]" @click="activeTab = 'settings'">
-                ⚙️ ตั้งค่าฐานข้อมูล
-            </button>
-            <button :class="['tab-btn', { active: activeTab === 'generate' }]" @click="activeTab = 'generate'">
-                📄 สร้างรายงาน
-            </button>
-            <button :class="['tab-btn', { active: activeTab === 'preview' }]" @click="activeTab = 'preview'">
-                👁️ ดูข้อมูล
-                <span v-if="previewData" class="badge">{{ previewData.row_count }}</span>
-            </button>
-        </nav>
+    <!-- ── Tab Nav ──────────────────────────────────────────────────────── -->
+    <nav class="tab-nav">
+        <button v-for="tab in tabs" :key="tab.id" class="tab-btn" :class="{ active: activeTab === tab.id }"
+            @click="activeTab = tab.id">
+            <span class="tab-icon">{{ tab.icon }}</span>
+            <span class="tab-label">{{ tab.label }}</span>
+        </button>
+    </nav>
 
-        <!-- Main Content -->
-        <main class="main-content">
+    <!-- ── Main Content ─────────────────────────────────────────────────── -->
+    <main class="main-content">
+        <TabSettings v-show="activeTab === 'settings'" :db-config="dbConfig"
+            @update:db-config="Object.assign(dbConfig, $event)" />
+        <TabQuery v-show="activeTab === 'query'" :db-config="dbConfig" v-model:start-date-html="startDateHtml"
+            v-model:end-date-html="endDateHtml" v-model:output-dir="outputDir" v-model:preview-data="previewData"
+            v-model:round="round" />
+        <TabReport1 v-show="activeTab === 'report1'" :db-config="dbConfig" :date-from="dateFrom" :date-to="dateTo"
+            :year="year" :month="month" :round="round" :output-dir="outputDir" :preview-data="previewData"
+            v-model:start-reg-no="r1Form.startRegNo" v-model:start-running="r1Form.startRunning"
+            @save-history="saveEntry" />
 
-            <!-- ===== SETTINGS TAB ===== -->
-            <section v-if="activeTab === 'settings'" class="tab-panel">
-                <div class="card">
-                    <h2 class="card-title">🔌 การเชื่อมต่อ SQL Server (INVS)</h2>
-                    <p class="card-desc">กรอกข้อมูลเซิร์ฟเวอร์ INVS เพื่อเชื่อมต่อผ่าน TDS Protocol (ไม่ต้องติดตั้ง ODBC
-                        Driver)</p>
+        <TabReport3 v-show="activeTab === 'report3'" :db-config="dbConfig" :date-from="dateFrom" :date-to="dateTo"
+            :year="year" :month="month" :round="round" :output-dir="outputDir" :preview-data="previewData"
+            v-model:budget-total="r3Form.budgetTotal" v-model:previous-balance="r3Form.previousBalance"
+            v-model:approval-date="r3Form.approvalDate" :r2-carry="r2Carry" @save-history="saveEntry" />
+        <!-- TabReport2 carry-forward listener (invisible) -->
+        <TabReport2 v-show="activeTab === 'report2'" :db-config="dbConfig" :date-from="dateFrom" :date-to="dateTo"
+            :year="year" :month="month" :round="round" :output-dir="outputDir" :preview-data="previewData"
+            v-model:start-po-no="r2Form.startPoNo" v-model:start-reg-no="r2Form.startRegNo"
+            v-model:start-running="r2Form.startRunning" v-model:approval-date="r2Form.approvalDate"
+            @save-history="saveEntry" @carry-result="handleR2Carry" />
+        <TabHistory v-show="activeTab === 'history'" :entries="historyEntries" @load-entry="applyHistoryEntry"
+            @delete-entry="deleteEntry" />
+    </main>
 
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="db-host">Host / IP Address</label>
-                            <input id="db-host" v-model="dbConfig.host" type="text" placeholder="เช่น 192.168.1.100" />
-                        </div>
-                        <div class="form-group">
-                            <label for="db-port">Port</label>
-                            <input id="db-port" v-model.number="dbConfig.port" type="number" placeholder="1433" />
-                        </div>
-                        <div class="form-group">
-                            <label for="db-name">Database Name</label>
-                            <input id="db-name" v-model="dbConfig.database" type="text" placeholder="INVS" />
-                        </div>
-                        <div class="form-group">
-                            <label for="db-user">Username</label>
-                            <input id="db-user" v-model="dbConfig.username" type="text" placeholder="sa" />
-                        </div>
-                        <div class="form-group">
-                            <label for="db-pass">Password</label>
-                            <input id="db-pass" v-model="dbConfig.password" type="password" placeholder="••••••••" />
-                        </div>
-                    </div>
-
-                    <div class="form-actions">
-                        <button class="btn btn-primary" :disabled="connectionStatus === 'testing' || !isDbConfigValid"
-                            @click="testConnection">
-                            <span v-if="connectionStatus === 'testing'" class="spinner"></span>
-                            {{ connectionStatus === "testing" ? "กำลังทดสอบ..." : "🔗 ทดสอบการเชื่อมต่อ" }}
-                        </button>
-                    </div>
-
-                    <div v-if="connectionMessage" :class="['status-msg', {
-                        'status-success': connectionStatus === 'success',
-                        'status-error': connectionStatus === 'error',
-                        'status-testing': connectionStatus === 'testing',
-                    }]">
-                        <span v-if="connectionStatus === 'success'">✅</span>
-                        <span v-else-if="connectionStatus === 'error'">❌</span>
-                        <span v-else>⏳</span>
-                        {{ connectionMessage }}
-                    </div>
-                </div>
-            </section>
-
-            <!-- ===== GENERATE TAB ===== -->
-            <section v-if="activeTab === 'generate'" class="tab-panel">
-                <div class="card">
-                    <h2 class="card-title">📄 ตั้งค่าการสร้างรายงาน</h2>
-                    <p class="card-desc">กำหนดช่วงเวลา รอบ งบประมาณ และเลขที่เอกสารเริ่มต้น</p>
-
-                    <!-- ─── Period + Round ─── -->
-                    <div class="section-label">📅 ช่วงเวลาและรอบการทำงาน</div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="gen-start-date">วันที่เริ่มต้น</label>
-                            <input id="gen-start-date" v-model="generateForm.startDate" type="date" />
-                        </div>
-                        <div class="form-group">
-                            <label for="gen-end-date">วันที่สิ้นสุด</label>
-                            <input id="gen-end-date" v-model="generateForm.endDate" type="date" />
-                        </div>
-                        <div class="form-group">
-                            <label for="gen-round">รอบที่ (ภายในช่วงวันที่)</label>
-                            <input id="gen-round" v-model.number="generateForm.round" type="number" min="1" max="99"
-                                placeholder="1" />
-                        </div>
-                    </div>
-
-                    <div class="period-badge">{{ periodLabel }}</div>
-
-                    <div class="info-box">
-                        <strong>💡 การทำงานเป็นรอบ:</strong>
-                        เช่น รอบ 1 มีบิล 10 ใบ → รอบ 2 มีเพิ่มอีก 20 ใบ โดยเลขทะเบียน เลขขอซื้อ
-                        และยอดงบประมาณคงเหลือจะต่อเนื่องจากรอบก่อนหน้าโดยอัตโนมัติ
-                    </div>
-
-                    <!-- ─── Budget ─── -->
-                    <div class="section-label">💰 งบประมาณ</div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="gen-budget">ยอดเงินจัดสรรทั้งหมด (บาท)</label>
-                            <input id="gen-budget" v-model.number="generateForm.budgetTotal" type="number" step="0.01"
-                                placeholder="5843812.60" />
-                        </div>
-                        <div class="form-group">
-                            <label for="gen-balance">ยอดคงเหลือก่อนรอบนี้ (บาท)</label>
-                            <input id="gen-balance" v-model.number="generateForm.previousBalance" type="number"
-                                step="0.01" placeholder="ยอดที่เหลือจากรอบที่แล้ว" />
-                            <span class="field-hint">ป้อนยอดคงเหลือสุดท้ายจากรอบก่อนหน้า</span>
-                        </div>
-                    </div>
-
-                    <!-- ─── Document Numbers ─── -->
-                    <div class="section-label">🔢 เลขที่เอกสารเริ่มต้น (ต่อจากรอบก่อน)</div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="gen-po">เลขขอซื้อ / PO เริ่มต้น</label>
-                            <input id="gen-po" v-model.number="generateForm.startPoNo" type="number"
-                                placeholder="253" />
-                            <span class="field-hint">เลขแรกของรอบนี้ (รอบก่อนจบที่เท่าไร + 1)</span>
-                        </div>
-                        <div class="form-group">
-                            <label for="gen-reg">เลขทะเบียนคุมเริ่มต้น</label>
-                            <input id="gen-reg" v-model="generateForm.startRegNo" type="text" placeholder="69ภ12" />
-                            <span class="field-hint">เช่น 69ภ12, 69ว5</span>
-                        </div>
-                        <div class="form-group">
-                            <label for="gen-running">ลำดับในทะเบียน (0–9)</label>
-                            <input id="gen-running" v-model.number="generateForm.startRunning" type="number" min="0"
-                                max="9" placeholder="0" />
-                            <span class="field-hint">ลำดับที่เริ่มในเล่มทะเบียน (ถ้าเป็นเล่มใหม่ใส่ 0)</span>
-                        </div>
-                    </div>
-
-                    <!-- ─── Output ─── -->
-                    <div class="section-label">📁 ไฟล์ผลลัพธ์ (PDF)</div>
-                    <div class="form-grid">
-                        <div class="form-group full-width">
-                            <label for="gen-output">โฟลเดอร์บันทึกไฟล์</label>
-                            <input id="gen-output" v-model="generateForm.outputDir" type="text"
-                                placeholder="เช่น C:\Reports หรือ /Users/me/Documents (ปล่อยว่างจะสร้างโฟลเดอร์ 'output' ในไดเรกทอรีปัจจุบัน)" />
-                            <span class="field-hint">ระบบจะสร้างโฟลเดอร์ 'output'
-                                ภายในโฟลเดอร์ที่ระบุโดยอัตโนมัติ</span>
-                        </div>
-                        <div class="form-group">
-                            <label for="gen-approval">วันที่ขออนุมัติ (แสดงบนเอกสาร)</label>
-                            <input id="gen-approval" v-model="generateForm.approvalDate" type="text"
-                                placeholder="เช่น 6 พ.ย. 68" />
-                        </div>
-                    </div>
-
-                    <!-- ─── Actions ─── -->
-                    <div class="form-actions">
-                        <button class="btn btn-secondary" :disabled="isPreviewing || !isDbConfigValid"
-                            @click="previewInvoices">
-                            <span v-if="isPreviewing" class="spinner"></span>
-                            {{ isPreviewing ? "กำลังโหลด..." : "👁️ ดูตัวอย่างข้อมูล" }}
-                        </button>
-
-                        <button class="btn btn-primary btn-large" :disabled="isGenerating || !isDbConfigValid"
-                            @click="generateReports">
-                            <span v-if="isGenerating" class="spinner"></span>
-                            {{ isGenerating ? "กำลังสร้าง PDF..." : "🚀 สร้างรายงาน PDF ทั้งหมด" }}
-                        </button>
-                    </div>
-
-                    <!-- Preview error -->
-                    <div v-if="previewError" class="status-msg status-error">
-                        ❌ {{ previewError }}
-                    </div>
-
-                    <!-- Generate status -->
-                    <div v-if="generateMessage" :class="['status-msg', {
-                        'status-success': generateStatus === 'success',
-                        'status-error': generateStatus === 'error',
-                    }]">
-                        <span v-if="generateStatus === 'success'">✅</span>
-                        <span v-else-if="generateStatus === 'error'">❌</span>
-                        <span v-else>⏳</span>
-                        {{ generateMessage }}
-                    </div>
-
-                    <!-- Result Details -->
-                    <div v-if="generateResult" class="result-card">
-                        <h3>📂 ไฟล์ PDF ที่สร้างแล้ว</h3>
-
-                        <div class="result-section">
-                            <div class="result-section-title">📊 รายงานสรุป</div>
-                            <ul class="file-list">
-                                <li v-for="f in summaryFiles" :key="f">
-                                    📄 <code>{{ fileName(f) }}</code>
-                                    <span class="file-path-hint">{{ f }}</span>
-                                </li>
-                            </ul>
-                        </div>
-
-                        <div class="result-section">
-                            <div class="result-section-title">📝 เอกสารเบิกยาปะหน้า (รวมเป็น 1 ไฟล์)</div>
-                            <ul class="file-list">
-                                <li v-for="f in coverLetterFiles" :key="f">
-                                    📄 <code>{{ fileName(f) }}</code>
-                                    <span class="file-path-hint">{{ f }}</span>
-                                </li>
-                            </ul>
-                        </div>
-
-                        <div class="result-summary">
-                            <span class="result-stat">📦 {{ generateResult.total_rows }} รายการ</span>
-                            <span class="result-stat">💰 {{ formatNumber(generateResult.total_amount) }} บาท</span>
-                            <span class="result-stat">📄 {{ generateResult.files.length }} ไฟล์ PDF</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- ===== PREVIEW TAB ===== -->
-            <section v-if="activeTab === 'preview'" class="tab-panel">
-                <div class="card">
-                    <h2 class="card-title">👁️ ดูข้อมูลจากฐานข้อมูล INVS</h2>
-
-                    <div v-if="!previewData" class="empty-state">
-                        <p>🔍 ยังไม่มีข้อมูล</p>
-                        <p class="hint">ไปที่แท็บ "สร้างรายงาน" แล้วกดปุ่ม "ดูตัวอย่างข้อมูล"</p>
-                    </div>
-
-                    <div v-else>
-                        <div class="preview-summary">
-                            <div class="summary-item">
-                                <span class="summary-label">จำนวนรายการ</span>
-                                <span class="summary-value">{{ previewData.row_count }} รายการ</span>
-                            </div>
-                            <div class="summary-item">
-                                <span class="summary-label">ยอดรวมทั้งหมด</span>
-                                <span class="summary-value">{{ formatNumber(previewData.total_amount) }} บาท</span>
-                            </div>
-                        </div>
-
-                        <div class="table-wrapper">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>วันที่รับของ</th>
-                                        <th>เลขที่เอกสาร</th>
-                                        <th>รหัสบริษัท</th>
-                                        <th>ชื่อบริษัท</th>
-                                        <th>ประเภท</th>
-                                        <th class="text-right">จำนวนเงิน (บาท)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="(inv, idx) in previewData.invoices" :key="idx">
-                                        <td class="text-center">{{ idx + 1 }}</td>
-                                        <td>{{ inv.receive_date }}</td>
-                                        <td><code>{{ inv.invoice_no }}</code></td>
-                                        <td><code>{{ inv.vendor_code }}</code></td>
-                                        <td>{{ inv.company_name }}</td>
-                                        <td>
-                                            <span
-                                                :class="['cat-badge', inv.category === 'ยา' ? 'cat-drug' : 'cat-material']">
-                                                {{ inv.category }}
-                                            </span>
-                                        </td>
-                                        <td class="text-right">{{ formatNumber(inv.total_cost) }}</td>
-                                    </tr>
-                                </tbody>
-                                <tfoot>
-                                    <tr>
-                                        <td colspan="6" class="text-right"><strong>รวมทั้งสิ้น</strong></td>
-                                        <td class="text-right"><strong>{{ formatNumber(previewData.total_amount)
-                                        }}</strong></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-        </main>
-
-        <!-- Footer -->
-        <footer class="app-footer">
-            <p>Swift Bill v0.2.0 — ระบบสร้างรายงานเบิกจ่ายยาและเวชภัณฑ์ | Tauri + Vue 3 + Rust</p>
-        </footer>
-    </div>
+    <!-- ── Footer ───────────────────────────────────────────────────────── -->
+    <footer class="app-footer">
+        <p>Swift Bill v0.3 &nbsp;·&nbsp; โรงพยาบาลสระโบสถ์ &nbsp;·&nbsp; Read-only DB</p>
+    </footer>
+</div>
 </template>
 
 <style>
+/* ── Reset ──────────────────────────────────────────────────────────────────── */
 *,
 *::before,
 *::after {
@@ -540,324 +255,404 @@ async function generateReports() {
     padding: 0;
 }
 
+/* ── CSS Variables ──────────────────────────────────────────────────────────── */
 :root {
-    --primary: #1a6fc4;
-    --primary-dark: #155aa0;
-    --primary-light: #e8f0fb;
-    --secondary: #6c757d;
-    --success: #198754;
-    --success-bg: #d1e7dd;
-    --error: #dc3545;
-    --error-bg: #f8d7da;
-    --warn: #e07d10;
-    --warn-bg: #fff3cd;
-    --bg: #f4f6fa;
-    --card-bg: #ffffff;
-    --border: #dee2e6;
-    --text: #212529;
-    --text-muted: #6c757d;
-    --radius: 10px;
-    --shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
-    --font: 'Segoe UI', 'Noto Sans Thai', 'TH SarabunPSK', Arial, sans-serif;
+    --c-primary: #1a56db;
+    --c-primary-light: #eff6ff;
+    --c-primary-hover: #1648c0;
+    --c-secondary: #6b7280;
+    --c-success: #059669;
+    --c-success-bg: #ecfdf5;
+    --c-error: #dc2626;
+    --c-error-bg: #fef2f2;
+    --c-warn: #d97706;
+    --c-warn-bg: #fffbeb;
+    --c-bg: #f9fafb;
+    --c-surface: #ffffff;
+    --c-border: #e5e7eb;
+    --c-border-focus: #93c5fd;
+    --c-text: #111827;
+    --c-text-muted: #6b7280;
+    --c-text-light: #9ca3af;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+    font-family: "Segoe UI", "Sarabun", sans-serif;
+    font-size: 14px;
+    color: var(--c-text);
 }
 
 body {
-    font-family: var(--font);
-    background: var(--bg);
-    color: var(--text);
-    font-size: 14px;
-    line-height: 1.6;
+    background: var(--c-bg);
+    min-height: 100vh;
 }
 
+/* ── Layout ──────────────────────────────────────────────────────────────────── */
 .app-root {
-    min-height: 100vh;
     display: flex;
     flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
 }
 
-/* ── Header ── */
+/* ── Header ──────────────────────────────────────────────────────────────────── */
 .app-header {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    background: linear-gradient(135deg, #1a56db 0%, #1e40af 100%);
     color: #fff;
-    padding: 16px 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    padding: 10px 20px;
+    flex-shrink: 0;
 }
 
-.header-content {
-    max-width: 1100px;
-    margin: 0 auto;
+.header-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-icon {
+    font-size: 28px;
 }
 
 .app-title {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.app-subtitle {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 1px;
+}
+
+.header-badge {
+    margin-left: auto;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.badge-dot {
+    width: 7px;
+    height: 7px;
+    background: #4ade80;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+/* ── Tab Nav ──────────────────────────────────────────────────────────────────── */
+.tab-nav {
+    display: flex;
+    background: var(--c-surface);
+    border-bottom: 2px solid var(--c-border);
+    flex-shrink: 0;
+}
+
+.tab-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 8px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    color: var(--c-text-muted);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+}
+
+.tab-btn:hover {
+    color: var(--c-primary);
+    background: var(--c-primary-light);
+}
+
+.tab-btn.active {
+    color: var(--c-primary);
+    border-bottom-color: var(--c-primary);
+    font-weight: 600;
+}
+
+.tab-icon {
+    font-size: 16px;
+}
+
+.tab-label {
+    font-size: 13px;
+}
+
+/* ── Main Content ─────────────────────────────────────────────────────────────── */
+.main-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    background: var(--c-bg);
+}
+
+/* ── Footer ───────────────────────────────────────────────────────────────────── */
+.app-footer {
+    background: var(--c-surface);
+    border-top: 1px solid var(--c-border);
+    padding: 6px 20px;
+    text-align: center;
+    color: var(--c-text-light);
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+/* ─── Shared component styles (used by all tabs) ──────────────────────────────── */
+
+/* Card */
+.card {
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+}
+
+.card-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--c-text);
+    margin-bottom: 4px;
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.title-icon {
-    font-size: 26px;
-}
-
-.app-subtitle {
+.card-desc {
     font-size: 13px;
-    opacity: 0.85;
-    margin-top: 2px;
+    color: var(--c-text-muted);
+    margin-bottom: 16px;
 }
 
-/* ── Tab nav ── */
-.tab-nav {
-    background: var(--card-bg);
-    border-bottom: 2px solid var(--border);
-    display: flex;
-    gap: 4px;
-    padding: 0 24px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-}
-
-.tab-btn {
-    background: none;
+.card-divider {
     border: none;
-    padding: 12px 20px;
-    font-size: 14px;
-    font-family: var(--font);
-    cursor: pointer;
-    color: var(--text-muted);
-    border-bottom: 3px solid transparent;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: -2px;
+    border-top: 1px solid var(--c-border);
+    margin: 16px 0;
 }
 
-.tab-btn:hover {
-    color: var(--primary);
-    background: var(--primary-light);
-}
-
-.tab-btn.active {
-    color: var(--primary);
-    border-bottom-color: var(--primary);
-    font-weight: 600;
-}
-
-.badge {
-    background: var(--primary);
-    color: #fff;
-    border-radius: 12px;
-    padding: 1px 7px;
+/* Section label */
+.section-label {
     font-size: 11px;
     font-weight: 700;
-}
-
-/* ── Main content ── */
-.main-content {
-    flex: 1;
-    padding: 24px;
-    max-width: 1100px;
-    margin: 0 auto;
-    width: 100%;
-}
-
-.tab-panel {
-    animation: fadeIn 0.15s ease;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(4px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* ── Card ── */
-.card {
-    background: var(--card-bg);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 28px 32px;
-    border: 1px solid var(--border);
-}
-
-.card-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--primary-dark);
-    margin-bottom: 6px;
-}
-
-.card-desc {
-    color: var(--text-muted);
-    font-size: 13px;
-    margin-bottom: 20px;
-}
-
-/* ── Section label ── */
-.section-label {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--primary);
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin: 22px 0 12px;
-    padding-bottom: 4px;
-    border-bottom: 1px solid var(--primary-light);
+    color: var(--c-text-muted);
+    padding: 4px 0;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--c-border);
 }
 
-/* ── Form ── */
+/* Form */
 .form-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.form-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.form-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
 }
 
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 5px;
 }
 
-.form-group.full-width {
+.form-group.full {
     grid-column: 1 / -1;
 }
 
 .form-group label {
     font-size: 12px;
     font-weight: 600;
-    color: var(--text-muted);
+    color: var(--c-text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.05em;
 }
 
 .form-group input,
 .form-group select {
-    padding: 9px 12px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
+    padding: 8px 10px;
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius);
     font-size: 14px;
-    font-family: var(--font);
-    background: var(--bg);
-    color: var(--text);
+    background: var(--c-bg);
+    color: var(--c-text);
     transition: border-color 0.15s, box-shadow 0.15s;
+    font-family: inherit;
 }
 
 .form-group input:focus,
 .form-group select:focus {
     outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(26, 111, 196, 0.12);
+    border-color: var(--c-border-focus);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    background: var(--c-surface);
 }
 
 .form-group input::placeholder {
-    color: #b0b7c3;
+    color: var(--c-text-light);
+}
+
+.form-group input[readonly] {
+    background: #f3f4f6;
+    color: var(--c-text-muted);
+    cursor: default;
 }
 
 .field-hint {
     font-size: 11px;
-    color: var(--text-muted);
-    line-height: 1.4;
+    color: var(--c-text-light);
 }
 
-/* ── Info box ── */
+/* Info box */
 .info-box {
-    background: var(--warn-bg);
-    border: 1px solid #f0c060;
-    border-radius: 8px;
-    padding: 12px 16px;
+    background: var(--c-primary-light);
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius);
+    padding: 10px 14px;
     font-size: 13px;
-    margin: 12px 0;
-    color: #5a4000;
-    line-height: 1.6;
+    color: #1e40af;
+    margin-bottom: 12px;
 }
 
-/* ── Period badge ── */
-.period-badge {
-    display: inline-block;
-    background: var(--primary-light);
-    color: var(--primary-dark);
-    border: 1px solid var(--primary);
-    border-radius: 20px;
-    padding: 5px 16px;
-    font-size: 13px;
-    font-weight: 600;
-    margin: 10px 0 4px;
-}
-
-/* ── Form actions ── */
-.form-actions {
+/* Preview summary */
+.preview-summary {
     display: flex;
-    gap: 12px;
-    margin: 24px 0 16px;
+    gap: 16px;
     flex-wrap: wrap;
+    margin-bottom: 12px;
 }
 
-/* ── Buttons ── */
+.summary-stat {
+    background: var(--c-bg);
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 130px;
+}
+
+.summary-stat-label {
+    font-size: 11px;
+    color: var(--c-text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.summary-stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--c-text);
+}
+
+.summary-stat-value.money {
+    color: var(--c-primary);
+}
+
+/* Buttons */
 .btn {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    padding: 10px 20px;
+    padding: 9px 18px;
     border: none;
-    border-radius: 6px;
+    border-radius: var(--radius);
     font-size: 14px;
-    font-family: var(--font);
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.15s;
+    font-family: inherit;
+    text-decoration: none;
 }
 
 .btn:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
+    pointer-events: none;
 }
 
 .btn-primary {
-    background: var(--primary);
+    background: var(--c-primary);
     color: #fff;
 }
 
 .btn-primary:hover:not(:disabled) {
-    background: var(--primary-dark);
-    box-shadow: 0 3px 8px rgba(26, 111, 196, 0.3);
+    background: var(--c-primary-hover);
 }
 
 .btn-secondary {
-    background: var(--bg);
-    color: var(--secondary);
-    border: 1px solid var(--border);
+    background: var(--c-surface);
+    color: var(--c-text);
+    border: 1px solid var(--c-border);
 }
 
 .btn-secondary:hover:not(:disabled) {
-    background: var(--border);
-    color: var(--text);
+    background: var(--c-bg);
+    border-color: #9ca3af;
 }
 
-.btn-large {
-    padding: 12px 28px;
+.btn-danger {
+    background: #fee2e2;
+    color: var(--c-error);
+    border: 1px solid #fca5a5;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: #fecaca;
+}
+
+.btn-success {
+    background: #d1fae5;
+    color: var(--c-success);
+    border: 1px solid #6ee7b7;
+}
+
+.btn-success:hover:not(:disabled) {
+    background: #a7f3d0;
+}
+
+.btn-lg {
+    padding: 11px 24px;
     font-size: 15px;
 }
 
-/* ── Spinner ── */
+/* Spinner */
 .spinner {
-    width: 14px;
-    height: 14px;
-    border: 2px solid rgba(255, 255, 255, 0.4);
-    border-top-color: #fff;
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
     display: inline-block;
-}
-
-.btn-secondary .spinner {
-    border-color: rgba(0, 0, 0, 0.15);
-    border-top-color: var(--secondary);
+    opacity: 0.7;
 }
 
 @keyframes spin {
@@ -866,64 +661,54 @@ body {
     }
 }
 
-/* ── Status messages ── */
+/* Status messages */
 .status-msg {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 8px;
-    padding: 12px 16px;
-    border-radius: 8px;
+    padding: 10px 14px;
+    border-radius: var(--radius);
     font-size: 13px;
-    margin-top: 12px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    line-height: 1.5;
+    font-weight: 500;
 }
 
 .status-success {
-    background: var(--success-bg);
-    border-color: #a3cfbb;
-    color: #0a3622;
+    background: var(--c-success-bg);
+    color: var(--c-success);
+    border: 1px solid #6ee7b7;
 }
 
 .status-error {
-    background: var(--error-bg);
-    border-color: #f1aeb5;
-    color: #58151c;
+    background: var(--c-error-bg);
+    color: var(--c-error);
+    border: 1px solid #fca5a5;
 }
 
-.status-testing {
-    background: var(--warn-bg);
-    border-color: #f0c060;
-    color: #5a4000;
+.status-info {
+    background: var(--c-primary-light);
+    color: var(--c-primary);
+    border: 1px solid #bfdbfe;
 }
 
-/* ── Result card ── */
+.status-warn {
+    background: var(--c-warn-bg);
+    color: var(--c-warn);
+    border: 1px solid #fcd34d;
+}
+
+/* Result card */
 .result-card {
-    margin-top: 18px;
-    background: #f0f7ee;
-    border: 1px solid #a3cfbb;
-    border-radius: 8px;
-    padding: 18px 20px;
+    background: var(--c-success-bg);
+    border: 1px solid #6ee7b7;
+    border-radius: var(--radius);
+    padding: 14px 16px;
 }
 
-.result-card h3 {
-    font-size: 15px;
-    color: var(--success);
-    margin-bottom: 14px;
-}
-
-.result-section {
-    margin-bottom: 14px;
-}
-
-.result-section-title {
-    font-size: 12px;
+.result-card-title {
     font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    margin-bottom: 6px;
+    color: var(--c-success);
+    margin-bottom: 8px;
+    font-size: 14px;
 }
 
 .file-list {
@@ -934,91 +719,27 @@ body {
 }
 
 .file-list li {
+    font-size: 12px;
+    color: var(--c-success);
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 6px;
-    flex-wrap: wrap;
 }
 
 .file-list code {
-    background: #e8f5e9;
-    padding: 2px 7px;
-    border-radius: 4px;
-    font-size: 12px;
-    color: #1b5e20;
-    word-break: break-all;
-}
-
-.file-path-hint {
-    font-size: 10px;
-    color: var(--text-muted);
-    word-break: break-all;
-}
-
-.result-summary {
-    display: flex;
-    gap: 16px;
-    margin-top: 12px;
-    flex-wrap: wrap;
-    border-top: 1px solid #a3cfbb;
-    padding-top: 10px;
-}
-
-.result-stat {
-    font-size: 13px;
-    font-weight: 600;
-    color: #0a3622;
-    background: #c3e6cb;
-    padding: 3px 10px;
-    border-radius: 12px;
-}
-
-/* ── Preview ── */
-.empty-state {
-    text-align: center;
-    padding: 48px 20px;
-    color: var(--text-muted);
-}
-
-.empty-state .hint {
-    font-size: 13px;
-    margin-top: 8px;
-}
-
-.preview-summary {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-}
-
-.summary-item {
-    background: var(--primary-light);
-    border-radius: 8px;
-    padding: 12px 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.summary-label {
+    font-family: monospace;
     font-size: 11px;
-    font-weight: 600;
-    color: var(--primary);
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
+    background: rgba(5, 150, 105, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    word-break: break-all;
 }
 
-.summary-value {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--primary-dark);
-}
-
-.table-wrapper {
+/* Table */
+.table-wrap {
     overflow-x: auto;
-    border-radius: 8px;
-    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    border: 1px solid var(--c-border);
 }
 
 .data-table {
@@ -1028,110 +749,197 @@ body {
 }
 
 .data-table th {
-    background: #e8f0fb;
-    color: var(--primary-dark);
+    background: #f3f4f6;
+    color: var(--c-text-muted);
     font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     padding: 10px 12px;
     text-align: left;
-    border-bottom: 2px solid var(--primary);
+    border-bottom: 1px solid var(--c-border);
     white-space: nowrap;
 }
 
 .data-table td {
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--border);
-    vertical-align: middle;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--c-border);
+    color: var(--c-text);
 }
 
-.data-table tbody tr:hover {
-    background: #f0f6ff;
+.data-table tbody tr:hover td {
+    background: #f9fafb;
 }
 
 .data-table tfoot td {
-    background: #f4f6fa;
-    font-size: 13px;
-    padding: 10px 12px;
-    border-top: 2px solid var(--border);
+    background: #f3f4f6;
+    font-weight: 700;
+    border-top: 2px solid var(--c-border);
+    border-bottom: none;
 }
 
 .text-right {
-    text-align: right;
+    text-align: right !important;
 }
 
 .text-center {
-    text-align: center;
+    text-align: center !important;
 }
 
+/* Category badges */
 .cat-badge {
-    display: inline-block;
-    padding: 2px 9px;
-    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
     font-size: 11px;
     font-weight: 600;
 }
 
 .cat-drug {
-    background: #cfe2ff;
-    color: #084298;
+    background: #dbeafe;
+    color: #1d4ed8;
 }
 
-.cat-material {
-    background: #d1ecf1;
-    color: #0c5460;
+.cat-supply {
+    background: #fef3c7;
+    color: #92400e;
 }
 
-/* ── Footer ── */
-.app-footer {
-    background: var(--card-bg);
-    border-top: 1px solid var(--border);
-    padding: 12px 24px;
-    text-align: center;
+/* Carry-forward box */
+.carry-box {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: var(--radius);
+    padding: 12px 16px;
+}
+
+.carry-box-title {
     font-size: 12px;
-    color: var(--text-muted);
+    font-weight: 700;
+    color: var(--c-success);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
-/* ── Dark mode ── */
+.carry-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.carry-item {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.carry-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--c-text-muted);
+    font-weight: 600;
+}
+
+.carry-val {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--c-text);
+}
+
+/* History table */
+.history-empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--c-text-light);
+    font-size: 14px;
+}
+
+/* Period badge */
+.period-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--c-primary-light);
+    color: var(--c-primary);
+    border: 1px solid #bfdbfe;
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+/* Dark mode */
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg: #1a1d24;
-        --card-bg: #242830;
-        --border: #3a3f4b;
-        --text: #e2e5ec;
-        --text-muted: #8b92a5;
-        --primary-light: #1a2a3f;
-        --success-bg: #0d2e1a;
-        --error-bg: #2e0d0d;
-        --warn-bg: #2e2200;
+        --c-bg: #111827;
+        --c-surface: #1f2937;
+        --c-border: #374151;
+        --c-border-focus: #3b82f6;
+        --c-text: #f9fafb;
+        --c-text-muted: #9ca3af;
+        --c-text-light: #6b7280;
+        --c-primary-light: #1e3a5f;
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .data-table th {
+        background: #374151;
+    }
+
+    .data-table tbody tr:hover td {
+        background: #374151;
+    }
+
+    .data-table tfoot td {
+        background: #374151;
+    }
+
+    .tab-nav {
+        background: #1f2937;
+        border-bottom-color: #374151;
+    }
+
+    .app-footer {
+        background: #1f2937;
+        border-top-color: #374151;
     }
 
     .form-group input,
     .form-group select {
-        background: #1a1d24;
-        color: var(--text);
-        border-color: var(--border);
+        background: #374151;
+        border-color: #4b5563;
+        color: #f9fafb;
     }
 
-    .app-footer {
-        background: #1e2128;
+    .form-group input:focus,
+    .form-group select:focus {
+        background: #1f2937;
     }
 
-    .tab-nav {
-        background: var(--card-bg);
-        border-bottom-color: var(--border);
-    }
-
-    .data-table th {
-        background: #1a2a3f;
-    }
-
-    .data-table tbody tr:hover {
-        background: #1e2535;
+    .form-group input[readonly] {
+        background: #374151;
+        color: #9ca3af;
     }
 
     .info-box {
-        background: #2e2200;
-        border-color: #5a4000;
-        color: #f0c060;
+        background: #1e3a5f;
+        border-color: #2563eb;
+        color: #93c5fd;
+    }
+
+    .summary-stat {
+        background: #374151;
+        border-color: #4b5563;
+    }
+
+    .carry-box {
+        background: #064e3b;
+        border-color: #059669;
     }
 }
 </style>

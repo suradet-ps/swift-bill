@@ -1,0 +1,348 @@
+<script setup lang="ts">
+interface RoundHistoryEntry {
+    id: string;
+    label: string;
+    fiscal_year: number;
+    month: number;
+    round: number;
+    date_from: string;
+    date_to: string;
+    next_reg_no: string;
+    next_running: number;
+    next_po_no: number;
+    remaining_balance: number;
+    budget_total: number;
+    total_amount: number;
+    invoice_count: number;
+    created_at: string;
+}
+
+defineProps<{
+    entries: RoundHistoryEntry[];
+}>();
+
+const emit = defineEmits<{
+    (e: "loadEntry", entry: RoundHistoryEntry): void;
+    (e: "deleteEntry", id: string): void;
+}>();
+
+const THAI_MONTHS = [
+    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
+];
+
+function formatMoney(n: number): string {
+    return n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatDate(yyyymmdd: string): string {
+    if (!yyyymmdd || yyyymmdd.length < 8) return yyyymmdd;
+    const y = parseInt(yyyymmdd.substring(0, 4)) + 543;
+    const m = parseInt(yyyymmdd.substring(4, 6));
+    const d = parseInt(yyyymmdd.substring(6, 8));
+    return `${d} ${THAI_MONTHS[m - 1] ?? ""} ${y}`;
+}
+
+function formatCreatedAt(iso: string): string {
+    try {
+        const d = new Date(iso);
+        return d.toLocaleString("th-TH", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    } catch {
+        return iso;
+    }
+}
+
+function confirmDelete(id: string, label: string) {
+    if (confirm(`ลบประวัติรอบ "${label}" ออก?`)) {
+        emit("deleteEntry", id);
+    }
+}
+</script>
+
+<template>
+<div class="history-wrap">
+    <!-- Header card -->
+    <div class="card header-card">
+        <div class="card-title">📁 ประวัติรอบการทำงาน</div>
+        <div class="card-desc">
+            บันทึกข้อมูล carry-forward แต่ละรอบไว้ที่นี่ เพื่อดึงค่าไปใช้ในรอบถัดไปได้ทันที
+            (บันทึกได้จากแต่ละหน้ารายงานหลังสร้าง PDF สำเร็จ)
+        </div>
+    </div>
+
+    <!-- Empty state -->
+    <div v-if="entries.length === 0" class="card empty-card">
+        <div class="empty-icon">📂</div>
+        <div class="empty-title">ยังไม่มีประวัติรอบ</div>
+        <div class="empty-desc">
+            หลังจากสร้าง PDF แต่ละรายงานสำเร็จ กด "💾 บันทึกรอบนี้สู่ประวัติ"
+            เพื่อบันทึก carry-forward ไว้ใช้งานรอบถัดไป
+        </div>
+    </div>
+
+    <!-- Entry list -->
+    <div v-else class="entries">
+        <div v-for="entry in entries" :key="entry.id" class="entry-card">
+            <!-- Entry header -->
+            <div class="entry-header">
+                <div class="entry-title-row">
+                    <span class="entry-label">{{ entry.label }}</span>
+                    <span class="entry-round-badge">รอบ {{ entry.round }}</span>
+                </div>
+                <div class="entry-meta">
+                    <span class="meta-chip">📅 {{ formatDate(entry.date_from) }} – {{ formatDate(entry.date_to)
+                    }}</span>
+                    <span class="meta-chip">📦 {{ entry.invoice_count }} บิล</span>
+                    <span class="meta-chip money">💰 {{ formatMoney(entry.total_amount) }} บาท</span>
+                    <span class="meta-chip muted">🕐 {{ formatCreatedAt(entry.created_at) }}</span>
+                </div>
+            </div>
+
+            <!-- Carry-forward values -->
+            <div class="carry-section">
+                <div class="carry-title">➡️ ค่า Carry-Forward สำหรับรอบถัดไป (รอบ {{ entry.round + 1 }})</div>
+                <div class="carry-values">
+                    <div class="cv-item">
+                        <span class="cv-label">เลขทะเบียนคุม</span>
+                        <span class="cv-val reg">{{ entry.next_reg_no || "—" }}</span>
+                    </div>
+                    <div class="cv-item">
+                        <span class="cv-label">ลำดับในสมุด</span>
+                        <span class="cv-val">{{ entry.next_running }}</span>
+                    </div>
+                    <div class="cv-item">
+                        <span class="cv-label">เลขขอซื้อ/PO</span>
+                        <span class="cv-val">{{ entry.next_po_no || "—" }}</span>
+                    </div>
+                    <div class="cv-item">
+                        <span class="cv-label">ยอดงบคงเหลือ</span>
+                        <span class="cv-val money">{{ entry.remaining_balance > 0 ? formatMoney(entry.remaining_balance)
+                            : "—" }}</span>
+                    </div>
+                    <div v-if="entry.budget_total > 0" class="cv-item">
+                        <span class="cv-label">งบประมาณรวม</span>
+                        <span class="cv-val">{{ formatMoney(entry.budget_total) }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="entry-actions">
+                <button class="btn btn-primary" @click="emit('loadEntry', entry)">
+                    📥 โหลดค่านี้ไปใช้รอบถัดไป
+                </button>
+                <button class="btn btn-danger" @click="confirmDelete(entry.id, entry.label)">
+                    🗑️ ลบ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- How to use -->
+    <div class="card tip-card">
+        <div class="card-title">💡 วิธีใช้งานประวัติรอบ</div>
+        <ol class="tip-list">
+            <li>สร้าง PDF แต่ละรายงานสำเร็จแล้ว → กด <strong>💾 บันทึกรอบนี้สู่ประวัติ</strong></li>
+            <li>เมื่อเริ่มรอบใหม่ → กด <strong>📥 โหลดค่านี้ไปใช้รอบถัดไป</strong></li>
+            <li>ระบบจะ pre-fill ค่า carry-forward ให้ทุกแท็บอัตโนมัติ และสลับไปแท็บ 🔍 ดึงข้อมูล</li>
+            <li>เลือกช่วงวันที่ใหม่ → ดึงข้อมูล → สร้างรายงานได้เลย</li>
+        </ol>
+    </div>
+</div>
+</template>
+
+<style scoped>
+.history-wrap {
+    max-width: 900px;
+}
+
+.header-card {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-color: #bae6fd;
+}
+
+/* Empty state */
+.empty-card {
+    text-align: center;
+    padding: 56px 20px !important;
+}
+
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.empty-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--c-text-muted);
+    margin-bottom: 8px;
+}
+
+.empty-desc {
+    font-size: 13px;
+    color: var(--c-text-light);
+    max-width: 400px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* Entry cards */
+.entries {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.entry-card {
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    box-shadow: var(--shadow);
+    transition: border-color 0.15s;
+}
+
+.entry-card:hover {
+    border-color: #93c5fd;
+}
+
+.entry-header {
+    margin-bottom: 12px;
+}
+
+.entry-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.entry-label {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--c-text);
+}
+
+.entry-round-badge {
+    background: var(--c-primary-light);
+    color: var(--c-primary);
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.entry-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.meta-chip {
+    font-size: 12px;
+    color: var(--c-text-muted);
+    background: var(--c-bg);
+    border: 1px solid var(--c-border);
+    border-radius: 999px;
+    padding: 2px 10px;
+}
+
+.meta-chip.money {
+    color: #1d4ed8;
+    background: #eff6ff;
+    border-color: #bfdbfe;
+}
+
+.meta-chip.muted {
+    color: var(--c-text-light);
+    font-size: 11px;
+}
+
+/* Carry values */
+.carry-section {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 14px;
+}
+
+.carry-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #059669;
+    margin-bottom: 10px;
+}
+
+.carry-values {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.cv-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 120px;
+}
+
+.cv-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.cv-val {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--c-text);
+}
+
+.cv-val.reg {
+    color: #1d4ed8;
+    font-family: monospace;
+}
+
+.cv-val.money {
+    color: #059669;
+}
+
+/* Entry actions */
+.entry-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* Tip card */
+.tip-card {
+    background: #fffbeb;
+    border-color: #fcd34d;
+}
+
+.tip-list {
+    padding-left: 20px;
+    line-height: 2;
+    font-size: 13px;
+    color: var(--c-text-muted);
+}
+
+.tip-list li {
+    margin-bottom: 4px;
+}
+
+.tip-list strong {
+    color: var(--c-text);
+}
+</style>

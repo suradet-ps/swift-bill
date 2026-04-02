@@ -1,7 +1,8 @@
 use chrono::{Datelike, NaiveDate};
 
 use crate::models::{
-    CoverLetterPage, GenerateParams, InvoiceRow, InvoiceSubmissionRow, ReceivingSummaryRow,
+    CoverLetterPage, CoverLettersParams, InvoiceRow, InvoiceSubmissionParams, InvoiceSubmissionRow,
+    ReceivingSummaryParams, ReceivingSummaryRow,
 };
 
 /// Format a NaiveDate as a Thai short date string, e.g. "5 ม.ค. 69"
@@ -74,14 +75,12 @@ fn compute_reg_for_item(item_index: u32, start_running: u32, start_reg_num: u32)
 
 pub fn process_invoice_submission(
     invoices: &[InvoiceRow],
-    params: &GenerateParams,
+    params: &InvoiceSubmissionParams,
 ) -> Vec<InvoiceSubmissionRow> {
     let (reg_prefix, reg_start_num) = parse_reg_no(&params.start_reg_no);
     let mut rows: Vec<InvoiceSubmissionRow> = Vec::with_capacity(invoices.len());
 
     for (i, inv) in invoices.iter().enumerate() {
-        // seq is purely within this batch (1-based); the round label on the
-        // printed document already disambiguates it across rounds.
         let seq = (i as u32) + 1;
         let (reg_num, running) =
             compute_reg_for_item(i as u32, params.start_running, reg_start_num);
@@ -112,15 +111,11 @@ pub fn process_invoice_submission(
 
 pub fn process_receiving_summary(
     invoices: &[InvoiceRow],
-    params: &GenerateParams,
+    params: &ReceivingSummaryParams,
 ) -> Vec<ReceivingSummaryRow> {
     let (reg_prefix, reg_start_num) = parse_reg_no(&params.start_reg_no);
     let mut rows: Vec<ReceivingSummaryRow> = Vec::with_capacity(invoices.len());
 
-    // PO-related counters continue across rounds.
-    // start_po_no already holds the correct starting value for this round.
-    // request_no and report_no increment by 2 per row.
-    // po_no increments by 1 per row.
     let mut request_no = params.start_po_no;
     let mut report_no = params.start_po_no + 1;
     let mut po_no = params.start_po_no;
@@ -135,9 +130,6 @@ pub fn process_receiving_summary(
         let receive_date_str = format_thai_date(&inv.receive_date);
         let po_date_str = receive_date_str.clone();
 
-        // Receiving code: sequential within this batch (1-based).
-        // Across rounds the counter is continuous because start_running is
-        // already set to the next available slot by the user.
         let receiving_code = (i as u32) + 1;
 
         rows.push(ReceivingSummaryRow {
@@ -169,11 +161,10 @@ pub fn process_receiving_summary(
 
 pub fn process_cover_letters(
     invoices: &[InvoiceRow],
-    params: &GenerateParams,
+    params: &CoverLettersParams,
 ) -> Vec<CoverLetterPage> {
-    // fiscal_year shown on cover letter (Buddhist year)
-    let year: i32 = params.start_date[0..4].parse().unwrap_or(2569);
-    let fiscal_year = format!("{}", year + 543);
+    // fiscal_year is already a Buddhist year supplied by the frontend
+    let fiscal_year = format!("{}", params.year);
 
     let date_text = if let Some(ref dt) = params.approval_date {
         dt.clone()
@@ -186,11 +177,7 @@ pub fn process_cover_letters(
 
     let mut pages: Vec<CoverLetterPage> = Vec::with_capacity(invoices.len());
 
-    // Running balance starts from previous_balance provided by user.
-    // This value already accounts for all previous rounds.
     let mut running_balance = params.previous_balance;
-
-    // Cumulative spent before this batch = budget_total - previous_balance
     let total_budget = params.budget_total;
     let mut cumulative_spent = total_budget - params.previous_balance;
 
@@ -211,12 +198,26 @@ pub fn process_cover_letters(
             date_text: date_text.clone(),
         });
 
-        // Advance running totals for the next page
         running_balance = remaining_balance;
         cumulative_spent += current_amount;
     }
 
     pages
+}
+
+// ---------------------------------------------------------------------------
+// Compute next reg_no and running slot after processing `count` items.
+// ---------------------------------------------------------------------------
+
+/// Returns `(next_reg_no_string, next_running_slot)` — the register number and
+/// position that the *next* batch should start from.
+pub fn compute_next_reg(start_reg_no: &str, start_running: u32, count: u32) -> (String, u32) {
+    let (prefix, start_num) = parse_reg_no(start_reg_no);
+    let next_absolute = start_running + count;
+    let reg_offset = next_absolute / 10;
+    let next_running = next_absolute % 10;
+    let next_reg_no = format_reg_no(&prefix, start_num + reg_offset);
+    (next_reg_no, next_running)
 }
 
 // ---------------------------------------------------------------------------
@@ -226,6 +227,9 @@ pub fn process_cover_letters(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::{
+        CoverLettersParams, DbConfig, InvoiceSubmissionParams, ReceivingSummaryParams,
+    };
 
     fn sample_invoices() -> Vec<InvoiceRow> {
         vec![
@@ -259,26 +263,66 @@ mod tests {
         ]
     }
 
-    fn sample_params() -> GenerateParams {
-        GenerateParams {
-            db_config: crate::models::DbConfig {
-                host: "localhost".to_string(),
+    fn sample_submission_params() -> InvoiceSubmissionParams {
+        InvoiceSubmissionParams {
+            db_config: DbConfig {
+                host: "localhost".into(),
                 port: 1433,
-                database: "test".to_string(),
-                username: "sa".to_string(),
-                password: "pass".to_string(),
+                database: "test".into(),
+                username: "sa".into(),
+                password: "pass".into(),
             },
+            date_from: "20260101".into(),
+            date_to: "20260110".into(),
             year: 2569,
             month: 1,
-            half: 1,
+            round: 1,
+            start_reg_no: "69ภ12".into(),
+            start_running: 3,
+            output_dir: "/tmp".into(),
+        }
+    }
+
+    fn sample_summary_params() -> ReceivingSummaryParams {
+        ReceivingSummaryParams {
+            db_config: DbConfig {
+                host: "localhost".into(),
+                port: 1433,
+                database: "test".into(),
+                username: "sa".into(),
+                password: "pass".into(),
+            },
+            date_from: "20260101".into(),
+            date_to: "20260110".into(),
+            year: 2569,
+            month: 1,
+            round: 1,
+            start_po_no: 253,
+            start_reg_no: "69ภ12".into(),
+            start_running: 3,
+            approval_date: Some("15 ม.ค. 69".into()),
+            output_dir: "/tmp".into(),
+        }
+    }
+
+    fn sample_cover_params() -> CoverLettersParams {
+        CoverLettersParams {
+            db_config: DbConfig {
+                host: "localhost".into(),
+                port: 1433,
+                database: "test".into(),
+                username: "sa".into(),
+                password: "pass".into(),
+            },
+            date_from: "20260101".into(),
+            date_to: "20260110".into(),
+            year: 2569,
+            month: 1,
             round: 1,
             budget_total: 5_843_812.60,
             previous_balance: 1_000_000.0,
-            start_po_no: 253,
-            start_reg_no: "69ภ12".to_string(),
-            start_running: 3,
-            output_dir: "/tmp".to_string(),
-            approval_date: Some("15 ม.ค. 69".to_string()),
+            approval_date: Some("15 ม.ค. 69".into()),
+            output_dir: "/tmp".into(),
         }
     }
 
@@ -316,7 +360,7 @@ mod tests {
     #[test]
     fn test_invoice_submission() {
         let invoices = sample_invoices();
-        let params = sample_params();
+        let params = sample_submission_params();
         let rows = process_invoice_submission(&invoices, &params);
 
         assert_eq!(rows.len(), 3);
@@ -332,7 +376,7 @@ mod tests {
     #[test]
     fn test_receiving_summary_counters() {
         let invoices = sample_invoices();
-        let params = sample_params();
+        let params = sample_summary_params();
         let rows = process_receiving_summary(&invoices, &params);
 
         assert_eq!(rows.len(), 3);
@@ -353,7 +397,7 @@ mod tests {
     #[test]
     fn test_cover_letters_running_balance() {
         let invoices = sample_invoices();
-        let params = sample_params();
+        let params = sample_cover_params();
         let pages = process_cover_letters(&invoices, &params);
 
         assert_eq!(pages.len(), 3);
@@ -377,7 +421,7 @@ mod tests {
     #[test]
     fn test_cover_letters_cumulative_spent() {
         let invoices = sample_invoices();
-        let params = sample_params();
+        let params = sample_cover_params();
         let pages = process_cover_letters(&invoices, &params);
 
         let initial_spent = params.budget_total - params.previous_balance;
@@ -385,6 +429,15 @@ mod tests {
         assert!((pages[0].previous_spent - initial_spent).abs() < 0.01);
         assert!((pages[1].previous_spent - (initial_spent + 10_000.0)).abs() < 0.01);
         assert!((pages[2].previous_spent - (initial_spent + 30_000.0)).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_cover_letters_fiscal_year() {
+        let invoices = sample_invoices();
+        let params = sample_cover_params();
+        let pages = process_cover_letters(&invoices, &params);
+        // year = 2569 (Buddhist, passed directly)
+        assert_eq!(pages[0].fiscal_year, "2569");
     }
 
     #[test]
@@ -402,7 +455,7 @@ mod tests {
             });
         }
 
-        let mut params = sample_params();
+        let mut params = sample_submission_params();
         params.start_running = 8;
         params.start_reg_no = "69ภ12".to_string();
 
@@ -426,14 +479,11 @@ mod tests {
 
     #[test]
     fn test_round2_po_numbering() {
-        // Round 2 scenario: previous round used 3 items with start_po_no=253
-        // so round 2 starts at 253 + 3 = 256 for po_no,
-        // and request_no = 256, report_no = 257 for the first item.
         let invoices = sample_invoices();
-        let mut params = sample_params();
+        let mut params = sample_summary_params();
         params.round = 2;
-        params.start_po_no = 256; // user sets this based on previous round's last po_no + 1
-        params.start_running = 3; // first available slot in register
+        params.start_po_no = 256;
+        params.start_running = 3;
 
         let rows = process_receiving_summary(&invoices, &params);
         assert_eq!(rows[0].po_no, 256);
@@ -441,5 +491,29 @@ mod tests {
         assert_eq!(rows[0].report_no, 257);
         assert_eq!(rows[1].po_no, 257);
         assert_eq!(rows[2].po_no, 258);
+    }
+
+    #[test]
+    fn test_compute_next_reg_no_overflow() {
+        // 3 items starting at pos 3 in reg 12 → next is pos 6 in reg 12
+        let (next_reg, next_run) = compute_next_reg("69ภ12", 3, 3);
+        assert_eq!(next_reg, "69ภ12");
+        assert_eq!(next_run, 6);
+    }
+
+    #[test]
+    fn test_compute_next_reg_with_overflow() {
+        // 5 items starting at pos 8 in reg 12 → last at pos 2 in reg 13, next is pos 3
+        let (next_reg, next_run) = compute_next_reg("69ภ12", 8, 5);
+        assert_eq!(next_reg, "69ภ13");
+        assert_eq!(next_run, 3);
+    }
+
+    #[test]
+    fn test_compute_next_reg_exact_boundary() {
+        // 2 items starting at pos 8 → fills pos 8,9 → next is pos 0 in reg 13
+        let (next_reg, next_run) = compute_next_reg("69ภ12", 8, 2);
+        assert_eq!(next_reg, "69ภ13");
+        assert_eq!(next_run, 0);
     }
 }
