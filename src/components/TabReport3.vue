@@ -351,31 +351,33 @@ function saveToHistory() {
 
 <style scoped>
 .report-wrap {
-    max-width: 800px;
+    width: 100%;
 }
 
+/* ── Info banner ─────────────────────────────────────────────────────────────── */
 .info-banner {
-    background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%);
-    border-color: #e9d5ff;
+    background: linear-gradient(135deg, var(--c-primary-light) 0%, #dce9b0 100%);
+    border-color: #c4d49a;
 }
 
 .banner-title {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
-    color: #6b21a8;
-    margin-bottom: 4px;
+    color: var(--c-primary);
+    margin-bottom: 5px;
 }
 
 .banner-desc {
-    font-size: 13px;
-    color: #9333ea;
+    font-size: 14px;
+    color: var(--c-primary-mid);
 }
 
+/* ── No-data placeholder ─────────────────────────────────────────────────────── */
 .no-data {
     text-align: center;
-    padding: 20px;
+    padding: 22px;
     color: var(--c-warn);
-    font-size: 14px;
+    font-size: 15px;
     background: var(--c-warn-bg);
     border-radius: var(--radius);
 }
@@ -385,16 +387,17 @@ function saveToHistory() {
 }
 
 .actions {
-    margin-top: 20px;
+    margin-top: 22px;
 }
 
-/* Budget preview table */
+/* ── Budget preview calculation ──────────────────────────────────────────────── */
+/* #4e5538 on #eef3df → ~6.5:1 ✓   (#1b1f0d on #eef3df → ~15:1 ✓)              */
 .budget-preview {
-    background: #f8fafc;
-    border: 1px solid var(--c-border);
+    background: var(--c-primary-light);
+    border: 1px solid #c4d49a;
     border-radius: var(--radius);
-    padding: 14px 16px;
-    margin: 16px 0;
+    padding: 16px 18px;
+    margin: 18px 0;
 }
 
 .budget-preview-title {
@@ -402,36 +405,38 @@ function saveToHistory() {
     font-weight: 700;
     color: var(--c-text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 10px;
+    letter-spacing: 0.06em;
+    margin-bottom: 12px;
 }
 
 .budget-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 5px 0;
-    border-bottom: 1px solid var(--c-border);
-    font-size: 13px;
+    padding: 6px 0;
+    border-bottom: 1px solid #c4d49a;
+    font-size: 14px;
 }
 
 .budget-row:last-child {
     border-bottom: none;
 }
 
+/* warm amber highlight for debit row  */
 .budget-row.highlight {
-    background: #fef3c7;
-    margin: 0 -4px;
-    padding: 5px 4px;
+    background: rgba(251, 191, 36, 0.15);
+    margin: 0 -6px;
+    padding: 6px 6px;
     border-radius: 4px;
+    border-bottom-color: transparent;
 }
 
 .budget-row.total {
     font-weight: 700;
-    font-size: 14px;
+    font-size: 15px;
     margin-top: 4px;
-    padding-top: 8px;
-    border-top: 2px solid var(--c-border);
+    padding-top: 10px;
+    border-top: 2px solid var(--c-primary-mid);
     border-bottom: none;
 }
 
@@ -442,23 +447,26 @@ function saveToHistory() {
 .budget-val {
     font-variant-numeric: tabular-nums;
     font-weight: 600;
+    color: var(--c-text);
 }
 
+/* #b91c1c on #eef3df → 5.8:1 ✓ */
 .budget-val.debit {
-    color: #dc2626;
+    color: var(--c-error);
 }
 
+/* #166534 on #eef3df → ~7.5:1 ✓ */
 .budget-val.positive {
-    color: #059669;
+    color: var(--c-success);
 }
 
 .budget-val.negative {
-    color: #dc2626;
+    color: var(--c-error);
 }
 
-/* Result */
+/* ── Result section ──────────────────────────────────────────────────────────── */
 .file-path {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--c-text-muted);
     word-break: break-all;
     display: block;
@@ -469,26 +477,80 @@ function saveToHistory() {
 .result-stats {
     display: flex;
     gap: 8px;
-    margin-top: 12px;
+    margin-top: 14px;
     flex-wrap: wrap;
 }
 
+/* #166534 on #dcfce7 → 6.8:1 ✓ */
 .stat-chip {
-    background: #d1fae5;
-    color: #065f46;
+    background: #dcfce7;
+    color: var(--c-success);
+    border: 1px solid #86efac;
     border-radius: 999px;
-    padding: 3px 12px;
-    font-size: 12px;
+    padding: 4px 14px;
+    font-size: 13px;
     font-weight: 600;
 }
 
+/* #4d6320 on #eef3df → ~6.7:1 ✓ */
 .stat-chip.money {
-    background: #dbeafe;
-    color: #1e40af;
+    background: var(--c-primary-light);
+    color: var(--c-primary);
+    border-color: #c4d49a;
 }
 
 .save-actions {
     display: flex;
-    gap: 8px;
+    gap: 10px;
+}
+
+/* ── Dark mode overrides ─────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+    .info-banner {
+        background: linear-gradient(135deg, #1e2b0c 0%, #263510 100%);
+        border-color: #385018;
+    }
+
+    .banner-desc {
+        color: var(--c-primary-mid);
+    }
+
+    .budget-preview {
+        background: #1e2b0c;
+        border-color: #385018;
+    }
+
+    .budget-row {
+        border-bottom-color: #2e3820;
+    }
+
+    .budget-row.highlight {
+        background: rgba(251, 191, 36, 0.10);
+        border-bottom-color: transparent;
+    }
+
+    .budget-row.total {
+        border-top-color: var(--c-primary-mid);
+    }
+
+    .budget-val.debit {
+        color: var(--c-error);
+    }
+
+    .budget-val.positive {
+        color: var(--c-success);
+    }
+
+    .stat-chip {
+        background: #052e16;
+        color: #4ade80;
+        border-color: #166534;
+    }
+
+    .stat-chip.money {
+        background: #1e2b0c;
+        color: var(--c-primary);
+        border-color: #385018;
+    }
 }
 </style>

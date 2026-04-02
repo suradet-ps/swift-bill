@@ -97,7 +97,7 @@ function confirmDelete(id: string, label: string) {
                 </div>
                 <div class="entry-meta">
                     <span class="meta-chip">📅 {{ formatDate(entry.date_from) }} – {{ formatDate(entry.date_to)
-                    }}</span>
+                        }}</span>
                     <span class="meta-chip">📦 {{ entry.invoice_count }} บิล</span>
                     <span class="meta-chip money">💰 {{ formatMoney(entry.total_amount) }} บาท</span>
                     <span class="meta-chip muted">🕐 {{ formatCreatedAt(entry.created_at) }}</span>
@@ -159,62 +159,64 @@ function confirmDelete(id: string, label: string) {
 
 <style scoped>
 .history-wrap {
-    max-width: 900px;
+    width: 100%;
 }
 
+/* #4d6320 on #eef3df → ~6.7:1 ✓ */
 .header-card {
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    border-color: #bae6fd;
+    background: linear-gradient(135deg, var(--c-primary-light) 0%, #dce9b0 100%);
+    border-color: #c4d49a;
 }
 
 /* Empty state */
 .empty-card {
     text-align: center;
-    padding: 56px 20px !important;
+    padding: 60px 20px !important;
 }
 
 .empty-icon {
-    font-size: 48px;
-    margin-bottom: 16px;
+    font-size: 52px;
+    margin-bottom: 18px;
 }
 
 .empty-title {
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 600;
     color: var(--c-text-muted);
     margin-bottom: 8px;
 }
 
 .empty-desc {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--c-text-light);
-    max-width: 400px;
+    max-width: 420px;
     margin: 0 auto;
-    line-height: 1.6;
+    line-height: 1.65;
 }
 
 /* Entry cards */
 .entries {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
 }
 
 .entry-card {
     background: var(--c-surface);
     border: 1px solid var(--c-border);
     border-radius: var(--radius-lg);
-    padding: 16px 20px;
+    padding: 18px 22px;
     box-shadow: var(--shadow);
-    transition: border-color 0.15s;
+    transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .entry-card:hover {
-    border-color: #93c5fd;
+    border-color: var(--c-primary-mid);
+    box-shadow: var(--shadow-md);
 }
 
 .entry-header {
-    margin-bottom: 12px;
+    margin-bottom: 14px;
 }
 
 .entry-title-row {
@@ -225,18 +227,19 @@ function confirmDelete(id: string, label: string) {
 }
 
 .entry-label {
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 700;
     color: var(--c-text);
 }
 
+/* #4d6320 on #eef3df → ~6.7:1 ✓ */
 .entry-round-badge {
     background: var(--c-primary-light);
     color: var(--c-primary);
-    border: 1px solid #bfdbfe;
+    border: 1px solid #c4d49a;
     border-radius: 999px;
-    padding: 2px 10px;
-    font-size: 12px;
+    padding: 3px 12px;
+    font-size: 13px;
     font-weight: 600;
 }
 
@@ -247,75 +250,79 @@ function confirmDelete(id: string, label: string) {
 }
 
 .meta-chip {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--c-text-muted);
     background: var(--c-bg);
     border: 1px solid var(--c-border);
     border-radius: 999px;
-    padding: 2px 10px;
+    padding: 3px 11px;
 }
 
+/* #4d6320 on #eef3df → ~6.7:1 ✓ */
 .meta-chip.money {
-    color: #1d4ed8;
-    background: #eff6ff;
-    border-color: #bfdbfe;
+    color: var(--c-primary);
+    background: var(--c-primary-light);
+    border-color: #c4d49a;
 }
 
 .meta-chip.muted {
     color: var(--c-text-light);
-    font-size: 11px;
+    font-size: 12px;
 }
 
 /* Carry values */
 .carry-section {
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
+    background: var(--c-primary-light);
+    border: 1px solid #c4d49a;
     border-radius: var(--radius);
-    padding: 12px 14px;
+    padding: 13px 16px;
     margin-bottom: 14px;
 }
 
+/* #4d6320 on #eef3df → ~6.7:1 ✓ */
 .carry-title {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
-    color: #059669;
+    color: var(--c-primary);
     margin-bottom: 10px;
 }
 
 .carry-values {
     display: flex;
-    gap: 20px;
+    gap: 24px;
     flex-wrap: wrap;
 }
 
 .cv-item {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    min-width: 120px;
+    gap: 3px;
+    min-width: 130px;
 }
 
+/* #4e5538 on #eef3df → ~6.5:1 ✓ */
 .cv-label {
-    font-size: 10px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: #6b7280;
+    color: var(--c-text-muted);
     font-weight: 600;
 }
 
 .cv-val {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
     color: var(--c-text);
 }
 
+/* #4d6320 on #eef3df → ~6.7:1 ✓ */
 .cv-val.reg {
-    color: #1d4ed8;
-    font-family: monospace;
+    color: var(--c-primary);
+    font-family: "Consolas", "Fira Code", monospace;
 }
 
 .cv-val.money {
-    color: #059669;
+    color: var(--c-primary);
 }
 
 /* Entry actions */
@@ -325,16 +332,16 @@ function confirmDelete(id: string, label: string) {
     align-items: center;
 }
 
-/* Tip card */
+/* Tip card — olive tint instead of yellow */
 .tip-card {
-    background: #fffbeb;
-    border-color: #fcd34d;
+    background: var(--c-primary-light);
+    border-color: #c4d49a;
 }
 
 .tip-list {
     padding-left: 20px;
-    line-height: 2;
-    font-size: 13px;
+    line-height: 2.1;
+    font-size: 14px;
     color: var(--c-text-muted);
 }
 
@@ -344,5 +351,34 @@ function confirmDelete(id: string, label: string) {
 
 .tip-list strong {
     color: var(--c-text);
+}
+
+/* ── Dark Mode ────────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+    .header-card {
+        background: linear-gradient(135deg, #1e2b0c 0%, #263510 100%);
+        border-color: #385018;
+    }
+
+    .entry-round-badge {
+        background: #1e2b0c;
+        border-color: #385018;
+    }
+
+    .meta-chip.money {
+        background: #1e2b0c;
+        color: var(--c-primary);
+        border-color: #385018;
+    }
+
+    .carry-section {
+        background: #1e2b0c;
+        border-color: #385018;
+    }
+
+    .tip-card {
+        background: #1e2b0c;
+        border-color: #385018;
+    }
 }
 </style>

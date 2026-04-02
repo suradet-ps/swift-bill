@@ -297,31 +297,31 @@ function saveToHistory() {
 
 <style scoped>
 .report-wrap {
-    max-width: 800px;
+    width: 100%;
 }
 
 .info-banner {
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border-color: #bfdbfe;
+    background: linear-gradient(135deg, var(--c-primary-light) 0%, #dce9b0 100%);
+    border-color: #c4d49a;
 }
 
 .banner-title {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
-    color: #1e40af;
-    margin-bottom: 4px;
+    color: var(--c-primary);
+    margin-bottom: 5px;
 }
 
 .banner-desc {
-    font-size: 13px;
-    color: #3b82f6;
+    font-size: 14px;
+    color: var(--c-primary-mid);
 }
 
 .no-data {
     text-align: center;
     padding: 20px;
     color: var(--c-warn);
-    font-size: 14px;
+    font-size: 15px;
     background: var(--c-warn-bg);
     border-radius: var(--radius);
 }
@@ -331,11 +331,11 @@ function saveToHistory() {
 }
 
 .actions {
-    margin-top: 20px;
+    margin-top: 22px;
 }
 
 .file-path {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--c-text-muted);
     word-break: break-all;
     display: block;
@@ -346,26 +346,53 @@ function saveToHistory() {
 .result-stats {
     display: flex;
     gap: 8px;
-    margin-top: 12px;
+    margin-top: 14px;
     flex-wrap: wrap;
 }
 
+/* #166534 on #dcfce7 → 6.8:1 ✓ */
 .stat-chip {
-    background: #d1fae5;
-    color: #065f46;
+    background: #dcfce7;
+    color: var(--c-success);
+    border: 1px solid #86efac;
     border-radius: 999px;
-    padding: 3px 12px;
-    font-size: 12px;
+    padding: 4px 14px;
+    font-size: 13px;
     font-weight: 600;
 }
 
+/* #4d6320 on #eef3df → ~6.7:1 ✓ */
 .stat-chip.money {
-    background: #dbeafe;
-    color: #1e40af;
+    background: var(--c-primary-light);
+    color: var(--c-primary);
+    border-color: #c4d49a;
 }
 
 .save-actions {
     display: flex;
-    gap: 8px;
+    gap: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+    .info-banner {
+        background: linear-gradient(135deg, #1e2b0c 0%, #263510 100%);
+        border-color: #385018;
+    }
+
+    .banner-desc {
+        color: var(--c-primary-mid);
+    }
+
+    .stat-chip {
+        background: #052e16;
+        color: #4ade80;
+        border-color: #166534;
+    }
+
+    .stat-chip.money {
+        background: #1e2b0c;
+        color: var(--c-primary);
+        border-color: #385018;
+    }
 }
 </style>

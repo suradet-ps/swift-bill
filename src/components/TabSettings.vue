@@ -147,19 +147,28 @@ async function testConnection() {
 
 <style scoped>
 .settings-wrap {
-    max-width: 800px;
+    width: 100%;
 }
 
 .actions {
-    margin-top: 20px;
+    margin-top: 22px;
 }
 
 code {
-    font-family: monospace;
+    font-family: "Consolas", "Fira Code", monospace;
     font-size: 12px;
-    background: #f3f4f6;
-    padding: 1px 5px;
-    border-radius: 3px;
-    color: #374151;
+    background: var(--c-primary-light);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--c-primary);
+    border: 1px solid #c4d49a;
+}
+
+@media (prefers-color-scheme: dark) {
+    code {
+        background: #1e2b0c;
+        color: var(--c-primary);
+        border-color: #385018;
+    }
 }
 </style>

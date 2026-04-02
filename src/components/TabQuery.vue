@@ -285,7 +285,7 @@ async function fetchData() {
 
 <style scoped>
 .query-wrap {
-    max-width: 1000px;
+    width: 100%;
 }
 
 .actions {
@@ -315,45 +315,47 @@ async function fetchData() {
     text-align: center;
     padding: 20px;
     color: var(--c-warn);
-    font-size: 14px;
+    font-size: 15px;
 }
 
 .empty-card {
     text-align: center;
-    padding: 48px 20px !important;
+    padding: 56px 20px !important;
 }
 
 .empty-icon {
-    font-size: 40px;
-    margin-bottom: 12px;
+    font-size: 44px;
+    margin-bottom: 14px;
 }
 
 .empty-text {
-    font-size: 15px;
+    font-size: 16px;
+    font-weight: 600;
     color: var(--c-text-muted);
     margin-bottom: 6px;
 }
 
 .empty-hint {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--c-text-light);
 }
 
 .num {
     color: var(--c-text-light);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .money-cell {
     font-variant-numeric: tabular-nums;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 code {
-    font-family: monospace;
+    font-family: "Consolas", "Fira Code", monospace;
     font-size: 12px;
-    background: #f3f4f6;
-    padding: 1px 5px;
-    border-radius: 3px;
+    background: var(--c-primary-light);
+    color: var(--c-primary);
+    padding: 2px 6px;
+    border-radius: 4px;
 }
 </style>
