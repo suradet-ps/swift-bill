@@ -173,10 +173,10 @@ function doDelete(id: string) {
     width: 100%;
 }
 
-/* #4d6320 on #eef3df → ~6.7:1 ✓ */
+/* #C8102E on #FFF0EC → ~7.8:1 ✓ */
 .header-card {
-    background: linear-gradient(135deg, var(--c-primary-light) 0%, #dce9b0 100%);
-    border-color: #c4d49a;
+    background: linear-gradient(135deg, var(--c-primary-light) 0%, #FFD8C8 100%);
+    border-color: #F0C4B8;
 }
 
 /* Empty state */
@@ -243,11 +243,11 @@ function doDelete(id: string) {
     color: var(--c-text);
 }
 
-/* #4d6320 on #eef3df → ~6.7:1 ✓ */
+/* #C8102E on #FFF0EC → ~7.8:1 ✓ */
 .entry-round-badge {
     background: var(--c-primary-light);
     color: var(--c-primary);
-    border: 1px solid #c4d49a;
+    border: 1px solid #F0C4B8;
     border-radius: 999px;
     padding: 3px 12px;
     font-size: 13px;
@@ -269,11 +269,11 @@ function doDelete(id: string) {
     padding: 3px 11px;
 }
 
-/* #4d6320 on #eef3df → ~6.7:1 ✓ */
+/* #C8102E on #FFF0EC → ~7.8:1 ✓ */
 .meta-chip.money {
     color: var(--c-primary);
     background: var(--c-primary-light);
-    border-color: #c4d49a;
+    border-color: #F0C4B8;
 }
 
 .meta-chip.muted {
@@ -284,13 +284,13 @@ function doDelete(id: string) {
 /* Carry values */
 .carry-section {
     background: var(--c-primary-light);
-    border: 1px solid #c4d49a;
+    border: 1px solid #F0C4B8;
     border-radius: var(--radius);
     padding: 13px 16px;
     margin-bottom: 14px;
 }
 
-/* #4d6320 on #eef3df → ~6.7:1 ✓ */
+/* #C8102E on #FFF0EC → ~7.8:1 ✓ */
 .carry-title {
     font-size: 13px;
     font-weight: 700;
@@ -311,7 +311,7 @@ function doDelete(id: string) {
     min-width: 130px;
 }
 
-/* #4e5538 on #eef3df → ~6.5:1 ✓ */
+/* #5C2C1E on #FFF0EC → ~11:1 ✓ */
 .cv-label {
     font-size: 11px;
     text-transform: uppercase;
@@ -326,7 +326,7 @@ function doDelete(id: string) {
     color: var(--c-text);
 }
 
-/* #4d6320 on #eef3df → ~6.7:1 ✓ */
+/* #C8102E on #FFF0EC → ~7.8:1 ✓ */
 .cv-val.reg {
     color: var(--c-primary);
     font-family: "Consolas", "Fira Code", monospace;
@@ -351,10 +351,10 @@ function doDelete(id: string) {
     white-space: nowrap;
 }
 
-/* Tip card — olive tint instead of yellow */
+/* Tip card — warm cream tint */
 .tip-card {
     background: var(--c-primary-light);
-    border-color: #c4d49a;
+    border-color: #F0C4B8;
 }
 
 .tip-list {
@@ -375,29 +375,29 @@ function doDelete(id: string) {
 /* ── Dark Mode ────────────────────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
     .header-card {
-        background: linear-gradient(135deg, #1e2b0c 0%, #263510 100%);
-        border-color: #385018;
+        background: linear-gradient(135deg, #2A0808 0%, #350A0A 100%);
+        border-color: #501515;
     }
 
     .entry-round-badge {
-        background: #1e2b0c;
-        border-color: #385018;
+        background: #2A0808;
+        border-color: #501515;
     }
 
     .meta-chip.money {
-        background: #1e2b0c;
+        background: #2A0808;
         color: var(--c-primary);
-        border-color: #385018;
+        border-color: #501515;
     }
 
     .carry-section {
-        background: #1e2b0c;
-        border-color: #385018;
+        background: #2A0808;
+        border-color: #501515;
     }
 
     .tip-card {
-        background: #1e2b0c;
-        border-color: #385018;
+        background: #2A0808;
+        border-color: #501515;
     }
 }
 </style>

@@ -334,8 +334,8 @@ function saveToHistory() {
 }
 
 .info-banner {
-    background: linear-gradient(135deg, var(--c-primary-light) 0%, #dde9b0 100%);
-    border-color: #c4d49a;
+    background: linear-gradient(135deg, var(--c-primary-light) 0%, #FFD8C8 100%);
+    border-color: #F0C4B8;
 }
 
 .banner-title {
@@ -386,7 +386,7 @@ function saveToHistory() {
 .stat-chip {
     background: var(--c-primary-light);
     color: var(--c-primary);
-    border: 1px solid #c4d49a;
+    border: 1px solid #F0C4B8;
     border-radius: 999px;
     padding: 4px 14px;
     font-size: 13px;
@@ -394,7 +394,7 @@ function saveToHistory() {
 }
 
 .stat-chip.money {
-    background: #eef3df;
+    background: #FFF0EC;
     color: var(--c-primary-hover);
     border-color: #b8cc80;
 }
@@ -406,20 +406,20 @@ function saveToHistory() {
 
 @media (prefers-color-scheme: dark) {
     .info-banner {
-        background: linear-gradient(135deg, #1e2b0c 0%, #263510 100%);
-        border-color: #385018;
+        background: linear-gradient(135deg, #2A0808 0%, #350A0A 100%);
+        border-color: #501515;
     }
 
     .stat-chip {
-        background: #1e2b0c;
+        background: #2A0808;
         color: var(--c-primary);
-        border-color: #385018;
+        border-color: #501515;
     }
 
     .stat-chip.money {
-        background: #1e2b0c;
+        background: #2A0808;
         color: var(--c-primary);
-        border-color: #385018;
+        border-color: #501515;
     }
 }
 </style>

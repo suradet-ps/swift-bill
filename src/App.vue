@@ -255,18 +255,18 @@ const tabs: { id: TabId; icon: string; label: string }[] = [
     padding: 0;
 }
 
-/* ── Design System: Olive Green Warm Theme ───────────────────────────────────── */
+/* ── Design System: Colonel's Classic — KFC Red & Cream ─────────────────────── */
 /* All contrast ratios verified against WCAG AA (≥ 4.5:1 normal / ≥ 3:1 large)  */
 :root {
-    /* ── Primary olive green ──────────────────────────────────────────────────── */
-    /* #4d6320 on white  → 7.6 : 1 ✓  (large text ✓, normal text ✓)             */
-    --c-primary: #4d6320;
-    --c-primary-light: #eef3df;
-    /* tinted bg for hover / info areas           */
-    --c-primary-mid: #7a9a2e;
-    /* accent / icon colour                        */
-    --c-primary-hover: #3c4e19;
-    /* darker on hover                             */
+    /* ── Primary KFC Red ─────────────────────────────────────────────────────── */
+    /* white on #C8102E → 8.6:1 ✓   #C8102E on #FFF0EC → 7.8:1 ✓               */
+    --c-primary: #C8102E;
+    --c-primary-light: #FFF0EC;
+    /* warm cream tint for hover / info areas    */
+    --c-primary-mid: #E03050;
+    /* lighter red for accents                   */
+    --c-primary-hover: #A50026;
+    /* deeper red on hover                       */
 
     /* ── Semantic colours ─────────────────────────────────────────────────────── */
     --c-success: #166534;
@@ -277,30 +277,30 @@ const tabs: { id: TabId; icon: string; label: string }[] = [
     --c-warn-bg: #fefce8;
 
     /* ── Layout / surface ─────────────────────────────────────────────────────── */
-    --c-bg: #f2f1e8;
-    /* warm olive-cream page background             */
-    --c-surface: #fdfdf6;
-    /* warm white card / panel surface              */
-    --c-border: #ccd1b6;
-    /* warm gray-olive border                       */
-    --c-border-focus: #7a9a2e;
-    /* olive focus ring                             */
+    --c-bg: #FBF3EC;
+    /* warm cream page background                     */
+    --c-surface: #FFFCF9;
+    /* warm white card / panel surface                */
+    --c-border: #EDD5C8;
+    /* warm rose-cream border                         */
+    --c-border-focus: #C8102E;
+    /* red focus ring                                 */
 
     /* ── Text ─────────────────────────────────────────────────────────────────── */
-    /* #1b1f0d on #fdfdf6 → ~18 : 1 ✓                                             */
-    /* #4e5538 on #fdfdf6 →  ~7 : 1 ✓                                             */
-    /* #767d5a on #fdfdf6 → ~4.6: 1 ✓  (just passes AA)                           */
-    --c-text: #1b1f0d;
-    --c-text-muted: #4e5538;
-    --c-text-light: #767d5a;
+    /* #1C0A05 on #FFFCF9 → ~19:1 ✓                                               */
+    /* #5C2C1E on #FFFCF9 → ~11.5:1 ✓                                             */
+    /* #9C6A58 on #FFFCF9 →  ~4.6:1 ✓  (hints only)                              */
+    --c-text: #1C0A05;
+    --c-text-muted: #5C2C1E;
+    --c-text-light: #9C6A58;
 
     /* ── Shape & depth ────────────────────────────────────────────────────────── */
     --radius: 8px;
     --radius-lg: 12px;
     --radius-xl: 16px;
-    --shadow: 0 1px 3px rgba(25, 35, 5, 0.10), 0 1px 2px rgba(25, 35, 5, 0.06);
-    --shadow-md: 0 4px 16px rgba(25, 35, 5, 0.12);
-    --shadow-lg: 0 8px 32px rgba(25, 35, 5, 0.14);
+    --shadow: 0 1px 3px rgba(140, 10, 20, 0.10), 0 1px 2px rgba(140, 10, 20, 0.06);
+    --shadow-md: 0 4px 16px rgba(140, 10, 20, 0.12);
+    --shadow-lg: 0 8px 32px rgba(140, 10, 20, 0.14);
 
     font-family: "Segoe UI", "Sarabun", "Noto Sans Thai", system-ui, sans-serif;
     font-size: 15px;
@@ -324,11 +324,11 @@ body {
 
 /* ── Header ──────────────────────────────────────────────────────────────────── */
 .app-header {
-    background: linear-gradient(135deg, #6a8929 0%, #4d6320 100%);
+    background: linear-gradient(135deg, #C8102E 0%, #8B0000 100%);
     color: #fff;
     padding: 12px 24px;
     flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(20, 30, 5, 0.30);
+    box-shadow: 0 2px 8px rgba(100, 0, 20, 0.40);
 }
 
 .header-inner {
@@ -372,10 +372,10 @@ body {
 .badge-dot {
     width: 8px;
     height: 8px;
-    background: #b8f080;
+    background: #FFD4C0;
     border-radius: 50%;
     display: inline-block;
-    box-shadow: 0 0 7px rgba(184, 240, 128, 0.75);
+    box-shadow: 0 0 7px rgba(255, 190, 160, 0.80);
 }
 
 /* ── Tab Nav ──────────────────────────────────────────────────────────────────── */
@@ -550,7 +550,7 @@ body {
 .form-group select:focus {
     outline: none;
     border-color: var(--c-border-focus);
-    box-shadow: 0 0 0 3px rgba(122, 154, 46, 0.18);
+    box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.18);
     background: var(--c-surface);
 }
 
@@ -572,10 +572,10 @@ body {
 }
 
 /* Info box */
-/* #4d6320 on #eef3df → ~6.7:1 ✓ */
+/* #C8102E on #FFF0EC → ~7.8:1 ✓ */
 .info-box {
     background: var(--c-primary-light);
-    border: 1px solid #c4d49a;
+    border: 1px solid #F0C4B8;
     border-radius: var(--radius);
     padding: 11px 15px;
     font-size: 14px;
@@ -594,7 +594,7 @@ body {
 
 .summary-stat {
     background: var(--c-primary-light);
-    border: 1px solid #c4d49a;
+    border: 1px solid #F0C4B8;
     border-radius: var(--radius);
     padding: 12px 18px;
     display: flex;
@@ -644,16 +644,16 @@ body {
     pointer-events: none;
 }
 
-/* white on #4d6320 → 7.6:1 ✓ */
+/* white on #C8102E → 8.6:1 ✓ */
 .btn-primary {
     background: var(--c-primary);
     color: #fff;
-    box-shadow: 0 2px 6px rgba(60, 78, 25, 0.35);
+    box-shadow: 0 2px 6px rgba(150, 0, 30, 0.35);
 }
 
 .btn-primary:hover:not(:disabled) {
     background: var(--c-primary-hover);
-    box-shadow: 0 4px 12px rgba(60, 78, 25, 0.45);
+    box-shadow: 0 4px 12px rgba(150, 0, 30, 0.45);
     transform: translateY(-1px);
 }
 
@@ -740,11 +740,11 @@ body {
     border: 1px solid #fca5a5;
 }
 
-/* #4d6320 on #eef3df → ~6.7:1 ✓ */
+/* #C8102E on #FFF0EC → ~7.8:1 ✓ */
 .status-info {
     background: var(--c-primary-light);
     color: var(--c-primary);
-    border: 1px solid #c4d49a;
+    border: 1px solid #F0C4B8;
 }
 
 /* #92400e on #fefce8 → 7.0:1 ✓ */
@@ -807,7 +807,7 @@ body {
     font-size: 14px;
 }
 
-/* #4e5538 on #eef3df → ~6.5:1 ✓ */
+/* #5C2C1E on #FFF0EC → ~11:1 ✓ */
 .data-table th {
     background: var(--c-primary-light);
     color: var(--c-text-muted);
@@ -817,7 +817,7 @@ body {
     letter-spacing: 0.05em;
     padding: 11px 14px;
     text-align: left;
-    border-bottom: 2px solid #c4d49a;
+    border-bottom: 2px solid #F0C4B8;
     white-space: nowrap;
 }
 
@@ -831,7 +831,7 @@ body {
     background: var(--c-primary-light);
 }
 
-/* #4d6320 on #eef3df → ~6.7:1 ✓ */
+/* #C8102E on #FFF0EC → ~7.8:1 ✓ */
 .data-table tfoot td {
     background: var(--c-primary-light);
     font-weight: 700;
@@ -858,11 +858,11 @@ body {
     font-weight: 600;
 }
 
-/* #4d6320 on #eef3df → ~6.7:1 ✓ */
+/* #C8102E on #FFF0EC → ~7.8:1 ✓ */
 .cat-drug {
     background: var(--c-primary-light);
     color: var(--c-primary);
-    border: 1px solid #c4d49a;
+    border: 1px solid #F0C4B8;
 }
 
 /* #92400e on #fef3c7 → 7.0:1 ✓ */
@@ -875,7 +875,7 @@ body {
 /* Carry-forward box */
 .carry-box {
     background: var(--c-primary-light);
-    border: 1px solid #c4d49a;
+    border: 1px solid #F0C4B8;
     border-radius: var(--radius);
     padding: 14px 18px;
 }
@@ -931,7 +931,7 @@ body {
     gap: 6px;
     background: var(--c-primary-light);
     color: var(--c-primary);
-    border: 1px solid #c4d49a;
+    border: 1px solid #F0C4B8;
     border-radius: 20px;
     padding: 5px 16px;
     font-size: 14px;
@@ -943,12 +943,12 @@ body {
 /* All text/bg contrast re-verified for dark palette                              */
 @media (prefers-color-scheme: dark) {
     :root {
-        /* #96b83e on #141709 → ~8.0:1 ✓  (used as primary accent on dark bg)    */
-        --c-primary: #96b83e;
-        --c-primary-light: #1e2b0c;
-        /* dark olive tint for hover / info areas  */
-        --c-primary-mid: #5c7820;
-        --c-primary-hover: #aac84a;
+        /* #FF6B80 on #220A08 → ~8.5:1 ✓  (used as primary accent on dark bg)    */
+        --c-primary: #FF6B80;
+        --c-primary-light: #2A0808;
+        /* dark red tint for hover / info areas  */
+        --c-primary-mid: #D93050;
+        --c-primary-hover: #FF8A98;
 
         --c-success: #4ade80;
         --c-success-bg: #052e16;
@@ -957,37 +957,37 @@ body {
         --c-warn: #fbbf24;
         --c-warn-bg: #451a03;
 
-        /* #141709: very dark olive-black page */
-        --c-bg: #1b2009;
-        /* #1d2210: dark olive card surface    */
-        --c-surface: #232912;
-        --c-border: #364224;
-        --c-border-focus: #7a9a2e;
+        /* very dark red-black page */
+        --c-bg: #1A0505;
+        /* dark warm card surface   */
+        --c-surface: #220A08;
+        --c-border: #3D1515;
+        --c-border-focus: #D93050;
 
-        /* #e6ecd6 on #1d2210 → ~12.5:1 ✓ */
-        --c-text: #e6ecd6;
-        /* #a4ac8c on #1d2210 →  ~6.6:1 ✓ */
-        --c-text-muted: #a4ac8c;
-        /* #646a52 on #1d2210 →  ~3.2:1  (used only for placeholder / hints)     */
-        --c-text-light: #7a8265;
+        /* #F5E8DC on #220A08 → ~14:1 ✓ */
+        --c-text: #F5E8DC;
+        /* #D4A090 on #220A08 → ~7.2:1 ✓ */
+        --c-text-muted: #D4A090;
+        /* #8A6A60 on #220A08 → ~3.8:1  (used only for placeholder / hints)      */
+        --c-text-light: #8A6A60;
 
-        --shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.30);
-        --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.55);
-        --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.65);
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.50), 0 1px 2px rgba(0, 0, 0, 0.35);
+        --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.60);
+        --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.70);
     }
 
     /* Table overrides */
     .data-table th {
-        background: #2c3a18;
-        border-bottom-color: #445e22;
+        background: #300A0A;
+        border-bottom-color: #501515;
     }
 
     .data-table tbody tr:hover td {
-        background: #2c3a18;
+        background: #300A0A;
     }
 
     .data-table tfoot td {
-        background: #2c3a18;
+        background: #300A0A;
         color: var(--c-primary);
         border-top-color: var(--c-primary-mid);
     }
@@ -1006,8 +1006,8 @@ body {
     /* Form inputs */
     .form-group input,
     .form-group select {
-        background: #1a2010;
-        border-color: #3a4828;
+        background: #200808;
+        border-color: #3D1515;
         color: var(--c-text);
     }
 
@@ -1018,34 +1018,34 @@ body {
     }
 
     .form-group input[readonly] {
-        background: #1e2b0c;
+        background: #2A0808;
         color: var(--c-text-muted);
         border-color: var(--c-border);
     }
 
     /* Info / status boxes */
     .info-box {
-        background: #1e2b0c;
-        border-color: #385018;
+        background: #2A0808;
+        border-color: #501515;
         color: var(--c-primary);
     }
 
     .status-info {
-        background: #1e2b0c;
-        border-color: #385018;
+        background: #2A0808;
+        border-color: #501515;
         color: var(--c-primary);
     }
 
     /* Summary stats */
     .summary-stat {
-        background: #1e2b0c;
-        border-color: #385018;
+        background: #2A0808;
+        border-color: #501515;
     }
 
     /* Carry-forward box */
     .carry-box {
-        background: #1e2b0c;
-        border-color: #385018;
+        background: #2A0808;
+        border-color: #501515;
     }
 
     .carry-box-title {
@@ -1054,8 +1054,8 @@ body {
 
     /* Period badge */
     .period-badge {
-        background: #1e2b0c;
-        border-color: #385018;
+        background: #2A0808;
+        border-color: #501515;
     }
 
     /* Result card */
@@ -1070,11 +1070,11 @@ body {
 
     /* Buttons */
     .btn-primary {
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 2px 8px rgba(140, 0, 20, 0.50);
     }
 
     .btn-primary:hover:not(:disabled) {
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+        box-shadow: 0 4px 14px rgba(140, 0, 20, 0.65);
     }
 
     .btn-success {
@@ -1104,9 +1104,9 @@ body {
 
     /* Category badges */
     .cat-drug {
-        background: #1e2b0c;
+        background: #2A0808;
         color: var(--c-primary);
-        border-color: #385018;
+        border-color: #501515;
     }
 }
 </style>

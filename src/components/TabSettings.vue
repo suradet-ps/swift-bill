@@ -161,14 +161,14 @@ code {
     padding: 2px 6px;
     border-radius: 4px;
     color: var(--c-primary);
-    border: 1px solid #c4d49a;
+    border: 1px solid #F0C4B8;
 }
 
 @media (prefers-color-scheme: dark) {
     code {
-        background: #1e2b0c;
+        background: #2A0808;
         color: var(--c-primary);
-        border-color: #385018;
+        border-color: #501515;
     }
 }
 </style>

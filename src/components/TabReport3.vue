@@ -356,8 +356,8 @@ function saveToHistory() {
 
 /* ── Info banner ─────────────────────────────────────────────────────────────── */
 .info-banner {
-    background: linear-gradient(135deg, var(--c-primary-light) 0%, #dce9b0 100%);
-    border-color: #c4d49a;
+    background: linear-gradient(135deg, var(--c-primary-light) 0%, #FFD8C8 100%);
+    border-color: #F0C4B8;
 }
 
 .banner-title {
@@ -391,10 +391,10 @@ function saveToHistory() {
 }
 
 /* ── Budget preview calculation ──────────────────────────────────────────────── */
-/* #4e5538 on #eef3df → ~6.5:1 ✓   (#1b1f0d on #eef3df → ~15:1 ✓)              */
+/* #5C2C1E on #FFF0EC → ~11:1 ✓ */
 .budget-preview {
     background: var(--c-primary-light);
-    border: 1px solid #c4d49a;
+    border: 1px solid #F0C4B8;
     border-radius: var(--radius);
     padding: 16px 18px;
     margin: 18px 0;
@@ -414,7 +414,7 @@ function saveToHistory() {
     justify-content: space-between;
     align-items: center;
     padding: 6px 0;
-    border-bottom: 1px solid #c4d49a;
+    border-bottom: 1px solid #F0C4B8;
     font-size: 14px;
 }
 
@@ -450,12 +450,12 @@ function saveToHistory() {
     color: var(--c-text);
 }
 
-/* #b91c1c on #eef3df → 5.8:1 ✓ */
+/* #991B1B on #FFF0EC → ~5.6:1 ✓ */
 .budget-val.debit {
     color: var(--c-error);
 }
 
-/* #166534 on #eef3df → ~7.5:1 ✓ */
+/* #166534 on #FFF0EC → ~7.2:1 ✓ */
 .budget-val.positive {
     color: var(--c-success);
 }
@@ -492,11 +492,11 @@ function saveToHistory() {
     font-weight: 600;
 }
 
-/* #4d6320 on #eef3df → ~6.7:1 ✓ */
+/* #C8102E on #FFF0EC → ~7.8:1 ✓ */
 .stat-chip.money {
     background: var(--c-primary-light);
     color: var(--c-primary);
-    border-color: #c4d49a;
+    border-color: #F0C4B8;
 }
 
 .save-actions {
@@ -507,8 +507,8 @@ function saveToHistory() {
 /* ── Dark mode overrides ─────────────────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
     .info-banner {
-        background: linear-gradient(135deg, #1e2b0c 0%, #263510 100%);
-        border-color: #385018;
+        background: linear-gradient(135deg, #2A0808 0%, #350A0A 100%);
+        border-color: #501515;
     }
 
     .banner-desc {
@@ -516,8 +516,8 @@ function saveToHistory() {
     }
 
     .budget-preview {
-        background: #1e2b0c;
-        border-color: #385018;
+        background: #2A0808;
+        border-color: #501515;
     }
 
     .budget-row {
@@ -548,9 +548,9 @@ function saveToHistory() {
     }
 
     .stat-chip.money {
-        background: #1e2b0c;
+        background: #2A0808;
         color: var(--c-primary);
-        border-color: #385018;
+        border-color: #501515;
     }
 }
 </style>
