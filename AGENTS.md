@@ -104,11 +104,11 @@ app/src/
 
 ### COMPANY (Vendor Master)
 
-| Column       | Type   | Notes                                                        |
-| ------------ | ------ | ------------------------------------------------------------ |
-| COMPANY_CODE | String | PK                                                           |
-| KEY_WORD     | String | Short code — if starts with `PS` → วัสดุเภสัชกรรม, else → ยา |
-| COMPANY_NAME | String | Full company name                                            |
+| Column       | Type   | Notes             |
+| ------------ | ------ | ----------------- |
+| COMPANY_CODE | String | PK                |
+| KEY_WORD     | String |
+| COMPANY_NAME | String | Full company name |
 
 ---
 

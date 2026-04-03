@@ -255,7 +255,7 @@ async function fetchData() {
                         <td class="text-center num">{{ idx + 1 }}</td>
                         <td>{{ inv.receive_date }}</td>
                         <td><code>{{ inv.invoice_no }}</code></td>
-                        <td><code>{{ inv.vendor_code }}</code></td>
+                        <td><code>{{ inv.company_keyword }}</code></td>
                         <td>{{ inv.company_name }}</td>
                         <td class="text-center">
                             <span :class="['cat-badge', inv.category === 'ยา' ? 'cat-drug' : 'cat-supply']">

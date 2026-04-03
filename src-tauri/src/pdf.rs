@@ -422,7 +422,7 @@ pub fn generate_invoice_submission_pdf(
     let cw: Vec<f64> = col_x.windows(2).map(|w| w[1] - w[0]).collect();
 
     let table_top = MARGIN + 19.0;
-    let hdr_h = 14.0;
+    let hdr_h = 16.0;
     let row_h = 12.5;
 
     // Pre-compute grand total across ALL rows for the last-page totals row
@@ -437,7 +437,7 @@ pub fn generate_invoice_submission_pdf(
         let is_last = page_idx + 1 == total_pages;
         let mut ops: Vec<Op> = Vec::new();
 
-        ops.push(Op::SetOutlineThickness { pt: pt_f(0.5) });
+        ops.push(Op::SetOutlineThickness { pt: pt_f(0.3) });
 
         // ── Title ─────────────────────────────────────────────────────────
         op_text_center(
@@ -490,40 +490,43 @@ pub fn generate_invoice_submission_pdf(
         );
 
         // ── Header labels ──────────────────────────────────────────────────
-        let hdr_y1 = table_top + 2.5;
-        let hdr_y2 = table_top + 5.5;
-        let hdrs: &[(&str, usize, bool)] = &[
-            ("ลำดับ", 0, false),
-            ("วันที่รับของ", 1, false),
-            ("เลขที่เอกสาร", 2, false),
-            // col 3+4 spanned below
-            ("เลข", 3, false),
-            ("ลำดับ", 4, false),
-            ("วัน/เดือน/ปี", 5, false),
-            ("รหัสบริษัท", 6, false),
-            ("ค่าใช้จ่ายเรื่อง", 7, false),
-            ("จำนวนเงินรวม", 8, false),
+        // Single-row headers: visually centred in hdr_h
+        let hdr_y_single = table_top + hdr_h * 0.58; // ~9.3 mm below table_top
+                                                     // Two-row headers: upper line and lower sub-label
+        let hdr_y1 = table_top + hdr_h * 0.34; // ~5.4 mm — top row baseline
+        let hdr_y2 = table_top + hdr_h * 0.76; // ~12.2 mm — bottom row baseline
+
+        // ── Single-row column headers ──────────────────────────────────────
+        let single_hdrs: &[(&str, usize)] = &[
+            ("ลำดับ", 0),
+            ("วันที่รับของ", 1),
+            ("เลขที่เอกสาร", 2),
+            ("ชื่อบริษัท", 6),
+            ("ค่าใช้จ่ายเรื่อง", 7),
+            ("จำนวนเงินรวม", 8),
         ];
-        for &(lbl, ci, _) in hdrs {
+        for &(lbl, ci) in single_hdrs {
             op_text_center(
                 &mut ops,
                 &ctx,
                 &font_bold_id,
-                14.0,
+                13.0,
                 col_x[ci],
                 cw[ci],
-                hdr_y1,
+                hdr_y_single,
                 lbl,
             );
         }
-        // Second sub-line labels
+
+        // ── Two-row span: เลขทะเบียนคุม (cols 3–4) ──────────────────────
+        let span_w34 = cw[3] + cw[4];
         op_text_center(
             &mut ops,
             &ctx,
             &font_bold_id,
-            13.5,
+            13.0,
             col_x[3],
-            cw[3] + cw[4],
+            span_w34,
             hdr_y1,
             "เลขทะเบียนคุม",
         );
@@ -531,7 +534,7 @@ pub fn generate_invoice_submission_pdf(
             &mut ops,
             &ctx,
             &font_bold_id,
-            13.0,
+            12.0,
             col_x[3],
             cw[3],
             hdr_y2,
@@ -541,17 +544,29 @@ pub fn generate_invoice_submission_pdf(
             &mut ops,
             &ctx,
             &font_bold_id,
-            13.0,
+            12.0,
             col_x[4],
             cw[4],
             hdr_y2,
             "ลำดับ",
         );
+
+        // ── Two-row: วัน/เดือน/ปีใบส่งของ (col 5) ───────────────────────
         op_text_center(
             &mut ops,
             &ctx,
             &font_bold_id,
             13.0,
+            col_x[5],
+            cw[5],
+            hdr_y1,
+            "วัน/เดือน/ปี",
+        );
+        op_text_center(
+            &mut ops,
+            &ctx,
+            &font_bold_id,
+            12.0,
             col_x[5],
             cw[5],
             hdr_y2,
@@ -792,7 +807,7 @@ pub fn generate_invoice_submission_pdf(
     // Handle empty rows case
     if pdf_pages.is_empty() {
         let mut ops = Vec::new();
-        ops.push(Op::SetOutlineThickness { pt: pt_f(0.5) });
+        ops.push(Op::SetOutlineThickness { pt: pt_f(0.3) });
         op_text_center(
             &mut ops,
             &ctx,
@@ -865,7 +880,7 @@ pub fn generate_receiving_summary_pdf(
     let cw: Vec<f64> = col_x.windows(2).map(|w| w[1] - w[0]).collect();
 
     let table_top = MARGIN + 15.0;
-    let hdr_h = 15.0;
+    let hdr_h = 18.0;
     let row_h = 12.5;
 
     // Pre-compute grand total across ALL rows for the last-page totals row
@@ -880,7 +895,7 @@ pub fn generate_receiving_summary_pdf(
         let is_last = page_idx + 1 == total_pages;
         let mut ops: Vec<Op> = Vec::new();
 
-        ops.push(Op::SetOutlineThickness { pt: pt_f(0.5) });
+        ops.push(Op::SetOutlineThickness { pt: pt_f(0.3) });
 
         // ── Title ─────────────────────────────────────────────────────────
         op_text_center(
@@ -922,43 +937,44 @@ pub fn generate_receiving_summary_pdf(
             0.96,
         );
 
-        let hdr_y1 = table_top + 2.2;
-        let hdr_y2 = table_top + 5.8;
+        // Single-row headers: vertically centred
+        let hdr_y_single = table_top + hdr_h * 0.58;
+        // Two-row headers
+        let hdr_y1 = table_top + hdr_h * 0.32; // upper sub-row baseline
+        let hdr_y2 = table_top + hdr_h * 0.72; // lower sub-row baseline
 
-        let hdr_items: &[(&str, usize)] = &[
+        // ── Single-row column headers ─────────────────────────────────────
+        let single_hdrs2: &[(&str, usize)] = &[
             ("วันที่ขออนุมัติ", 0),
             ("วันที่สั่งซื้อ", 1),
             ("วันที่รับของ", 2),
             ("รหัสบริษัท", 3),
             ("จำนวนเงินรวม", 4),
             ("รหัสลงรับยา", 5),
-            // 6-7 spanned as เลขทะเบียนคุม
             ("เลขที่ลงรับ", 8),
-            ("ขอซื้อ", 9),
-            ("รายงาน/อนุมัติ", 10),
-            ("ใบสั่งซื้อ", 11),
         ];
-        for &(lbl, ci) in hdr_items {
+        for &(lbl, ci) in single_hdrs2 {
             op_text_center(
                 &mut ops,
                 &ctx,
                 &font_bold_id,
-                13.5,
+                12.5,
                 col_x[ci],
                 cw[ci],
-                hdr_y1,
+                hdr_y_single,
                 lbl,
             );
         }
-        // Span เลขทะเบียนคุม across cols 6-7
-        let span_w = col_x[8] - col_x[6];
+
+        // ── Two-row span: เลขทะเบียนคุม (cols 6–7) ───────────────────────
+        let span_w67 = col_x[8] - col_x[6];
         op_text_center(
             &mut ops,
             &ctx,
             &font_bold_id,
-            13.5,
+            12.5,
             col_x[6],
-            span_w,
+            span_w67,
             hdr_y1,
             "เลขทะเบียนคุม",
         );
@@ -966,7 +982,7 @@ pub fn generate_receiving_summary_pdf(
             &mut ops,
             &ctx,
             &font_bold_id,
-            13.0,
+            12.0,
             col_x[6],
             cw[6],
             hdr_y2,
@@ -976,44 +992,55 @@ pub fn generate_receiving_summary_pdf(
             &mut ops,
             &ctx,
             &font_bold_id,
-            13.0,
+            12.0,
             col_x[7],
             cw[7],
             hdr_y2,
             "ลำดับ",
         );
 
-        // Sub-labels for ขอซื้อ / รายงาน / ใบสั่งซื้อ
+        // ── Two-row: ขอซื้อ / รายงาน / ใบสั่งซื้อ with sub-labels ────────
+        let two_row_cols: &[(&str, &str, usize)] = &[
+            ("ขอซื้อ", "ลบ0033.302/", 9),
+            ("รายงาน/อนุมัติ", "ลบ0033.302/", 10),
+        ];
+        for &(top_lbl, bot_lbl, ci) in two_row_cols {
+            op_text_center(
+                &mut ops,
+                &ctx,
+                &font_bold_id,
+                12.5,
+                col_x[ci],
+                cw[ci],
+                hdr_y1,
+                top_lbl,
+            );
+            op_text_center(
+                &mut ops, &ctx, &font_id, 11.5, col_x[ci], cw[ci], hdr_y2, bot_lbl,
+            );
+        }
+        let year_str = format!("ใบสั่งซื้อ…/{}", year);
         op_text_center(
             &mut ops,
             &ctx,
-            &font_id,
+            &font_bold_id,
             12.5,
-            col_x[9],
-            cw[9],
-            hdr_y2,
-            "ลบ0033.302/",
+            col_x[11],
+            cw[11],
+            hdr_y1,
+            "ใบสั่งซื้อ",
         );
         op_text_center(
             &mut ops,
             &ctx,
             &font_id,
-            12.5,
-            col_x[10],
-            cw[10],
-            hdr_y2,
-            "ลบ0033.302/",
-        );
-        op_text_center(
-            &mut ops,
-            &ctx,
-            &font_id,
-            12.5,
+            11.5,
             col_x[11],
             cw[11],
             hdr_y2,
             &format!("…/{}", year),
         );
+        let _ = year_str; // suppress unused-variable warning
 
         // ── Data rows ─────────────────────────────────────────────────────
         let mut cur_y = table_top + hdr_h;
@@ -1203,7 +1230,7 @@ pub fn generate_receiving_summary_pdf(
     // Handle empty rows case
     if pdf_pages.is_empty() {
         let mut ops = Vec::new();
-        ops.push(Op::SetOutlineThickness { pt: pt_f(0.5) });
+        ops.push(Op::SetOutlineThickness { pt: pt_f(0.3) });
         op_text_center(
             &mut ops,
             &ctx,
@@ -1256,7 +1283,7 @@ fn build_cover_letter_ops(
     };
 
     let mut ops: Vec<Op> = Vec::new();
-    ops.push(Op::SetOutlineThickness { pt: pt_f(0.5) });
+    ops.push(Op::SetOutlineThickness { pt: pt_f(0.3) });
 
     let lm = 20.0_f64; // left margin
     let rm = A4_PORT_W - 15.0; // right edge
@@ -1437,10 +1464,10 @@ fn build_cover_letter_ops(
             &mut ops,
             &ctx,
             font_bold_id,
-            17.0,
+            13.0,
             cx,
             tbl_col_w,
-            y + tbl_h - 2.5,
+            y + tbl_h * 0.62,
             lbl,
         );
     }
@@ -1459,7 +1486,7 @@ fn build_cover_letter_ops(
             &mut ops,
             &ctx,
             font_bold_id,
-            18.0,
+            14.0,
             cx,
             tbl_col_w,
             val_y + tbl_h - 2.5,
@@ -1605,7 +1632,6 @@ fn build_cover_letter_ops(
     ops
 }
 
-/// Generate a single combined PDF with all cover letters, one per page
 fn generate_combined_cover(
     pages: &[CoverLetterPage],
     params: &CoverLettersParams,

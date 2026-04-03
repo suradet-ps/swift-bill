@@ -324,7 +324,7 @@ body {
 
 /* ── Header ──────────────────────────────────────────────────────────────────── */
 .app-header {
-    background: linear-gradient(135deg, #3d5214 0%, #2b3c0e 100%);
+    background: linear-gradient(135deg, #6a8929 0%, #4d6320 100%);
     color: #fff;
     padding: 12px 24px;
     flex-shrink: 0;
@@ -958,10 +958,10 @@ body {
         --c-warn-bg: #451a03;
 
         /* #141709: very dark olive-black page */
-        --c-bg: #141709;
+        --c-bg: #1b2009;
         /* #1d2210: dark olive card surface    */
-        --c-surface: #1d2210;
-        --c-border: #2e3820;
+        --c-surface: #232912;
+        --c-border: #364224;
         --c-border-focus: #7a9a2e;
 
         /* #e6ecd6 on #1d2210 → ~12.5:1 ✓ */
@@ -969,7 +969,7 @@ body {
         /* #a4ac8c on #1d2210 →  ~6.6:1 ✓ */
         --c-text-muted: #a4ac8c;
         /* #646a52 on #1d2210 →  ~3.2:1  (used only for placeholder / hints)     */
-        --c-text-light: #646a52;
+        --c-text-light: #7a8265;
 
         --shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.30);
         --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.55);
@@ -978,16 +978,16 @@ body {
 
     /* Table overrides */
     .data-table th {
-        background: #253015;
-        border-bottom-color: #3a5018;
+        background: #2c3a18;
+        border-bottom-color: #445e22;
     }
 
     .data-table tbody tr:hover td {
-        background: #253015;
+        background: #2c3a18;
     }
 
     .data-table tfoot td {
-        background: #253015;
+        background: #2c3a18;
         color: var(--c-primary);
         border-top-color: var(--c-primary-mid);
     }

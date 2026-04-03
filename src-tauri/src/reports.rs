@@ -136,7 +136,7 @@ pub fn process_receiving_summary(
             approval_date: approval_date_str.clone(),
             po_date: po_date_str,
             receive_date: receive_date_str,
-            company_code: inv.vendor_code.clone(),
+            company_code: inv.company_keyword.clone(),
             total_amount: inv.total_cost,
             receiving_code,
             reg_no,

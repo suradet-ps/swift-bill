@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from "vue";
 interface RoundHistoryEntry {
     id: string;
     label: string;
@@ -25,6 +26,8 @@ const emit = defineEmits<{
     (e: "loadEntry", entry: RoundHistoryEntry): void;
     (e: "deleteEntry", id: string): void;
 }>();
+
+const confirmingId = ref<string | null>(null);
 
 const THAI_MONTHS = [
     "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
@@ -58,10 +61,9 @@ function formatCreatedAt(iso: string): string {
     }
 }
 
-function confirmDelete(id: string, label: string) {
-    if (confirm(`ลบประวัติรอบ "${label}" ออก?`)) {
-        emit("deleteEntry", id);
-    }
+function doDelete(id: string) {
+    emit("deleteEntry", id);
+    confirmingId.value = null;
 }
 </script>
 
@@ -97,7 +99,7 @@ function confirmDelete(id: string, label: string) {
                 </div>
                 <div class="entry-meta">
                     <span class="meta-chip">📅 {{ formatDate(entry.date_from) }} – {{ formatDate(entry.date_to)
-                        }}</span>
+                    }}</span>
                     <span class="meta-chip">📦 {{ entry.invoice_count }} บิล</span>
                     <span class="meta-chip money">💰 {{ formatMoney(entry.total_amount) }} บาท</span>
                     <span class="meta-chip muted">🕐 {{ formatCreatedAt(entry.created_at) }}</span>
@@ -137,7 +139,16 @@ function confirmDelete(id: string, label: string) {
                 <button class="btn btn-primary" @click="emit('loadEntry', entry)">
                     📥 โหลดค่านี้ไปใช้รอบถัดไป
                 </button>
-                <button class="btn btn-danger" @click="confirmDelete(entry.id, entry.label)">
+                <template v-if="confirmingId === entry.id">
+                    <span class="confirm-text">ยืนยันลบรอบนี้?</span>
+                    <button class="btn btn-danger" @click="doDelete(entry.id)">
+                        ✓ ยืนยันลบ
+                    </button>
+                    <button class="btn btn-secondary" @click="confirmingId = null">
+                        ✕ ยกเลิก
+                    </button>
+                </template>
+                <button v-else class="btn btn-danger" @click="confirmingId = entry.id">
                     🗑️ ลบ
                 </button>
             </div>
@@ -330,6 +341,14 @@ function confirmDelete(id: string, label: string) {
     display: flex;
     gap: 10px;
     align-items: center;
+}
+
+.confirm-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--c-error);
+    padding: 0 6px;
+    white-space: nowrap;
 }
 
 /* Tip card — olive tint instead of yellow */
