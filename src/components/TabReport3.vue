@@ -57,6 +57,7 @@ interface RoundHistoryEntry {
     budget_total: number;
     total_amount: number;
     invoice_count: number;
+    source_tab?: string;
     created_at: string;
 }
 
@@ -199,6 +200,7 @@ function saveToHistory() {
         budget_total: props.budgetTotal,
         total_amount: result.value.total_amount,
         invoice_count: result.value.total_rows,
+        source_tab: "📄 เบิกยาปะหน้า",
         created_at: now,
     };
     emit("saveHistory", entry);

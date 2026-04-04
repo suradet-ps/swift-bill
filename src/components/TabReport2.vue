@@ -70,6 +70,7 @@ interface RoundHistoryEntry {
     total_amount: number;
     invoice_count: number;
     created_at: string;
+    source_tab?: string;
 }
 
 const props = defineProps<{
@@ -254,6 +255,7 @@ function saveToHistory() {
         budget_total: 0,
         total_amount: exportedTotal.value,
         invoice_count: editableRows.value.length,
+        source_tab: "📊 สรุปรับยา",
         created_at: now,
     };
     emit("saveHistory", entry);

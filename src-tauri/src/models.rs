@@ -163,6 +163,8 @@ pub struct RoundHistoryEntry {
     pub total_amount: f64,
     pub invoice_count: u32,
     pub created_at: String, // ISO datetime
+    #[serde(default)]
+    pub source_tab: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

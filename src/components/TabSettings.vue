@@ -13,10 +13,13 @@ interface DbConfig {
 const props = defineProps<{ dbConfig: DbConfig }>();
 const emit = defineEmits<{
     (e: "update:dbConfig", val: DbConfig): void;
+    (e: "save"): void;
+    (e: "connectionStatus", connected: boolean): void;
 }>();
 
 const status = ref<"idle" | "testing" | "success" | "error">("idle");
 const message = ref("");
+const saveStatus = ref<"idle" | "saved">("idle");
 
 const isValid = computed(
     () =>
@@ -43,6 +46,12 @@ function update(field: keyof DbConfig, value: string | number) {
     emit("update:dbConfig", { ...props.dbConfig, [field]: value });
 }
 
+function saveConfig() {
+    emit("save");
+    saveStatus.value = "saved";
+    setTimeout(() => { saveStatus.value = "idle"; }, 2500);
+}
+
 async function testConnection() {
     if (!isValid.value) {
         message.value = "กรุณากรอกข้อมูลให้ครบถ้วน";
@@ -57,9 +66,11 @@ async function testConnection() {
         });
         status.value = "success";
         message.value = msg;
+        emit("connectionStatus", true);
     } catch (e) {
         status.value = "error";
         message.value = String(e);
+        emit("connectionStatus", false);
     }
 }
 </script>
@@ -74,7 +85,8 @@ async function testConnection() {
             <div class="form-group">
                 <label>Host / IP Address</label>
                 <input type="text" :value="dbConfig.host"
-                    @input="update('host', ($event.target as HTMLInputElement).value)" placeholder="192.168.1.100" />
+                    @input="update('host', ($event.target as HTMLInputElement).value)" placeholder="192.168.1.100"
+                    autocapitalize="none" autocorrect="off" spellcheck="false" />
             </div>
             <div class="form-group">
                 <label>Port</label>
@@ -85,12 +97,14 @@ async function testConnection() {
             <div class="form-group">
                 <label>Database Name</label>
                 <input type="text" :value="dbConfig.database"
-                    @input="update('database', ($event.target as HTMLInputElement).value)" placeholder="INVS" />
+                    @input="update('database', ($event.target as HTMLInputElement).value)" placeholder="INVS"
+                    autocapitalize="none" autocorrect="off" spellcheck="false" />
             </div>
             <div class="form-group">
                 <label>Username</label>
                 <input type="text" :value="dbConfig.username"
-                    @input="update('username', ($event.target as HTMLInputElement).value)" placeholder="sa" />
+                    @input="update('username', ($event.target as HTMLInputElement).value)" placeholder="sa"
+                    autocapitalize="none" autocorrect="off" spellcheck="false" />
             </div>
             <div class="form-group">
                 <label>Password</label>
@@ -99,7 +113,10 @@ async function testConnection() {
             </div>
         </div>
 
-        <div class="actions">
+        <div class="actions" style="display:flex; gap:12px; flex-wrap:wrap;">
+            <button class="btn btn-success btn-lg" :disabled="!isValid" @click="saveConfig">
+                {{ saveStatus === 'saved' ? '✅ บันทึกแล้ว!' : '💾 บันทึกการตั้งค่า' }}
+            </button>
             <button class="btn btn-primary btn-lg" :disabled="status === 'testing' || !isValid" @click="testConnection">
                 <span v-if="status === 'testing'" class="spinner"></span>
                 {{ status === "testing" ? "กำลังทดสอบ..." : "🔗 ทดสอบการเชื่อมต่อ" }}

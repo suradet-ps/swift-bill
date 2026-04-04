@@ -99,6 +99,9 @@ const month = computed(() =>
 // Shared round number (applies to all 3 reports)
 const round = ref(1);
 
+// DB connection status (set by TabSettings via connectionStatus event)
+const dbConnected = ref<boolean | null>(null);
+
 // Per-report unique fields
 const r1Form = reactive({ startRegNo: "69ภ1", startRunning: 0 });
 const r2Form = reactive({
@@ -128,6 +131,12 @@ const r2Carry = ref<{
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 
 onMounted(async () => {
+    const savedConfig = localStorage.getItem("swiftbill_dbconfig");
+    if (savedConfig) {
+        try {
+            Object.assign(dbConfig, JSON.parse(savedConfig));
+        } catch (_) { /* ignore corrupt data */ }
+    }
     try {
         historyEntries.value = await invoke<RoundHistoryEntry[]>("load_round_history");
     } catch (_) {
@@ -151,6 +160,14 @@ async function saveEntry(entry: RoundHistoryEntry) {
 async function deleteEntry(id: string) {
     await invoke("delete_round_entry", { id });
     await refreshHistory();
+}
+
+function saveDbConfig() {
+    localStorage.setItem("swiftbill_dbconfig", JSON.stringify(dbConfig));
+}
+
+function handleConnectionStatus(ok: boolean) {
+    dbConnected.value = ok;
 }
 
 function handleR2Carry(carry: { next_reg_no: string; next_running: number; next_po_no: number; next_purchase_no: number }) {
@@ -247,7 +264,8 @@ const tabs: { id: TabId; icon: string; label: string }[] = [
     <!-- ── Main Content ─────────────────────────────────────────────────── -->
     <main class="main-content">
         <TabSettings v-show="activeTab === 'settings'" :db-config="dbConfig"
-            @update:db-config="Object.assign(dbConfig, $event)" />
+            @update:db-config="Object.assign(dbConfig, $event)" @save="saveDbConfig"
+            @connection-status="handleConnectionStatus" />
         <TabQuery v-show="activeTab === 'query'" :db-config="dbConfig" v-model:start-date-html="startDateHtml"
             v-model:end-date-html="endDateHtml" v-model:output-dir="outputDir" v-model:preview-data="previewData"
             v-model:round="round" />
@@ -272,7 +290,13 @@ const tabs: { id: TabId; icon: string; label: string }[] = [
 
     <!-- ── Footer ───────────────────────────────────────────────────────── -->
     <footer class="app-footer">
-        <p>Swift Bill v0.3 &nbsp;·&nbsp; ลิขสิทธิ์ ภก.สุรเดช ประถมศักดิ์ โรงพยาบาลสระโบสถ์</p>
+        <span class="footer-left">Copyright &copy; 2025 ภก.สุรเดช ประถมศักดิ์ &nbsp;·&nbsp; โรงพยาบาลสระโบสถ์
+            &nbsp;·&nbsp; Swift Bill v0.3</span>
+        <span class="footer-right">
+            <span v-if="dbConnected === true" class="conn-status conn-ok">● เชื่อมต่อแล้ว</span>
+            <span v-else-if="dbConnected === false" class="conn-status conn-fail">● ยังไม่ได้เชื่อมต่อ</span>
+            <span v-else class="conn-status conn-unknown">○ ยังไม่ได้ทดสอบ</span>
+        </span>
     </footer>
 </div>
 </template>
@@ -477,11 +501,43 @@ body {
     background: var(--c-surface);
     border-top: 1px solid var(--c-border);
     padding: 7px 24px;
-    text-align: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     color: var(--c-text-light);
     font-size: 12px;
     flex-shrink: 0;
     letter-spacing: 0.01em;
+}
+
+.footer-left {
+    color: var(--c-text-light);
+}
+
+.footer-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.conn-status {
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.conn-ok {
+    color: #16A34A;
+}
+
+.conn-fail {
+    color: var(--c-error);
+}
+
+.conn-unknown {
+    color: var(--c-text-muted);
 }
 
 /* ─── Shared component styles ─────────────────────────────────────────────────── */
@@ -1037,6 +1093,10 @@ body {
     .app-footer {
         background: var(--c-surface);
         border-top-color: var(--c-border);
+    }
+
+    .conn-ok {
+        color: #4ADE80;
     }
 
     /* Form inputs */

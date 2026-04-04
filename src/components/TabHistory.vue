@@ -16,6 +16,7 @@ interface RoundHistoryEntry {
     budget_total: number;
     total_amount: number;
     invoice_count: number;
+    source_tab?: string;
     created_at: string;
 }
 
@@ -97,10 +98,11 @@ function doDelete(id: string) {
                 <div class="entry-title-row">
                     <span class="entry-label">{{ entry.label }}</span>
                     <span class="entry-round-badge">รอบ {{ entry.round }}</span>
+                    <span v-if="entry.source_tab" class="source-tab-badge">{{ entry.source_tab }}</span>
                 </div>
                 <div class="entry-meta">
                     <span class="meta-chip">📅 {{ formatDate(entry.date_from) }} – {{ formatDate(entry.date_to)
-                        }}</span>
+                    }}</span>
                     <span class="meta-chip">📦 {{ entry.invoice_count }} บิล</span>
                     <span class="meta-chip money">💰 {{ formatMoney(entry.total_amount) }} บาท</span>
                     <span class="meta-chip muted">🕐 {{ formatCreatedAt(entry.created_at) }}</span>
@@ -255,6 +257,16 @@ function doDelete(id: string) {
     font-weight: 600;
 }
 
+.source-tab-badge {
+    background: #EFF6FF;
+    color: #1D4ED8;
+    border: 1px solid #BFDBFE;
+    border-radius: 999px;
+    padding: 3px 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
 .entry-meta {
     display: flex;
     gap: 8px;
@@ -383,6 +395,12 @@ function doDelete(id: string) {
     .entry-round-badge {
         background: #2A0808;
         border-color: #501515;
+    }
+
+    .source-tab-badge {
+        background: #1E3A5F;
+        color: #93C5FD;
+        border-color: #1E40AF;
     }
 
     .meta-chip.money {
