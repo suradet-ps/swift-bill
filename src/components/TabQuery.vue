@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { useToast } from "../composables/useToast";
+
+const toast = useToast();
 
 interface DbConfig {
     host: string;
@@ -116,8 +119,17 @@ async function fetchData() {
             dateTo: toApiDate(props.endDateHtml),
         });
         emit("update:previewData", data);
+        if (data.row_count === 0) {
+            toast.warning("ไม่พบข้อมูล", "ไม่พบรายการบิลในช่วงวันที่ที่เลือก");
+        } else {
+            toast.success(
+                "ดึงข้อมูลสำเร็จ",
+                `พบ ${data.row_count} รายการ ยอดรวม ${data.total_amount.toLocaleString("th-TH", { minimumFractionDigits: 2 })} บาท`
+            );
+        }
     } catch (e) {
         error.value = String(e);
+        toast.error("ดึงข้อมูลล้มเหลว", String(e));
     } finally {
         loading.value = false;
     }

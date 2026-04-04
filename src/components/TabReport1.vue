@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { useToast } from "../composables/useToast";
 
 interface DbConfig {
     host: string;
@@ -88,6 +89,8 @@ const emit = defineEmits<{
     (e: "saveHistory", entry: RoundHistoryEntry): void;
 }>();
 
+const toast = useToast();
+
 const THAI_MONTHS = [
     "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
     "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
@@ -166,8 +169,10 @@ async function previewReport() {
         });
         editableRows.value = preview.rows.map(r => ({ ...r }));
         carryForward.value = preview.carry_forward;
+        toast.success("โหลดตัวอย่างสำเร็จ", `พบ ${preview.rows.length} รายการ`);
     } catch (e) {
         previewError.value = String(e);
+        toast.error("โหลดตัวอย่างล้มเหลว", String(e));
     } finally {
         previewLoading.value = false;
     }
@@ -193,8 +198,10 @@ async function exportExcel() {
         });
         exportedFile.value = res.files[0];
         carryForward.value = res.carry_forward;
+        toast.success("ส่งออก Excel สำเร็จ", `บันทึกไฟล์เรียบร้อยแล้ว`);
     } catch (e) {
         exportError.value = String(e);
+        toast.error("ส่งออก Excel ล้มเหลว", String(e));
     } finally {
         exportLoading.value = false;
     }

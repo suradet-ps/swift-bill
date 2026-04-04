@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { useToast } from "../composables/useToast";
 
 interface DbConfig {
     host: string;
@@ -82,6 +83,8 @@ const emit = defineEmits<{
     (e: "update:approvalDate", v: string): void;
     (e: "saveHistory", entry: RoundHistoryEntry): void;
 }>();
+
+const toast = useToast();
 
 const loading = ref(false);
 const error = ref("");
@@ -169,8 +172,13 @@ async function generate() {
             },
         });
         result.value = res;
+        toast.success(
+            "สร้าง PDF สำเร็จ",
+            `สร้าง ${res.total_rows} หน้า ยอดรวม ${res.total_amount.toLocaleString("th-TH", { minimumFractionDigits: 2 })} บาท`
+        );
     } catch (e) {
         error.value = String(e);
+        toast.error("สร้าง PDF ล้มเหลว", String(e));
     } finally {
         loading.value = false;
     }

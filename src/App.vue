@@ -7,6 +7,10 @@ import TabReport1 from "./components/TabReport1.vue";
 import TabReport2 from "./components/TabReport2.vue";
 import TabReport3 from "./components/TabReport3.vue";
 import TabHistory from "./components/TabHistory.vue";
+import ToastContainer from "./components/ToastContainer.vue";
+import { useToast } from "./composables/useToast";
+
+const toast = useToast();
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -153,21 +157,37 @@ async function refreshHistory() {
 }
 
 async function saveEntry(entry: RoundHistoryEntry) {
-    await invoke("save_round_entry", { entry });
-    await refreshHistory();
+    try {
+        await invoke("save_round_entry", { entry });
+        await refreshHistory();
+        toast.success("บันทึกประวัติสำเร็จ", `บันทึกรอบ ${entry.round} เรียบร้อยแล้ว`);
+    } catch (e) {
+        toast.error("บันทึกประวัติล้มเหลว", String(e));
+    }
 }
 
 async function deleteEntry(id: string) {
-    await invoke("delete_round_entry", { id });
-    await refreshHistory();
+    try {
+        await invoke("delete_round_entry", { id });
+        await refreshHistory();
+        toast.success("ลบประวัติสำเร็จ", "ลบรายการประวัติเรียบร้อยแล้ว");
+    } catch (e) {
+        toast.error("ลบประวัติล้มเหลว", String(e));
+    }
 }
 
 function saveDbConfig() {
     localStorage.setItem("swiftbill_dbconfig", JSON.stringify(dbConfig));
+    toast.success("บันทึกการตั้งค่าสำเร็จ", "ข้อมูลการเชื่อมต่อถูกบันทึกไว้ในเครื่องแล้ว");
 }
 
 function handleConnectionStatus(ok: boolean) {
     dbConnected.value = ok;
+    if (ok) {
+        toast.success("เชื่อมต่อสำเร็จ", "เชื่อมต่อฐานข้อมูล INVS ได้เรียบร้อย");
+    } else {
+        toast.error("เชื่อมต่อล้มเหลว", "ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาตรวจสอบการตั้งค่า");
+    }
 }
 
 function handleR2Carry(carry: { next_reg_no: string; next_running: number; next_po_no: number; next_purchase_no: number }) {
@@ -194,6 +214,11 @@ function applyHistoryEntry(entry: RoundHistoryEntry) {
 
     // Switch to query tab so user can pick the new date range
     activeTab.value = "query";
+
+    toast.info(
+        "โหลดประวัติสำเร็จ",
+        `โหลดค่า carry-forward จากรอบ ${entry.round} แล้ว — พร้อมทำงานรอบ ${entry.round + 1}`
+    );
 }
 
 // ─── Tabs meta ────────────────────────────────────────────────────────────────
@@ -298,6 +323,9 @@ const tabs: { id: TabId; icon: string; label: string }[] = [
             <span v-else class="conn-status conn-unknown">○ ยังไม่ได้ทดสอบ</span>
         </span>
     </footer>
+
+    <!-- ── Toast Notifications ──────────────────────────────────────────── -->
+    <ToastContainer />
 </div>
 </template>
 
