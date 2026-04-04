@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import { useToast } from "../composables/useToast";
 
 const toast = useToast();
@@ -103,6 +104,21 @@ const supplyCount = computed(() =>
     props.previewData?.invoices.filter((i) => i.category === "วัสดุเภสัชกรรม").length ?? 0
 );
 
+async function browseFolder() {
+    try {
+        const selected = await open({
+            directory: true,
+            multiple: false,
+            title: "เลือกโฟลเดอร์สำหรับบันทึก PDF",
+        });
+        if (selected && typeof selected === "string") {
+            emit("update:outputDir", selected);
+        }
+    } catch (e) {
+        console.error("Browse folder error:", e);
+    }
+}
+
 function formatMoney(n: number): string {
     return n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -161,10 +177,15 @@ async function fetchData() {
                 <span class="field-hint">รอบภายในช่วงเวลาเดียวกัน เช่น รอบ 1, 2, 3…</span>
             </div>
             <div class="form-group full">
-                <label>โฟลเดอร์บันทึก PDF</label>
-                <input type="text" :value="outputDir"
-                    @input="emit('update:outputDir', ($event.target as HTMLInputElement).value)"
-                    placeholder="เช่น C:\Reports หรือ /Users/me/Documents (ปล่อยว่าง = โฟลเดอร์ปัจจุบัน)" />
+                <label>โฟลเดอร์ที่ต้องการบันทึก</label>
+                <div class="input-with-browse">
+                    <input type="text" :value="outputDir"
+                        @input="emit('update:outputDir', ($event.target as HTMLInputElement).value)"
+                        placeholder="เช่น C:\Reports หรือ /Users/me/Documents (ปล่อยว่าง = โฟลเดอร์ปัจจุบัน)" />
+                    <button class="btn btn-browse" @click="browseFolder" type="button" title="เลือกโฟลเดอร์">
+                        📂 เลือก
+                    </button>
+                </div>
                 <span class="field-hint">ระบบจะสร้างโฟลเดอร์ย่อย output/ ภายในโฟลเดอร์ที่ระบุ</span>
             </div>
         </div>
@@ -318,5 +339,44 @@ code {
     color: var(--c-primary);
     padding: 2px 6px;
     border-radius: 4px;
+}
+
+.input-with-browse {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.input-with-browse input {
+    flex: 1;
+    min-width: 0;
+}
+
+.btn-browse {
+    white-space: nowrap;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius);
+    background: var(--c-surface);
+    color: var(--c-text);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-browse:hover {
+    background: var(--c-primary);
+    color: #fff;
+    border-color: var(--c-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.btn-browse:active {
+    transform: translateY(0);
 }
 </style>
