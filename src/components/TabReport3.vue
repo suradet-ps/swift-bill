@@ -30,6 +30,7 @@ interface CarryForward {
     next_reg_no: string;
     next_running: number;
     next_po_no: number;
+    next_purchase_no: number;
     remaining_balance: number;
 }
 
@@ -51,6 +52,7 @@ interface RoundHistoryEntry {
     next_reg_no: string;
     next_running: number;
     next_po_no: number;
+    next_purchase_no?: number;
     remaining_balance: number;
     budget_total: number;
     total_amount: number;

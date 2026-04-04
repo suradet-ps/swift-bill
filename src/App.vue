@@ -38,6 +38,7 @@ export interface CarryForward {
     next_reg_no: string;
     next_running: number;
     next_po_no: number;
+    next_purchase_no: number;
     remaining_balance: number;
 }
 
@@ -59,6 +60,7 @@ export interface RoundHistoryEntry {
     next_reg_no: string;
     next_running: number;
     next_po_no: number;
+    next_purchase_no?: number;
     remaining_balance: number;
     budget_total: number;
     total_amount: number;
@@ -101,6 +103,7 @@ const round = ref(1);
 const r1Form = reactive({ startRegNo: "69ภ1", startRunning: 0 });
 const r2Form = reactive({
     startPoNo: 1,
+    startPurchaseNo: 1,
     startRegNo: "69ภ1",
     startRunning: 0,
     approvalDate: "",
@@ -119,6 +122,7 @@ const r2Carry = ref<{
     next_reg_no: string;
     next_running: number;
     next_po_no: number;
+    next_purchase_no: number;
 } | null>(null);
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
@@ -149,7 +153,7 @@ async function deleteEntry(id: string) {
     await refreshHistory();
 }
 
-function handleR2Carry(carry: { next_reg_no: string; next_running: number; next_po_no: number }) {
+function handleR2Carry(carry: { next_reg_no: string; next_running: number; next_po_no: number; next_purchase_no: number }) {
     r2Carry.value = carry;
 }
 
@@ -163,6 +167,7 @@ function applyHistoryEntry(entry: RoundHistoryEntry) {
 
     // Pre-fill report 2 form
     r2Form.startPoNo = entry.next_po_no;
+    r2Form.startPurchaseNo = entry.next_purchase_no ?? 1;
     r2Form.startRegNo = entry.next_reg_no;
     r2Form.startRunning = entry.next_running;
 
@@ -231,9 +236,9 @@ const tabs: { id: TabId; icon: string; label: string }[] = [
         <!-- TabReport2 carry-forward listener (invisible) -->
         <TabReport2 v-show="activeTab === 'report2'" :db-config="dbConfig" :date-from="dateFrom" :date-to="dateTo"
             :year="year" :month="month" :round="round" :output-dir="outputDir" :preview-data="previewData"
-            v-model:start-po-no="r2Form.startPoNo" v-model:start-reg-no="r2Form.startRegNo"
-            v-model:start-running="r2Form.startRunning" v-model:approval-date="r2Form.approvalDate"
-            @save-history="saveEntry" @carry-result="handleR2Carry" />
+            v-model:start-po-no="r2Form.startPoNo" v-model:start-purchase-no="r2Form.startPurchaseNo"
+            v-model:start-reg-no="r2Form.startRegNo" v-model:start-running="r2Form.startRunning"
+            v-model:approval-date="r2Form.approvalDate" @save-history="saveEntry" @carry-result="handleR2Carry" />
         <TabHistory v-show="activeTab === 'history'" :entries="historyEntries" @load-entry="applyHistoryEntry"
             @delete-entry="deleteEntry" />
     </main>

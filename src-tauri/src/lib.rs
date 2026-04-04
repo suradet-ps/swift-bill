@@ -78,6 +78,7 @@ async fn preview_invoice_submission(
             next_reg_no,
             next_running,
             next_po_no: 0,
+            next_purchase_no: 0,
             remaining_balance: 0.0,
         },
         total_rows: invoices.len(),
@@ -113,6 +114,7 @@ async fn export_invoice_submission_excel(
             next_reg_no,
             next_running,
             next_po_no: 0,
+            next_purchase_no: 0,
             remaining_balance: 0.0,
         },
     })
@@ -144,6 +146,7 @@ async fn preview_receiving_summary(
             next_reg_no,
             next_running,
             next_po_no,
+            next_purchase_no: params.start_purchase_no + n,
             remaining_balance: 0.0,
         },
         total_rows: invoices.len(),
@@ -180,6 +183,7 @@ async fn export_receiving_summary_excel(
             next_reg_no,
             next_running,
             next_po_no,
+            next_purchase_no: params.start_purchase_no + n,
             remaining_balance: 0.0,
         },
     })
@@ -217,6 +221,7 @@ async fn generate_cover_letters(params: CoverLettersParams) -> Result<GenerateRe
             next_reg_no: String::new(),
             next_running: 0,
             next_po_no: 0,
+            next_purchase_no: 0,
             remaining_balance,
         },
     })

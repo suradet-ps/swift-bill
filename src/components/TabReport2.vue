@@ -20,6 +20,7 @@ interface CarryForward {
     next_reg_no: string;
     next_running: number;
     next_po_no: number;
+    next_purchase_no: number;
     remaining_balance: number;
 }
 
@@ -63,6 +64,7 @@ interface RoundHistoryEntry {
     next_reg_no: string;
     next_running: number;
     next_po_no: number;
+    next_purchase_no?: number;
     remaining_balance: number;
     budget_total: number;
     total_amount: number;
@@ -80,6 +82,7 @@ const props = defineProps<{
     outputDir: string;
     previewData: PreviewData | null;
     startPoNo: number;
+    startPurchaseNo: number;
     startRegNo: string;
     startRunning: number;
     approvalDate: string;
@@ -87,11 +90,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     (e: "update:startPoNo", v: number): void;
+    (e: "update:startPurchaseNo", v: number): void;
     (e: "update:startRegNo", v: string): void;
     (e: "update:startRunning", v: number): void;
     (e: "update:approvalDate", v: string): void;
     (e: "saveHistory", entry: RoundHistoryEntry): void;
-    (e: "carryResult", carry: { next_reg_no: string; next_running: number; next_po_no: number }): void;
+    (e: "carryResult", carry: { next_reg_no: string; next_running: number; next_po_no: number; next_purchase_no: number }): void;
 }>();
 
 const THAI_MONTHS = [
@@ -158,6 +162,7 @@ async function previewReport() {
                 month: props.month,
                 round: props.round,
                 start_po_no: props.startPoNo,
+                start_purchase_no: props.startPurchaseNo,
                 start_reg_no: props.startRegNo,
                 start_running: props.startRunning,
                 approval_date: props.approvalDate.trim() || null,
@@ -187,6 +192,7 @@ async function exportExcel() {
                 month: props.month,
                 round: props.round,
                 start_po_no: props.startPoNo,
+                start_purchase_no: props.startPurchaseNo,
                 start_reg_no: props.startRegNo,
                 start_running: props.startRunning,
                 output_dir: props.outputDir,
@@ -198,6 +204,7 @@ async function exportExcel() {
             next_reg_no: res.carry_forward.next_reg_no,
             next_running: res.carry_forward.next_running,
             next_po_no: res.carry_forward.next_po_no,
+            next_purchase_no: res.carry_forward.next_purchase_no,
         });
     } catch (e) {
         exportError.value = String(e);
@@ -221,6 +228,7 @@ function saveToHistory() {
         next_reg_no: carryForward.value.next_reg_no,
         next_running: carryForward.value.next_running,
         next_po_no: carryForward.value.next_po_no,
+        next_purchase_no: carryForward.value.next_purchase_no,
         remaining_balance: carryForward.value.remaining_balance,
         budget_total: 0,
         total_amount: exportedTotal.value,
@@ -287,9 +295,16 @@ function saveToHistory() {
         <div class="section-label" style="margin-top:16px">🔢 เลขที่เอกสาร (ต่อเนื่องจากรอบก่อน)</div>
         <div class="form-grid">
             <div class="form-group">
-                <label>เลขขอซื้อ / PO เริ่มต้น</label>
+                <label>เลขขอซื้อ / รายงาน เริ่มต้น</label>
                 <input type="number" min="1" :value="startPoNo"
                     @input="emit('update:startPoNo', parseInt(($event.target as HTMLInputElement).value) || 1)" />
+                <span class="field-hint">ขอซื้อ (ลบ0033.302/) และ รายงาน/อนุมัติ</span>
+            </div>
+            <div class="form-group">
+                <label>เลขใบสั่งซื้อ เริ่มต้น</label>
+                <input type="number" min="1" :value="startPurchaseNo"
+                    @input="emit('update:startPurchaseNo', parseInt(($event.target as HTMLInputElement).value) || 1)" />
+                <span class="field-hint">ใบสั่งซื้อ…/{year} — นับอิสระจากเลขขอซื้อ</span>
             </div>
             <div class="form-group">
                 <label>เลขทะเบียนคุมเริ่มต้น</label>
@@ -422,8 +437,12 @@ function saveToHistory() {
                     <span class="carry-val">{{ carryForward.next_running }}</span>
                 </div>
                 <div class="carry-item">
-                    <span class="carry-label">เลขขอซื้อ/PO ถัดไป</span>
+                    <span class="carry-label">เลขขอซื้อ/รายงาน ถัดไป</span>
                     <span class="carry-val">{{ carryForward.next_po_no }}</span>
+                </div>
+                <div class="carry-item">
+                    <span class="carry-label">เลขใบสั่งซื้อ ถัดไป</span>
+                    <span class="carry-val">{{ carryForward.next_purchase_no }}</span>
                 </div>
             </div>
         </div>

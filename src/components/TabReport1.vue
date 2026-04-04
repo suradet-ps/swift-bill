@@ -14,6 +14,7 @@ interface CarryForward {
     next_reg_no: string;
     next_running: number;
     next_po_no: number;
+    next_purchase_no: number;
     remaining_balance: number;
 }
 

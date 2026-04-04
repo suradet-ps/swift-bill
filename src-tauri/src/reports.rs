@@ -118,7 +118,7 @@ pub fn process_receiving_summary(
 
     let mut request_no = params.start_po_no;
     let mut report_no = params.start_po_no + 1;
-    let mut po_no = params.start_po_no;
+    let mut po_no = params.start_purchase_no;
 
     let approval_date_str = params.approval_date.clone().unwrap_or_default();
 
@@ -298,6 +298,7 @@ mod tests {
             month: 1,
             round: 1,
             start_po_no: 253,
+            start_purchase_no: 253,
             start_reg_no: "69ภ12".into(),
             start_running: 3,
             approval_date: Some("15 ม.ค. 69".into()),
@@ -483,6 +484,7 @@ mod tests {
         let mut params = sample_summary_params();
         params.round = 2;
         params.start_po_no = 256;
+        params.start_purchase_no = 256;
         params.start_running = 3;
 
         let rows = process_receiving_summary(&invoices, &params);

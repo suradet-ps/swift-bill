@@ -35,7 +35,8 @@ pub struct PreviewData {
 pub struct CarryForward {
     pub next_reg_no: String,    // e.g. "69ภ13"
     pub next_running: u32,      // next available slot (0–9) within register
-    pub next_po_no: u32,        // next PO number (meaningful only for ReceivingSummary)
+    pub next_po_no: u32,        // next ขอซื้อ/รายงาน start (ReceivingSummary)
+    pub next_purchase_no: u32,  // next ใบสั่งซื้อ start (ReceivingSummary)
     pub remaining_balance: f64, // (meaningful only for CoverLetters)
 }
 
@@ -116,7 +117,8 @@ pub struct ReceivingSummaryParams {
     pub year: i32,
     pub month: u32,
     pub round: u32,
-    pub start_po_no: u32,
+    pub start_po_no: u32,       // starting number for ขอซื้อ and รายงาน/อนุมัติ
+    pub start_purchase_no: u32, // starting number for ใบสั่งซื้อ (independent counter)
     pub start_reg_no: String,
     pub start_running: u32,
     pub approval_date: Option<String>,
@@ -153,6 +155,8 @@ pub struct RoundHistoryEntry {
     pub next_reg_no: String,
     pub next_running: u32,
     pub next_po_no: u32,
+    #[serde(default)]
+    pub next_purchase_no: u32, // ใบสั่งซื้อ counter (added later; default 0 for old entries)
     pub remaining_balance: f64,
     // Summary
     pub budget_total: f64,
@@ -204,6 +208,7 @@ pub struct ReceivingSummaryExcelParams {
     pub month: u32,
     pub round: u32,
     pub start_po_no: u32,
+    pub start_purchase_no: u32,
     pub start_reg_no: String,
     pub start_running: u32,
     pub output_dir: String,

@@ -11,6 +11,7 @@ interface RoundHistoryEntry {
     next_reg_no: string;
     next_running: number;
     next_po_no: number;
+    next_purchase_no?: number;
     remaining_balance: number;
     budget_total: number;
     total_amount: number;
@@ -99,7 +100,7 @@ function doDelete(id: string) {
                 </div>
                 <div class="entry-meta">
                     <span class="meta-chip">📅 {{ formatDate(entry.date_from) }} – {{ formatDate(entry.date_to)
-                    }}</span>
+                        }}</span>
                     <span class="meta-chip">📦 {{ entry.invoice_count }} บิล</span>
                     <span class="meta-chip money">💰 {{ formatMoney(entry.total_amount) }} บาท</span>
                     <span class="meta-chip muted">🕐 {{ formatCreatedAt(entry.created_at) }}</span>
