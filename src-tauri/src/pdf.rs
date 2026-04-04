@@ -8,6 +8,12 @@
 //! - **สรุปรับยา**     – one A4 landscape PDF
 //! - **เบิกยาปะหน้า** – one A4 portrait PDF *per invoice*
 
+// The invoice-submission and receiving-summary PDF paths are superseded by
+// Excel export; suppress dead_code lints for the still-present helpers.
+// PDF rendering helpers legitimately require many parameters.
+#![allow(dead_code)]
+#![allow(clippy::too_many_arguments)]
+
 use printpdf::{
     Color, FontId, Line, LinePoint, Mm, Op, PaintMode, ParsedFont, PdfDocument, PdfPage,
     PdfSaveOptions, PdfWarnMsg, Point, Polygon, PolygonRing, Pt, Rgb, WindingOrder,

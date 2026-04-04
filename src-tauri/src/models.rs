@@ -165,3 +165,46 @@ pub struct RoundHistoryEntry {
 pub struct RoundHistory {
     pub entries: Vec<RoundHistoryEntry>,
 }
+
+// ── Preview results ───────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InvoiceSubmissionPreview {
+    pub rows: Vec<InvoiceSubmissionRow>,
+    pub carry_forward: CarryForward,
+    pub total_rows: usize,
+    pub total_amount: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReceivingSummaryPreview {
+    pub rows: Vec<ReceivingSummaryRow>,
+    pub carry_forward: CarryForward,
+    pub total_rows: usize,
+    pub total_amount: f64,
+}
+
+// ── Excel export params ───────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InvoiceSubmissionExcelParams {
+    pub rows: Vec<InvoiceSubmissionRow>,
+    pub year: i32,
+    pub month: u32,
+    pub round: u32,
+    pub start_reg_no: String,
+    pub start_running: u32,
+    pub output_dir: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReceivingSummaryExcelParams {
+    pub rows: Vec<ReceivingSummaryRow>,
+    pub year: i32,
+    pub month: u32,
+    pub round: u32,
+    pub start_po_no: u32,
+    pub start_reg_no: String,
+    pub start_running: u32,
+    pub output_dir: String,
+}

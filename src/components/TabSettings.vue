@@ -111,11 +111,7 @@ async function testConnection() {
             {{ message }}
         </div>
 
-        <div class="info-box" style="margin-top:20px">
-            <strong>💡 หมายเหตุ:</strong>
-            ระบบนี้อ่านข้อมูลจากตาราง <code>MS_IVO</code> และ <code>COMPANY</code> เท่านั้น
-            ไม่มีการเขียนหรือแก้ไขข้อมูลในฐานข้อมูล
-        </div>
+
     </div>
 
     <div class="card">
@@ -125,19 +121,16 @@ async function testConnection() {
                 <tr>
                     <th>ตาราง</th>
                     <th>คอลัมน์ที่ใช้</th>
-                    <th>หมายเหตุ</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td><code>MS_IVO</code></td>
                     <td><code>INVOICE_NO, VENDOR_CODE, TOTAL_COST, RECEIVE_DATE</code></td>
-                    <td>ใบแจ้งหนี้รับยา</td>
                 </tr>
                 <tr>
                     <td><code>COMPANY</code></td>
                     <td><code>COMPANY_CODE, COMPANY_NAME, KEY_WORD</code></td>
-                    <td>KEY_WORD ขึ้นต้น PS = วัสดุเภสัชกรรม, อื่นๆ = ยา</td>
                 </tr>
             </tbody>
         </table>

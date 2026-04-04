@@ -1,4 +1,5 @@
 mod db;
+mod excel;
 mod history;
 mod models;
 mod pdf;
@@ -6,8 +7,9 @@ mod queries;
 mod reports;
 
 use models::{
-    CarryForward, CoverLettersParams, DbConfig, GenerateResult, InvoiceSubmissionParams,
-    PreviewData, ReceivingSummaryParams, RoundHistoryEntry,
+    CarryForward, CoverLettersParams, DbConfig, GenerateResult, InvoiceSubmissionExcelParams,
+    InvoiceSubmissionParams, InvoiceSubmissionPreview, PreviewData, ReceivingSummaryExcelParams,
+    ReceivingSummaryParams, ReceivingSummaryPreview, RoundHistoryEntry,
 };
 
 // ── Helper ────────────────────────────────────────────────────────────────
@@ -23,7 +25,7 @@ fn prepare_output_dir(raw: &str) -> Result<String, String> {
     Ok(dir.to_string_lossy().to_string())
 }
 
-// ── Tauri commands ────────────────────────────────────────────────────────
+// ── Tauri commands — connection & preview ─────────────────────────────────
 
 #[tauri::command]
 async fn test_connection(config: DbConfig) -> Result<String, String> {
@@ -51,10 +53,12 @@ async fn fetch_preview(
     })
 }
 
+// ── Tauri commands — ส่งหนี้เบิกยา preview + Excel export ────────────────
+
 #[tauri::command]
-async fn generate_invoice_submission(
+async fn preview_invoice_submission(
     params: InvoiceSubmissionParams,
-) -> Result<GenerateResult, String> {
+) -> Result<InvoiceSubmissionPreview, String> {
     let invoices =
         queries::fetch_invoices(&params.db_config, &params.date_from, &params.date_to).await?;
     if invoices.is_empty() {
@@ -68,16 +72,42 @@ async fn generate_invoice_submission(
     let rows = reports::process_invoice_submission(&invoices, &params);
     let total_amount: f64 = invoices.iter().map(|i| i.total_cost).sum();
 
+    Ok(InvoiceSubmissionPreview {
+        rows,
+        carry_forward: CarryForward {
+            next_reg_no,
+            next_running,
+            next_po_no: 0,
+            remaining_balance: 0.0,
+        },
+        total_rows: invoices.len(),
+        total_amount,
+    })
+}
+
+#[tauri::command]
+async fn export_invoice_submission_excel(
+    params: InvoiceSubmissionExcelParams,
+) -> Result<GenerateResult, String> {
+    let n = params.rows.len() as u32;
+    let (next_reg_no, next_running) =
+        reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
+
+    let total_amount: f64 = params.rows.iter().map(|r| r.total_amount).sum();
+    let total_rows = params.rows.len();
+
     let output_dir = prepare_output_dir(&params.output_dir)?;
-    let params_out = InvoiceSubmissionParams {
-        output_dir,
-        ..params
-    };
-    let file = pdf::generate_invoice_submission_pdf(&rows, &params_out)?;
+    let file = excel::generate_invoice_submission_excel(
+        &params.rows,
+        params.year,
+        params.month,
+        params.round,
+        &output_dir,
+    )?;
 
     Ok(GenerateResult {
         files: vec![file],
-        total_rows: invoices.len(),
+        total_rows,
         total_amount,
         carry_forward: CarryForward {
             next_reg_no,
@@ -88,10 +118,12 @@ async fn generate_invoice_submission(
     })
 }
 
+// ── Tauri commands — สรุปรับยา preview + Excel export ────────────────────
+
 #[tauri::command]
-async fn generate_receiving_summary(
+async fn preview_receiving_summary(
     params: ReceivingSummaryParams,
-) -> Result<GenerateResult, String> {
+) -> Result<ReceivingSummaryPreview, String> {
     let invoices =
         queries::fetch_invoices(&params.db_config, &params.date_from, &params.date_to).await?;
     if invoices.is_empty() {
@@ -106,16 +138,43 @@ async fn generate_receiving_summary(
     let rows = reports::process_receiving_summary(&invoices, &params);
     let total_amount: f64 = invoices.iter().map(|i| i.total_cost).sum();
 
+    Ok(ReceivingSummaryPreview {
+        rows,
+        carry_forward: CarryForward {
+            next_reg_no,
+            next_running,
+            next_po_no,
+            remaining_balance: 0.0,
+        },
+        total_rows: invoices.len(),
+        total_amount,
+    })
+}
+
+#[tauri::command]
+async fn export_receiving_summary_excel(
+    params: ReceivingSummaryExcelParams,
+) -> Result<GenerateResult, String> {
+    let n = params.rows.len() as u32;
+    let (next_reg_no, next_running) =
+        reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
+    let next_po_no = params.start_po_no + n;
+
+    let total_amount: f64 = params.rows.iter().map(|r| r.total_amount).sum();
+    let total_rows = params.rows.len();
+
     let output_dir = prepare_output_dir(&params.output_dir)?;
-    let params_out = ReceivingSummaryParams {
-        output_dir,
-        ..params
-    };
-    let file = pdf::generate_receiving_summary_pdf(&rows, &params_out)?;
+    let file = excel::generate_receiving_summary_excel(
+        &params.rows,
+        params.year,
+        params.month,
+        params.round,
+        &output_dir,
+    )?;
 
     Ok(GenerateResult {
         files: vec![file],
-        total_rows: invoices.len(),
+        total_rows,
         total_amount,
         carry_forward: CarryForward {
             next_reg_no,
@@ -125,6 +184,8 @@ async fn generate_receiving_summary(
         },
     })
 }
+
+// ── Tauri commands — เบิกยาปะหน้า (PDF, unchanged) ───────────────────────
 
 #[tauri::command]
 async fn generate_cover_letters(params: CoverLettersParams) -> Result<GenerateResult, String> {
@@ -187,8 +248,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             test_connection,
             fetch_preview,
-            generate_invoice_submission,
-            generate_receiving_summary,
+            preview_invoice_submission,
+            export_invoice_submission_excel,
+            preview_receiving_summary,
+            export_receiving_summary_excel,
             generate_cover_letters,
             load_round_history,
             save_round_entry,

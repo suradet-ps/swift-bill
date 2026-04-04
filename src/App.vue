@@ -240,7 +240,7 @@ const tabs: { id: TabId; icon: string; label: string }[] = [
 
     <!-- ── Footer ───────────────────────────────────────────────────────── -->
     <footer class="app-footer">
-        <p>Swift Bill v0.3 &nbsp;·&nbsp; โรงพยาบาลสระโบสถ์ &nbsp;·&nbsp; Read-only DB</p>
+        <p>Swift Bill v0.3 &nbsp;·&nbsp; ลิขสิทธิ์ ภก.สุรเดช ประถมศักดิ์ โรงพยาบาลสระโบสถ์</p>
     </footer>
 </div>
 </template>

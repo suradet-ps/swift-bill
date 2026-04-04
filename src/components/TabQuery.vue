@@ -104,29 +104,6 @@ function formatMoney(n: number): string {
     return n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function setQuickRange(type: "month" | "1-10" | "11-20" | "21-end") {
-    const today = new Date();
-    const y = today.getFullYear();
-    const m = today.getMonth(); // 0-based
-    const pad = (n: number) => String(n).padStart(2, "0");
-
-    if (type === "month") {
-        const lastDay = new Date(y, m + 1, 0).getDate();
-        emit("update:startDateHtml", `${y}-${pad(m + 1)}-01`);
-        emit("update:endDateHtml", `${y}-${pad(m + 1)}-${pad(lastDay)}`);
-    } else if (type === "1-10") {
-        emit("update:startDateHtml", `${y}-${pad(m + 1)}-01`);
-        emit("update:endDateHtml", `${y}-${pad(m + 1)}-10`);
-    } else if (type === "11-20") {
-        emit("update:startDateHtml", `${y}-${pad(m + 1)}-11`);
-        emit("update:endDateHtml", `${y}-${pad(m + 1)}-20`);
-    } else {
-        const lastDay = new Date(y, m + 1, 0).getDate();
-        emit("update:startDateHtml", `${y}-${pad(m + 1)}-21`);
-        emit("update:endDateHtml", `${y}-${pad(m + 1)}-${pad(lastDay)}`);
-    }
-}
-
 async function fetchData() {
     if (!canFetch.value) return;
     loading.value = true;
@@ -152,16 +129,7 @@ async function fetchData() {
     <!-- ── Date range card ── -->
     <div class="card">
         <div class="card-title">🔍 เลือกช่วงวันที่และดึงข้อมูล</div>
-        <div class="card-desc">เลือกช่วงวันที่รับยา (RECEIVE_DATE) แล้วกด "ดึงข้อมูล" เพื่อโหลดรายการบิลจาก INVS</div>
-
-        <!-- Quick range buttons -->
-        <div class="quick-range">
-            <span class="quick-label">เดือนนี้ :</span>
-            <button class="btn btn-secondary" @click="setQuickRange('1-10')">งวด 1 (1–10)</button>
-            <button class="btn btn-secondary" @click="setQuickRange('11-20')">งวด 2 (11–20)</button>
-            <button class="btn btn-secondary" @click="setQuickRange('21-end')">งวด 3 (21–สิ้นเดือน)</button>
-            <button class="btn btn-secondary" @click="setQuickRange('month')">ทั้งเดือน</button>
-        </div>
+        <div class="card-desc">เลือกช่วงวันที่แล้วกด "ดึงข้อมูล" เพื่อโหลดรายการบิลจาก INVS</div>
 
         <div class="form-grid-2" style="margin-top:12px">
             <div class="form-group">
@@ -290,25 +258,6 @@ async function fetchData() {
 
 .actions {
     margin-top: 16px;
-}
-
-.quick-range {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.quick-label {
-    font-size: 12px;
-    color: var(--c-text-muted);
-    font-weight: 600;
-    white-space: nowrap;
-}
-
-.quick-range .btn {
-    padding: 5px 12px;
-    font-size: 12px;
 }
 
 .empty-result {
