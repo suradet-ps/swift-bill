@@ -25,9 +25,7 @@ use ttf_parser::{Face, GlyphId};
 
 use crate::models::{CoverLetterPage, CoverLettersParams};
 
-// ---------------------------------------------------------------------------
 // Compile-time embedded assets
-// ---------------------------------------------------------------------------
 
 /// Pre-built blank A4 template (compiled into the binary).
 const TEMPLATE_BYTES: &[u8] = include_bytes!("template_cover.pdf");
@@ -35,9 +33,7 @@ const TEMPLATE_BYTES: &[u8] = include_bytes!("template_cover.pdf");
 /// Full TH Sarabun PSK TrueType font — used for all overlay text.
 const FONT_BYTES: &[u8] = include_bytes!("THSarabun.ttf");
 
-// ---------------------------------------------------------------------------
-// Layout constants  (PDF pt, origin = bottom-left)
-// ---------------------------------------------------------------------------
+// Layout constants (PDF pt, origin = bottom-left)
 
 /// X where the date text begins (just after "วันที่" label + underscores start).
 const DATE_X: f64 = 275.55;
@@ -68,9 +64,7 @@ const NUM_PT: f64 = 11.5;
 /// PDF resource name for our overlay font — must not clash with F1/F2/F3/F4.
 const FONT_RESOURCE: &str = "OVL_F";
 
-// ---------------------------------------------------------------------------
 // Number formatting
-// ---------------------------------------------------------------------------
 
 /// Format a monetary value as `"1,234,567.89"` (Western digits, 2 d.p.).
 /// Negative values are prefixed with `"-"`.
@@ -106,9 +100,7 @@ fn fmt_amount(v: f64) -> String {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Font / glyph helpers
-// ---------------------------------------------------------------------------
 
 /// Convert a Unicode string to a sequence of 2-byte big-endian GID pairs
 /// suitable for embedding in a `<HEXSTRING>` inside a Type0/Identity-H stream.
@@ -134,9 +126,7 @@ fn text_width_pt(text: &str, face: &Face, size: f64) -> f64 {
         .sum()
 }
 
-// ---------------------------------------------------------------------------
 // Content-stream builder
-// ---------------------------------------------------------------------------
 
 /// Append a single `BT … ET` text block to `buf`.
 ///
@@ -207,9 +197,7 @@ fn build_overlay(page: &CoverLetterPage, face: &Face) -> Vec<u8> {
     buf
 }
 
-// ---------------------------------------------------------------------------
 // lopdf helpers
-// ---------------------------------------------------------------------------
 
 /// Build the `/W` (per-glyph widths) array for the CIDFont dictionary.
 ///
@@ -243,7 +231,7 @@ fn build_w_array(face: &Face) -> Vec<Object> {
 /// Embed the full `THSarabun.ttf` as a new Type0/Identity-H composite font
 /// in `doc` and return the ObjectId of the top-level Type0 font object.
 fn embed_full_font(doc: &mut Document, face: &Face) -> Result<ObjectId, lopdf::Error> {
-    // ── FontFile2 stream ────────────────────────────────────────────────────
+    // FontFile2 stream
     let mut ff_dict = Dictionary::new();
     ff_dict.set(
         b"Length1".to_vec(),
@@ -251,7 +239,7 @@ fn embed_full_font(doc: &mut Document, face: &Face) -> Result<ObjectId, lopdf::E
     );
     let ff_id = doc.add_object(Object::Stream(Stream::new(ff_dict, FONT_BYTES.to_vec())));
 
-    // ── FontDescriptor ──────────────────────────────────────────────────────
+    // FontDescriptor
     let mut desc = Dictionary::new();
     desc.set(b"Type".to_vec(), Object::Name(b"FontDescriptor".to_vec()));
     desc.set(
@@ -276,7 +264,7 @@ fn embed_full_font(doc: &mut Document, face: &Face) -> Result<ObjectId, lopdf::E
     desc.set(b"FontFile2".to_vec(), Object::Reference(ff_id));
     let desc_id = doc.add_object(Object::Dictionary(desc));
 
-    // ── CIDSystemInfo ───────────────────────────────────────────────────────
+    // CIDSystemInfo
     let mut csi = Dictionary::new();
     csi.set(
         b"Registry".to_vec(),
@@ -288,7 +276,7 @@ fn embed_full_font(doc: &mut Document, face: &Face) -> Result<ObjectId, lopdf::E
     );
     csi.set(b"Supplement".to_vec(), Object::Integer(0));
 
-    // ── CIDFont (CIDFontType2) ──────────────────────────────────────────────
+    // CIDFont (CIDFontType2)
     let mut cidf = Dictionary::new();
     cidf.set(b"Type".to_vec(), Object::Name(b"Font".to_vec()));
     cidf.set(b"Subtype".to_vec(), Object::Name(b"CIDFontType2".to_vec()));
@@ -302,11 +290,11 @@ fn embed_full_font(doc: &mut Document, face: &Face) -> Result<ObjectId, lopdf::E
     // overrides this for every glyph we will actually render.
     cidf.set(b"DW".to_vec(), Object::Integer(400));
     cidf.set(b"CIDToGIDMap".to_vec(), Object::Name(b"Identity".to_vec()));
-    // ── per-glyph advance widths (fixes inter-character spacing) ────────────
+    // per-glyph advance widths (fixes inter-character spacing)
     cidf.set(b"W".to_vec(), Object::Array(build_w_array(face)));
     let cidf_id = doc.add_object(Object::Dictionary(cidf));
 
-    // ── Type0 composite font ────────────────────────────────────────────────
+    // Type0 composite font
     let mut f0 = Dictionary::new();
     f0.set(b"Type".to_vec(), Object::Name(b"Font".to_vec()));
     f0.set(b"Subtype".to_vec(), Object::Name(b"Type0".to_vec()));
@@ -441,9 +429,7 @@ fn add_page_to_tree(
     Ok(())
 }
 
-// ---------------------------------------------------------------------------
 // Public entry point
-// ---------------------------------------------------------------------------
 
 /// Generate a multi-page cover-letter PDF using the pre-built template.
 ///
@@ -454,24 +440,24 @@ pub fn generate(pages: &[CoverLetterPage], params: &CoverLettersParams) -> Resul
         return Err("ไม่มีข้อมูลสำหรับสร้าง PDF".into());
     }
 
-    // ── Parse font for glyph metrics (used throughout) ──────────────────────
+    // Parse font for glyph metrics (used throughout)
     let face = Face::parse(FONT_BYTES, 0).map_err(|e| format!("parse font: {:?}", e))?;
 
-    // ── Load template ────────────────────────────────────────────────────────
+    // Load template
     let mut doc = Document::load_mem(TEMPLATE_BYTES).map_err(|e| format!("load template: {e}"))?;
 
-    // ── Embed full TH Sarabun as OVL_F ──────────────────────────────────────
+    // Embed full TH Sarabun as OVL_F
     let font_obj_id = embed_full_font(&mut doc, &face).map_err(|e| format!("embed font: {e}"))?;
 
-    // ── Locate template page ─────────────────────────────────────────────────
+    // Locate template page
     let first_page_id = *doc.get_pages().get(&1).ok_or("template has no page 1")?;
 
-    // ── Save original (unmodified) template content ──────────────────────────
+    // Save original (unmodified) template content
     let template_content = doc
         .get_page_content(first_page_id)
         .map_err(|e| format!("get page content: {e}"))?;
 
-    // ── Inject OVL_F into page 1's resources ────────────────────────────────
+    // Inject OVL_F into page 1's resources
     add_font_to_page_resources(&mut doc, first_page_id, FONT_RESOURCE, font_obj_id)?;
 
     // Clone the (now-updated) page 1 dict for reuse in pages 2..N.
@@ -484,7 +470,7 @@ pub fn generate(pages: &[CoverLetterPage], params: &CoverLettersParams) -> Resul
 
     let pages_root_id = get_pages_root_id(&doc)?;
 
-    // ── Helper: build combined content bytes for one cover letter ────────────
+    // Helper: build combined content bytes for one cover letter
     let make_combined = |cover_page: &CoverLetterPage| -> Vec<u8> {
         let overlay = build_overlay(cover_page, &face);
         let mut v = template_content.clone();
@@ -494,11 +480,11 @@ pub fn generate(pages: &[CoverLetterPage], params: &CoverLettersParams) -> Resul
         v
     };
 
-    // ── Page 1: modify the existing template page in-place ───────────────────
+    // Page 1: modify the existing template page in-place
     doc.change_page_content(first_page_id, make_combined(&pages[0]))
         .map_err(|e| format!("change page content: {e}"))?;
 
-    // ── Pages 2..N: add new pages ────────────────────────────────────────────
+    // Pages 2..N: add new pages
     for cover_page in pages.iter().skip(1) {
         let combined = make_combined(cover_page);
 
@@ -513,7 +499,7 @@ pub fn generate(pages: &[CoverLetterPage], params: &CoverLettersParams) -> Resul
         add_page_to_tree(&mut doc, pages_root_id, new_page_id)?;
     }
 
-    // ── Save ─────────────────────────────────────────────────────────────────
+    // Save
     let filename = format!(
         "เบิกยาปะหน้า_{}_เดือน{}_รอบ{}.pdf",
         params.year, params.month, params.round
@@ -529,9 +515,7 @@ pub fn generate(pages: &[CoverLetterPage], params: &CoverLettersParams) -> Resul
     Ok(path_str)
 }
 
-// ---------------------------------------------------------------------------
 // Tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
@@ -539,7 +523,7 @@ mod tests {
     use crate::models::{CoverLetterPage, CoverLettersParams};
     use std::fs;
 
-    // ── fmt_amount ────────────────────────────────────────────────────────────
+    // fmt_amount tests
 
     #[test]
     fn test_fmt_amount_zero() {
@@ -565,7 +549,7 @@ mod tests {
         assert_eq!(fmt_amount(-1_000_000.0), "-1,000,000.00");
     }
 
-    // ── font helpers ──────────────────────────────────────────────────────────
+    // font helpers tests
 
     #[test]
     fn test_gid_lookup_thai_chars() {
@@ -604,7 +588,7 @@ mod tests {
         );
     }
 
-    // ── W array correctness ───────────────────────────────────────────────────
+    // W array correctness tests
 
     /// Digits were 2.7× too wide with DW=1000 (UPM=4096, advance≈1495 → 364 PDF units).
     /// After the fix every digit must be close to 364 and nowhere near 1000.
@@ -763,7 +747,7 @@ mod tests {
         }
     }
 
-    // ── build_overlay sanity ──────────────────────────────────────────────────
+    // build_overlay sanity tests
 
     #[test]
     fn test_overlay_contains_font_resource() {
@@ -780,7 +764,7 @@ mod tests {
         assert_eq!(bt_count, 7, "expected 7 text blocks, got {bt_count}");
     }
 
-    // ── full generate() ───────────────────────────────────────────────────────
+    // full generate() tests
 
     #[test]
     fn test_generate_single_page() {
@@ -870,7 +854,7 @@ mod tests {
         assert!(result.is_err(), "empty pages should return Err");
     }
 
-    // ── helpers ───────────────────────────────────────────────────────────────
+    // test helpers
 
     fn tempdir() -> std::path::PathBuf {
         let dir = std::env::temp_dir().join(format!(

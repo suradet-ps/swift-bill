@@ -410,7 +410,7 @@ pub fn generate_invoice_submission_pdf(
         page_h: A4_LAND_H,
     };
 
-    // ── Column X positions (mm from left) ─────────────────────────────────
+    // Column X positions (mm from left)
     //  0:ลำดับ 1:วันที่รับ 2:เลขที่เอกสาร 3:reg_no 4:running 5:วันที่ใบส่งของ
     //  6:รหัสบริษัท 7:ค่าใช้จ่ายเรื่อง 8:จำนวนเงินรวม  9:end
     let col_x: &[f64] = &[
@@ -445,7 +445,7 @@ pub fn generate_invoice_submission_pdf(
 
         ops.push(Op::SetOutlineThickness { pt: pt_f(0.3) });
 
-        // ── Title ─────────────────────────────────────────────────────────
+        // Title
         op_text_center(
             &mut ops,
             &ctx,
@@ -482,7 +482,7 @@ pub fn generate_invoice_submission_pdf(
             );
         }
 
-        // ── Header background ──────────────────────────────────────────────
+        // Header background
         op_filled_rect(
             &mut ops,
             &ctx,
@@ -495,14 +495,14 @@ pub fn generate_invoice_submission_pdf(
             0.96,
         );
 
-        // ── Header labels ──────────────────────────────────────────────────
+        // Header labels
         // Single-row headers: visually centred in hdr_h
         let hdr_y_single = table_top + hdr_h * 0.58; // ~9.3 mm below table_top
                                                      // Two-row headers: upper line and lower sub-label
         let hdr_y1 = table_top + hdr_h * 0.34; // ~5.4 mm — top row baseline
         let hdr_y2 = table_top + hdr_h * 0.76; // ~12.2 mm — bottom row baseline
 
-        // ── Single-row column headers ──────────────────────────────────────
+        // Single-row column headers
         let single_hdrs: &[(&str, usize)] = &[
             ("ลำดับ", 0),
             ("วันที่รับของ", 1),
@@ -524,7 +524,7 @@ pub fn generate_invoice_submission_pdf(
             );
         }
 
-        // ── Two-row span: เลขทะเบียนคุม (cols 3–4) ──────────────────────
+        // Two-row span: เลขทะเบียนคุม (cols 3–4)
         let span_w34 = cw[3] + cw[4];
         op_text_center(
             &mut ops,
@@ -557,7 +557,7 @@ pub fn generate_invoice_submission_pdf(
             "ลำดับ",
         );
 
-        // ── Two-row: วัน/เดือน/ปีใบส่งของ (col 5) ───────────────────────
+        // Two-row: วัน/เดือน/ปีใบส่งของ (col 5)
         op_text_center(
             &mut ops,
             &ctx,
@@ -579,7 +579,7 @@ pub fn generate_invoice_submission_pdf(
             "ใบส่งของ",
         );
 
-        // ── Data rows ─────────────────────────────────────────────────────
+        // Data rows
         let mut cur_y = table_top + hdr_h;
 
         for row in *chunk {
@@ -677,7 +677,7 @@ pub fn generate_invoice_submission_pdf(
             cur_y += row_h;
         }
 
-        // ── Last page: totals row + signature block ────────────────────────
+        // Last page: totals row + signature block
         if is_last {
             op_filled_rect(
                 &mut ops,
@@ -793,7 +793,7 @@ pub fn generate_invoice_submission_pdf(
             );
         }
 
-        // ── Table box + vertical lines ─────────────────────────────────────
+        // Table box + vertical lines
         op_box_rect(
             &mut ops,
             &ctx,
@@ -864,7 +864,7 @@ pub fn generate_receiving_summary_pdf(
         page_h: A4_LAND_H,
     };
 
-    // ── Column definitions (12 data columns) ──────────────────────────────
+    // Column definitions (12 data columns)
     // วันที่ขออนุมัติ | วันที่สั่งซื้อ | วันที่รับของ | รหัสบริษัท |
     // จำนวนเงินรวม | รหัสลงรับยา | เลขทะเบียน | running |
     // เลขที่ลงรับ | ขอซื้อ | รายงาน/อนุมัติ | ใบสั่งซื้อ | end
@@ -903,7 +903,7 @@ pub fn generate_receiving_summary_pdf(
 
         ops.push(Op::SetOutlineThickness { pt: pt_f(0.3) });
 
-        // ── Title ─────────────────────────────────────────────────────────
+        // Title
         op_text_center(
             &mut ops,
             &ctx,
@@ -930,7 +930,7 @@ pub fn generate_receiving_summary_pdf(
             );
         }
 
-        // ── Header background ──────────────────────────────────────────────
+        // Header background
         op_filled_rect(
             &mut ops,
             &ctx,
@@ -949,7 +949,7 @@ pub fn generate_receiving_summary_pdf(
         let hdr_y1 = table_top + hdr_h * 0.32; // upper sub-row baseline
         let hdr_y2 = table_top + hdr_h * 0.72; // lower sub-row baseline
 
-        // ── Single-row column headers ─────────────────────────────────────
+        // Single-row column headers
         let single_hdrs2: &[(&str, usize)] = &[
             ("วันที่ขออนุมัติ", 0),
             ("วันที่สั่งซื้อ", 1),
@@ -972,7 +972,7 @@ pub fn generate_receiving_summary_pdf(
             );
         }
 
-        // ── Two-row span: เลขทะเบียนคุม (cols 6–7) ───────────────────────
+        // Two-row span: เลขทะเบียนคุม (cols 6–7)
         let span_w67 = col_x[8] - col_x[6];
         op_text_center(
             &mut ops,
@@ -1005,7 +1005,7 @@ pub fn generate_receiving_summary_pdf(
             "ลำดับ",
         );
 
-        // ── Two-row: ขอซื้อ / รายงาน / ใบสั่งซื้อ with sub-labels ────────
+        // Two-row: ขอซื้อ / รายงาน / ใบสั่งซื้อ with sub-labels
         let two_row_cols: &[(&str, &str, usize)] = &[
             ("ขอซื้อ", "ลบ0033.302/", 9),
             ("รายงาน/อนุมัติ", "ลบ0033.302/", 10),
@@ -1048,7 +1048,7 @@ pub fn generate_receiving_summary_pdf(
         );
         let _ = year_str; // suppress unused-variable warning
 
-        // ── Data rows ─────────────────────────────────────────────────────
+        // Data rows
         let mut cur_y = table_top + hdr_h;
 
         for row in *chunk {
@@ -1177,7 +1177,7 @@ pub fn generate_receiving_summary_pdf(
             cur_y += row_h;
         }
 
-        // ── Last page: totals row ──────────────────────────────────────────
+        // Last page: totals row
         if is_last {
             op_filled_rect(
                 &mut ops,
@@ -1216,7 +1216,7 @@ pub fn generate_receiving_summary_pdf(
             cur_y += row_h;
         }
 
-        // ── Table borders + verticals ─────────────────────────────────────
+        // Table borders + verticals
         op_box_rect(
             &mut ops,
             &ctx,
@@ -1299,7 +1299,7 @@ fn build_cover_letter_ops(
     let title_size = 16.0;
     let body_size = 16.0;
 
-    // ── บันทึกข้อความ ────────────────────────────────────────────────────
+    // บันทึกข้อความ
     let mut y = MARGIN + 8.0;
     op_text_center(
         &mut ops,
@@ -1312,7 +1312,7 @@ fn build_cover_letter_ops(
         "บันทึกข้อความ",
     );
 
-    // ── ส่วนราชการ ────────────────────────────────────────────────────────
+    // ส่วนราชการ
     y += 12.0;
     op_text(
         &mut ops,
@@ -1334,7 +1334,7 @@ fn build_cover_letter_ops(
         "โรงพยาบาลสระโบสถ์....อำเภอสระโบสถ์.....จังหวัดลพบุรี",
     );
 
-    // ── ที่ / วันที่ ──────────────────────────────────────────────────────
+    // ที่ / วันที่
     y += 9.0;
     op_text(
         &mut ops,
@@ -1358,7 +1358,7 @@ fn build_cover_letter_ops(
     // underline for date
     op_hline(&mut ops, &ctx, lm + 93.0, rm, y + 2.0);
 
-    // ── เรื่อง ────────────────────────────────────────────────────────────
+    // เรื่อง
     y += 9.0;
     op_text(&mut ops, &ctx, font_bold_id, body_size, lm, y, "เรื่อง");
     op_text(
@@ -1371,7 +1371,7 @@ fn build_cover_letter_ops(
         "ขออนุมัติเบิกเงิน ตามโครงการ/กิจกรรม พัฒนาระบบบริหารคลัง/พัสดุ/ครุภัณฑ์",
     );
 
-    // ── เรียน ─────────────────────────────────────────────────────────────
+    // เรียน
     y += 9.0;
     op_text(&mut ops, &ctx, font_bold_id, body_size, lm, y, "เรียน");
     op_text(
@@ -1384,7 +1384,7 @@ fn build_cover_letter_ops(
         "ปลัดกระทรวงสาธารณสุข",
     );
 
-    // ── ด้วย ──────────────────────────────────────────────────────────────
+    // ด้วย
     y += 10.0;
     op_text(&mut ops, &ctx, font_id, body_size, lm + 10.0, y, "ด้วย");
     op_text(
@@ -1406,7 +1406,7 @@ fn build_cover_letter_ops(
         "มีความประสงค์จะขอเบิกเงิน",
     );
 
-    // ── ค่า category ─────────────────────────────────────────────────────
+    // ค่า category
     y += 9.0;
     op_text(
         &mut ops,
@@ -1427,7 +1427,7 @@ fn build_cover_letter_ops(
         &format!("โดยขอใช้งบประมาณประจำปี..........{}...", page.fiscal_year),
     );
 
-    // ── แผนงาน / company ─────────────────────────────────────────────────
+    // แผนงาน / company
     y += 9.0;
     op_text(
         &mut ops,
@@ -1448,7 +1448,7 @@ fn build_cover_letter_ops(
         &format!("ซื้อยาจาก{}............", page.company_name),
     );
 
-    // ── Budget table ─────────────────────────────────────────────────────
+    // Budget table
     y += 12.0;
     let tbl_x = lm;
     let tbl_w = rm - lm;
@@ -1514,7 +1514,7 @@ fn build_cover_letter_ops(
         );
     }
 
-    // ── จึงเรียน ─────────────────────────────────────────────────────────
+    // จึงเรียน
     y += tbl_h * 2.0 + 12.0;
     op_text(
         &mut ops,
@@ -1526,7 +1526,7 @@ fn build_cover_letter_ops(
         "จึงเรียนมาเพื่อโปรดพิจารณาอนุมัติ",
     );
 
-    // ── Signature blocks ─────────────────────────────────────────────────
+    // Signature blocks
     let sig_x = lm + 90.0;
     let sig_w = rm - sig_x;
 

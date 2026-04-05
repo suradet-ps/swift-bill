@@ -109,7 +109,7 @@ const editableRows = ref<InvoiceSubmissionRow[]>([]);
 const carryForward = ref<CarryForward | null>(null);
 const exportedFile = ref<string | null>(null);
 
-// ── computed ──────────────────────────────────────────────────────────────
+// Computed properties
 
 const periodText = computed(() => {
     if (!props.year || !props.month) return "ยังไม่ได้เลือกช่วงวันที่";
@@ -132,7 +132,7 @@ const exportedTotal = computed(() =>
     editableRows.value.reduce((s, r) => s + r.total_amount, 0)
 );
 
-// ── helpers ───────────────────────────────────────────────────────────────
+// Helpers
 
 function formatMoney(n: number): string {
     return n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -142,7 +142,7 @@ function fileName(path: string): string {
     return path.split(/[\\/]/).pop() ?? path;
 }
 
-// ── actions ───────────────────────────────────────────────────────────────
+// Actions
 
 async function previewReport() {
     if (!canPreview.value) return;

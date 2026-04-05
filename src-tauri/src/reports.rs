@@ -94,9 +94,7 @@ fn compute_reg_for_item(item_index: u32, start_running: u32, start_reg_num: u32)
     (start_reg_num + reg_offset, running_in_reg)
 }
 
-// ---------------------------------------------------------------------------
-// 1. Invoice Submission List  (ส่งหนี้เบิกยา)
-// ---------------------------------------------------------------------------
+// 1. Invoice Submission List (ส่งหนี้เบิกยา)
 
 pub fn process_invoice_submission(
     invoices: &[InvoiceRow],
@@ -130,9 +128,7 @@ pub fn process_invoice_submission(
     rows
 }
 
-// ---------------------------------------------------------------------------
-// 2. Receiving Summary  (สรุปรับยา)
-// ---------------------------------------------------------------------------
+// 2. Receiving Summary (สรุปรับยา)
 
 pub fn process_receiving_summary(
     invoices: &[InvoiceRow],
@@ -145,9 +141,7 @@ pub fn process_receiving_summary(
     let mut report_no = params.start_po_no + 1;
     let mut po_no = params.start_purchase_no;
 
-    // If approval_date is absent or blank, fall back to the first invoice's
-    // receive_date — matching the UI hint "ปล่อยว่าง = ใช้วันที่รับของจากบิลแรก"
-    // and the same pattern used in process_cover_letters.
+    // Fallback to first invoice's receive_date if approval_date is blank, matching UI behavior.
     let approval_date_str = params
         .approval_date
         .as_deref()
@@ -193,15 +187,13 @@ pub fn process_receiving_summary(
     rows
 }
 
-// ---------------------------------------------------------------------------
-// 3. Cover Letters  (เบิกยาปะหน้า)
-// ---------------------------------------------------------------------------
+// 3. Cover Letters (เบิกยาปะหน้า)
 
 pub fn process_cover_letters(
     invoices: &[InvoiceRow],
     params: &CoverLettersParams,
 ) -> Vec<CoverLetterPage> {
-    // fiscal_year is already a Buddhist year supplied by the frontend
+    // The fiscal_year is already a Buddhist year supplied by the frontend.
     let fiscal_year = format!("{}", params.year);
 
     let date_text = if let Some(ref dt) = params.approval_date {
@@ -243,9 +235,7 @@ pub fn process_cover_letters(
     pages
 }
 
-// ---------------------------------------------------------------------------
 // Compute next reg_no and running slot after processing `count` items.
-// ---------------------------------------------------------------------------
 
 /// Returns `(next_reg_no_string, next_running_slot)` — the register number and
 /// position that the *next* batch should start from.
@@ -258,9 +248,7 @@ pub fn compute_next_reg(start_reg_no: &str, start_running: u32, count: u32) -> (
     (next_reg_no, next_running)
 }
 
-// ---------------------------------------------------------------------------
 // Tests
-// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
@@ -557,7 +545,7 @@ mod tests {
         assert_eq!(next_run, 0);
     }
 
-    // ── next_po_no carry-forward: must advance by n*2 not n ──────────────
+    // Carry-forward tests
 
     /// After processing n=3 invoices starting at start_po_no=253,
     /// the last request_no used is 253 + (3-1)*2 = 257.
@@ -622,7 +610,7 @@ mod tests {
         assert_eq!(rows2[2].po_no, 258);
     }
 
-    // ── approval_date fallback ────────────────────────────────────────────
+    // Approval date fallback tests
 
     /// When approval_date is None the field should fall back to the first
     /// invoice's receive_date in Thai short format — same as cover letters.

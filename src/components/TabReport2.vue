@@ -119,7 +119,7 @@ const editableRows = ref<ReceivingSummaryRow[]>([]);
 const carryForward = ref<CarryForward | null>(null);
 const exportedFile = ref<string | null>(null);
 
-// ── Thai date picker ──────────────────────────────────────────────────────
+// Thai date picker for Approval Date
 // Holds the native <input type="date"> value (YYYY-MM-DD).
 // When changed, converts to Thai short format and emits to parent.
 const approvalDatePicker = ref("");

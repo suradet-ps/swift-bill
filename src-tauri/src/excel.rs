@@ -8,7 +8,7 @@ use rust_xlsxwriter::Workbook;
 
 use crate::models::{InvoiceSubmissionRow, ReceivingSummaryRow};
 
-// ── internal helper ───────────────────────────────────────────────────────
+// internal helper
 
 /// Convert an `XlsxError` into a plain `String` so callers return `Result<_, String>`.
 fn xl<T>(r: Result<T, rust_xlsxwriter::XlsxError>) -> Result<T, String> {
@@ -33,7 +33,7 @@ fn thai_month(m: u32) -> &'static str {
     }
 }
 
-// ── 1. ส่งหนี้เบิกยา ─────────────────────────────────────────────────────
+// 1. ส่งหนี้เบิกยา (Invoice Submission List)
 
 /// Generate an `.xlsx` file for **ส่งหนี้เบิกยา** (Invoice Submission List).
 ///
@@ -52,7 +52,7 @@ pub fn generate_invoice_submission_excel(
 
     let month_name = thai_month(month);
 
-    // ── Row 0: title ──────────────────────────────────────────────────────
+    // Row 0: title
     xl(ws.write(
         0,
         0,
@@ -62,7 +62,7 @@ pub fn generate_invoice_submission_excel(
         ),
     ))?;
 
-    // ── Row 1: column headers ─────────────────────────────────────────────
+    // Row 1: column headers
     let headers: &[&str] = &[
         "ลำดับ",
         "วันที่รับของ",
@@ -78,7 +78,7 @@ pub fn generate_invoice_submission_excel(
         xl(ws.write(1, col as u16, *h))?;
     }
 
-    // ── Rows 2+: data ─────────────────────────────────────────────────────
+    // Rows 2+: data
     let mut grand_total = 0.0_f64;
     for (i, row) in rows.iter().enumerate() {
         let r = (i as u32) + 2;
@@ -94,12 +94,12 @@ pub fn generate_invoice_submission_excel(
         grand_total += row.total_amount;
     }
 
-    // ── Total row ─────────────────────────────────────────────────────────
+    // Total row
     let total_r = (rows.len() as u32) + 2;
     xl(ws.write(total_r, 7, "รวมทั้งสิ้น"))?;
     xl(ws.write(total_r, 8, grand_total))?;
 
-    // ── Save ──────────────────────────────────────────────────────────────
+    // Save
     let filename = format!("ส่งหนี้เบิกยา_{year}_เดือน{month}_รอบ{round}.xlsx");
     let path = Path::new(output_dir).join(&filename);
     let path_str = path.to_string_lossy().to_string();
@@ -110,7 +110,7 @@ pub fn generate_invoice_submission_excel(
     Ok(path_str)
 }
 
-// ── 2. สรุปรับยา ─────────────────────────────────────────────────────────
+// 2. สรุปรับยา (Receiving Summary)
 
 /// Generate an `.xlsx` file for **สรุปรับยา** (Receiving Summary).
 ///
@@ -130,7 +130,7 @@ pub fn generate_receiving_summary_excel(
 
     let month_name = thai_month(month);
 
-    // ── Row 0: title ──────────────────────────────────────────────────────
+    // Row 0: title
     xl(ws.write(
         0,
         0,
@@ -140,7 +140,7 @@ pub fn generate_receiving_summary_excel(
         ),
     ))?;
 
-    // ── Row 1: column headers ─────────────────────────────────────────────
+    // Row 1: column headers
     // Static headers (cols 0–10)
     let static_headers: &[&str] = &[
         "วันที่ขออนุมัติ",
@@ -162,7 +162,7 @@ pub fn generate_receiving_summary_excel(
     let year_header = format!("ใบสั่งซื้อ…/{}", year);
     xl(ws.write(1, 11_u16, year_header.as_str()))?;
 
-    // ── Rows 2+: data ─────────────────────────────────────────────────────
+    // Rows 2+: data
     let mut grand_total = 0.0_f64;
     for (i, row) in rows.iter().enumerate() {
         let r = (i as u32) + 2;
@@ -181,12 +181,12 @@ pub fn generate_receiving_summary_excel(
         grand_total += row.total_amount;
     }
 
-    // ── Total row ─────────────────────────────────────────────────────────
+    // Total row
     let total_r = (rows.len() as u32) + 2;
     xl(ws.write(total_r, 3, "รวมทั้งสิ้น"))?;
     xl(ws.write(total_r, 4, grand_total))?;
 
-    // ── Save ──────────────────────────────────────────────────────────────
+    // Save
     let filename = format!("สรุปรับยา_{year}_เดือน{month}_รอบ{round}.xlsx");
     let path = Path::new(output_dir).join(&filename);
     let path_str = path.to_string_lossy().to_string();

@@ -100,7 +100,7 @@ const THAI_MONTHS_SHORT = [
     "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
 ];
 
-// ── Thai date picker ──────────────────────────────────────────────────────
+// Thai date picker for Approval Date
 // Holds the native <input type="date"> value (YYYY-MM-DD).
 // When changed, converts to Thai short format and emits to parent.
 const approvalDatePicker = ref("");

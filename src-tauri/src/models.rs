@@ -1,7 +1,7 @@
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
-// ── Shared ──────────────────────────────────────────────────────────────────
+// Shared models
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DbConfig {
@@ -20,7 +20,8 @@ pub struct InvoiceRow {
     pub company_keyword: String,
     pub total_cost: f64,
     pub receive_date: NaiveDate,
-    pub category: String, // "ยา" or "วัสดุเภสัชกรรม"
+    /// Must be either "ยา" or "วัสดุเภสัชกรรม"
+    pub category: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -30,14 +31,20 @@ pub struct PreviewData {
     pub row_count: usize,
 }
 
-/// Carry-forward values for the next round (returned with every GenerateResult)
+/// Carry-forward values for the next round processing.
+/// Included in every GenerateResult.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CarryForward {
-    pub next_reg_no: String,    // e.g. "69ภ13"
-    pub next_running: u32,      // next available slot (0–9) within register
-    pub next_po_no: u32,        // next ขอซื้อ/รายงาน start (ReceivingSummary)
-    pub next_purchase_no: u32,  // next ใบสั่งซื้อ start (ReceivingSummary)
-    pub remaining_balance: f64, // (meaningful only for CoverLetters)
+    /// Format: e.g., "69ภ13"
+    pub next_reg_no: String,
+    /// Next available slot (0-9) within the register
+    pub next_running: u32,
+    /// Next request/report start number for ReceivingSummary
+    pub next_po_no: u32,
+    /// Next purchase order start number for ReceivingSummary
+    pub next_purchase_no: u32,
+    /// Applicable only for CoverLetters
+    pub remaining_balance: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,7 +55,7 @@ pub struct GenerateResult {
     pub carry_forward: CarryForward,
 }
 
-// ── Intermediate row types ────────────────────────────────────────────────
+// Intermediate row types
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InvoiceSubmissionRow {
@@ -92,23 +99,28 @@ pub struct CoverLetterPage {
     pub date_text: String,
 }
 
-// ── Per-report params ─────────────────────────────────────────────────────
+// Per-report parameters
 
-/// Params for ส่งหนี้เบิกยา
+/// Parameters for Invoice Submission (ส่งหนี้เบิกยา)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InvoiceSubmissionParams {
     pub db_config: DbConfig,
-    pub date_from: String, // YYYYMMDD Gregorian
-    pub date_to: String,   // YYYYMMDD Gregorian
-    pub year: i32,         // Buddhist year for display/filename e.g. 2568
-    pub month: u32,        // 1–12
+    /// Date in YYYYMMDD (Gregorian) format
+    pub date_from: String,
+    /// Date in YYYYMMDD (Gregorian) format
+    pub date_to: String,
+    /// Buddhist year for display and filename (e.g., 2568)
+    pub year: i32,
+    pub month: u32,
     pub round: u32,
-    pub start_reg_no: String, // e.g. "69ภ12"
-    pub start_running: u32,   // 0–9
+    /// Format: e.g., "69ภ12"
+    pub start_reg_no: String,
+    /// Available slot (0-9)
+    pub start_running: u32,
     pub output_dir: String,
 }
 
-/// Params for สรุปรับยา
+/// Parameters for Receiving Summary (สรุปรับยา)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReceivingSummaryParams {
     pub db_config: DbConfig,
@@ -117,15 +129,17 @@ pub struct ReceivingSummaryParams {
     pub year: i32,
     pub month: u32,
     pub round: u32,
-    pub start_po_no: u32,       // starting number for ขอซื้อ and รายงาน/อนุมัติ
-    pub start_purchase_no: u32, // starting number for ใบสั่งซื้อ (independent counter)
+    /// Starting number for request and approval reports
+    pub start_po_no: u32,
+    /// Starting number for purchase orders (independent counter)
+    pub start_purchase_no: u32,
     pub start_reg_no: String,
     pub start_running: u32,
     pub approval_date: Option<String>,
     pub output_dir: String,
 }
 
-/// Params for เบิกยาปะหน้า
+/// Parameters for Cover Letters (เบิกยาปะหน้า)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CoverLettersParams {
     pub db_config: DbConfig,
@@ -140,29 +154,34 @@ pub struct CoverLettersParams {
     pub output_dir: String,
 }
 
-// ── Round history ─────────────────────────────────────────────────────────
+// Round history
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoundHistoryEntry {
-    pub id: String,       // unique id (timestamp-based)
-    pub label: String,    // e.g. "ม.ค. 2568 รอบ 1"
-    pub fiscal_year: i32, // Buddhist year
+    /// Timestamp-based unique identifier
+    pub id: String,
+    /// Descriptive label (e.g., "ม.ค. 2568 รอบ 1")
+    pub label: String,
+    /// Buddhist year
+    pub fiscal_year: i32,
     pub month: u32,
     pub round: u32,
-    pub date_from: String, // YYYYMMDD
-    pub date_to: String,   // YYYYMMDD
-    // Carry-forward for NEXT round
+    /// Date in YYYYMMDD
+    pub date_from: String,
+    /// Date in YYYYMMDD
+    pub date_to: String,
     pub next_reg_no: String,
     pub next_running: u32,
     pub next_po_no: u32,
+    /// Independent counter for purchase orders. Defaults to 0 for older entries.
     #[serde(default)]
-    pub next_purchase_no: u32, // ใบสั่งซื้อ counter (added later; default 0 for old entries)
+    pub next_purchase_no: u32,
     pub remaining_balance: f64,
-    // Summary
     pub budget_total: f64,
     pub total_amount: f64,
     pub invoice_count: u32,
-    pub created_at: String, // ISO datetime
+    /// ISO 8601 datetime
+    pub created_at: String,
     #[serde(default)]
     pub source_tab: String,
 }
@@ -172,7 +191,7 @@ pub struct RoundHistory {
     pub entries: Vec<RoundHistoryEntry>,
 }
 
-// ── Preview results ───────────────────────────────────────────────────────
+// Preview results
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InvoiceSubmissionPreview {
@@ -190,7 +209,7 @@ pub struct ReceivingSummaryPreview {
     pub total_amount: f64,
 }
 
-// ── Excel export params ───────────────────────────────────────────────────
+// Excel export parameters
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InvoiceSubmissionExcelParams {

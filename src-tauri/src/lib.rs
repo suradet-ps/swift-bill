@@ -13,7 +13,7 @@ use models::{
     ReceivingSummaryParams, ReceivingSummaryPreview, RoundHistoryEntry,
 };
 
-// ── Helper ────────────────────────────────────────────────────────────────
+// Helpers
 
 fn prepare_output_dir(raw: &str) -> Result<String, String> {
     let base = if raw.trim().is_empty() {
@@ -26,7 +26,7 @@ fn prepare_output_dir(raw: &str) -> Result<String, String> {
     Ok(dir.to_string_lossy().to_string())
 }
 
-// ── Tauri commands — connection & preview ─────────────────────────────────
+// Tauri commands: Connection & Preview
 
 #[tauri::command]
 async fn test_connection(config: DbConfig) -> Result<String, String> {
@@ -54,7 +54,7 @@ async fn fetch_preview(
     })
 }
 
-// ── Tauri commands — ส่งหนี้เบิกยา preview + Excel export ────────────────
+// Tauri commands: Invoice Submission (ส่งหนี้เบิกยา) Preview + Excel export
 
 #[tauri::command]
 async fn preview_invoice_submission(
@@ -121,7 +121,7 @@ async fn export_invoice_submission_excel(
     })
 }
 
-// ── Tauri commands — สรุปรับยา preview + Excel export ────────────────────
+// Tauri commands: Receiving Summary (สรุปรับยา) Preview + Excel export
 
 #[tauri::command]
 async fn preview_receiving_summary(
@@ -136,7 +136,7 @@ async fn preview_receiving_summary(
     let n = invoices.len() as u32;
     let (next_reg_no, next_running) =
         reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
-    // request_no increments +2 per row, so the next batch must start at start_po_no + n*2
+    // request_no increments by 2 per row, so the next batch starts at start_po_no + n * 2
     let next_po_no = params.start_po_no + n * 2;
 
     let rows = reports::process_receiving_summary(&invoices, &params);
@@ -163,7 +163,7 @@ async fn export_receiving_summary_excel(
     let n = params.rows.len() as u32;
     let (next_reg_no, next_running) =
         reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
-    // request_no increments +2 per row, so the next batch must start at start_po_no + n*2
+    // request_no increments by 2 per row, so the next batch starts at start_po_no + n * 2
     let next_po_no = params.start_po_no + n * 2;
 
     let total_amount: f64 = params.rows.iter().map(|r| r.total_amount).sum();
@@ -192,7 +192,7 @@ async fn export_receiving_summary_excel(
     })
 }
 
-// ── Tauri commands — เบิกยาปะหน้า (PDF, unchanged) ───────────────────────
+// Tauri commands: Cover Letters (เบิกยาปะหน้า)
 
 #[tauri::command]
 async fn generate_cover_letters(params: CoverLettersParams) -> Result<GenerateResult, String> {
@@ -230,7 +230,7 @@ async fn generate_cover_letters(params: CoverLettersParams) -> Result<GenerateRe
     })
 }
 
-// ── History commands ──────────────────────────────────────────────────────
+// History commands
 
 #[tauri::command]
 async fn load_round_history(app: tauri::AppHandle) -> Result<Vec<RoundHistoryEntry>, String> {
@@ -247,7 +247,7 @@ async fn delete_round_entry(app: tauri::AppHandle, id: String) -> Result<(), Str
     history::delete_entry(&app, &id)
 }
 
-// ── App entrypoint ────────────────────────────────────────────────────────
+// App entrypoint
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

@@ -12,7 +12,7 @@ import { useToast } from "./composables/useToast";
 
 const toast = useToast();
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// Types
 
 export interface DbConfig {
     host: string;
@@ -72,7 +72,7 @@ export interface RoundHistoryEntry {
     created_at: string;
 }
 
-// ─── Shared State ─────────────────────────────────────────────────────────────
+// Shared State
 
 type TabId = "settings" | "query" | "report1" | "report2" | "report3" | "history";
 const activeTab = ref<TabId>("settings");
@@ -132,7 +132,7 @@ const r2Carry = ref<{
     next_purchase_no: number;
 } | null>(null);
 
-// ─── Lifecycle ────────────────────────────────────────────────────────────────
+// Lifecycle
 
 onMounted(async () => {
     const savedConfig = localStorage.getItem("swiftbill_dbconfig");
@@ -148,7 +148,7 @@ onMounted(async () => {
     }
 });
 
-// ─── History handlers ─────────────────────────────────────────────────────────
+// History handlers
 
 async function refreshHistory() {
     try {
@@ -221,7 +221,7 @@ function applyHistoryEntry(entry: RoundHistoryEntry) {
     );
 }
 
-// ─── Tabs meta ────────────────────────────────────────────────────────────────
+// Tabs metadata
 
 const tabs: { id: TabId; icon: string; label: string }[] = [
     { id: "settings", icon: "⚙️", label: "ฐานข้อมูล" },
