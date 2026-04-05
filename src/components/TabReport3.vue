@@ -105,7 +105,7 @@ const THAI_MONTHS_SHORT = [
 // When changed, converts to Thai short format and emits to parent.
 const approvalDatePicker = ref("");
 
-function toThaiShortDate(htmlDate: string): string {
+function toThaiFullDate(htmlDate: string): string {
     if (!htmlDate) return "";
     const parts = htmlDate.split("-");
     if (parts.length !== 3) return "";
@@ -113,12 +113,12 @@ function toThaiShortDate(htmlDate: string): string {
     const month = parseInt(parts[1], 10);
     const day = parseInt(parts[2], 10);
     if (isNaN(year) || isNaN(month) || isNaN(day)) return "";
-    const thaiYear = (year + 543) % 100;
-    return `${day} ${THAI_MONTHS_SHORT[month - 1] ?? ""} ${thaiYear}`;
+    const thaiYear = year + 543;
+    return `${day} ${THAI_MONTHS[month - 1] ?? ""} ${thaiYear}`;
 }
 
 function onApprovalDatePick() {
-    emit("update:approvalDate", toThaiShortDate(approvalDatePicker.value));
+    emit("update:approvalDate", toThaiFullDate(approvalDatePicker.value));
 }
 
 const periodText = computed(() => {

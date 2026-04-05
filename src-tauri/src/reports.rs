@@ -31,6 +31,31 @@ fn format_thai_date(date: &NaiveDate) -> String {
     )
 }
 
+/// Format a NaiveDate as a Thai full date string, e.g. "5 มกราคม 2569"
+fn format_thai_date_full(date: &NaiveDate) -> String {
+    let thai_months = [
+        "มกราคม",
+        "กุมภาพันธ์",
+        "มีนาคม",
+        "เมษายน",
+        "พฤษภาคม",
+        "มิถุนายน",
+        "กรกฎาคม",
+        "สิงหาคม",
+        "กันยายน",
+        "ตุลาคม",
+        "พฤศจิกายน",
+        "ธันวาคม",
+    ];
+    let buddhist_year = date.year() + 543;
+    format!(
+        "{} {} {}",
+        date.day(),
+        thai_months[date.month0() as usize],
+        buddhist_year
+    )
+}
+
 /// Parse a register number string like "69ภ12" into (prefix, number).
 fn parse_reg_no(reg: &str) -> (String, u32) {
     let last_non_digit = reg.char_indices().rev().find(|(_, c)| !c.is_ascii_digit());
@@ -184,7 +209,7 @@ pub fn process_cover_letters(
     } else {
         invoices
             .first()
-            .map(|inv| format_thai_date(&inv.receive_date))
+            .map(|inv| format_thai_date_full(&inv.receive_date))
             .unwrap_or_default()
     };
 
