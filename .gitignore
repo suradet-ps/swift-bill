@@ -27,3 +27,4 @@ dist-ssr
 src-tauri/output/
 output/
 *.pdf
+!src-tauri/src/template_cover.pdf
