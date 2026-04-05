@@ -68,7 +68,7 @@ pub async fn fetch_invoices(
         LEFT JOIN COMPANY c ON i.VENDOR_CODE = c.COMPANY_CODE
         WHERE i.RECEIVE_DATE >= @P1
           AND i.RECEIVE_DATE <= @P2
-        ORDER BY i.RECEIVE_DATE, i.VENDOR_CODE
+        ORDER BY i.PO_NO ASC, i.RECEIVE_DATE, i.VENDOR_CODE
     "#;
 
     let result = client
