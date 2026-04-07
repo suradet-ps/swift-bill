@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * gen-icons.js — Swift Bill app-icon generator
+ * gen-icons.cjs — Swift Bill app-icon generator
  * 
  * Usage:
  *   node scripts/gen-icons.js          # Normal mode
