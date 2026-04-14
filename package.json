@@ -13,18 +13,18 @@
     "gen-icons": "node scripts/gen-icons.cjs"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-dialog": "^2.6.0",
-    "@tauri-apps/plugin-opener": "^2",
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-dialog": "^2.7.0",
+    "@tauri-apps/plugin-opener": "^2.5.3",
     "lucide-vue-next": "^1.0.0",
-    "vue": "^3.5.13"
+    "vue": "^3.5.32"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",
-    "@tauri-apps/cli": "^2",
-    "@vitejs/plugin-vue": "^5.2.1",
-    "typescript": "~5.6.2",
-    "vite": "^6.0.3",
-    "vue-tsc": "^2.1.10"
+    "@tauri-apps/cli": "^2.10.1",
+    "@vitejs/plugin-vue": "^6.0.6",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.8",
+    "vue-tsc": "^3.2.6"
   }
 }
