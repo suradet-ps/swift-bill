@@ -3,6 +3,11 @@
   "private": true,
   "version": "0.3.5",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/suradet-ps/swift-bill.git"
+  },
+  "homepage": "https://github.com/suradet-ps/swift-bill",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",

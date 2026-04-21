@@ -29,7 +29,7 @@ A specialized desktop application designed for hospitals to automate the generat
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/your-org/swift-bill.git
+   git clone https://github.com/suradet-ps/swift-bill.git
    cd swift-bill
    ```
 
