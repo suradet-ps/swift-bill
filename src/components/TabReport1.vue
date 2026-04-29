@@ -2,7 +2,7 @@
 import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useToast } from "../composables/useToast";
-import { FileText, BarChart3, AlertTriangle, Hash, Info, Eye, XCircle, Pencil, FileSpreadsheet, CheckCircle, ArrowRight, Save, Package, Banknote } from 'lucide-vue-next'
+import { BarChart3, AlertTriangle, Hash, Info, Eye, XCircle, Pencil, FileSpreadsheet, CheckCircle, ArrowRight, Save, Package, Banknote } from 'lucide-vue-next'
 
 interface DbConfig {
     host: string;
@@ -237,12 +237,9 @@ function saveToHistory() {
 <template>
 <div class="report-wrap">
 
-    <!-- Info banner -->
-    <div class="card info-banner">
-        <div class="banner-title">
-            <FileText :size="17" /> ส่งหนี้เบิกยา (Invoice Submission List)
-        </div>
-        <div class="banner-desc">สร้างรายการส่งหนี้สินและเอกสารเบิกเงิน</div>
+    <div class="page-header">
+        <h2 class="page-title">ส่งหนี้เบิกยา</h2>
+        <p class="page-desc">Invoice Submission List — สร้างรายการส่งหนี้สินและเอกสารเบิกเงิน</p>
     </div>
 
     <!-- Data summary from query -->
@@ -307,8 +304,8 @@ function saveToHistory() {
             </div>
         </div>
 
-        <div class="info-box" style="display:flex; align-items:flex-start; gap:8px;">
-            <Info :size="14" style="flex-shrink:0" /> แต่ละสมุดทะเบียนมี 10 ลำดับ (0–9)
+        <div class="info-box info-note">
+            <Info :size="14" class="info-note-icon" /> แต่ละสมุดทะเบียนมี 10 ลำดับ (0–9)
             เมื่อครบจะขึ้นเล่มใหม่โดยอัตโนมัติ
             เช่น 69ภ12 ลำดับ 8 → 69ภ12(8), 69ภ12(9), 69ภ13(0), …
         </div>
@@ -322,7 +319,7 @@ function saveToHistory() {
             </button>
         </div>
 
-        <div v-if="previewError" class="status-msg status-error" style="margin-top:12px">
+        <div v-if="previewError" class="status-msg status-error status-stack">
             <XCircle :size="14" /> {{ previewError }}
         </div>
     </div>
@@ -388,7 +385,7 @@ function saveToHistory() {
             </button>
         </div>
 
-        <div v-if="exportError" class="status-msg status-error" style="margin-top:12px">
+        <div v-if="exportError" class="status-msg status-error status-stack">
             <XCircle :size="14" /> {{ exportError }}
         </div>
     </div>
@@ -420,7 +417,7 @@ function saveToHistory() {
         </div>
 
         <!-- Carry-forward info -->
-        <div v-if="carryForward" class="carry-box" style="margin-top:16px">
+        <div v-if="carryForward" class="carry-box section-spaced">
             <div class="carry-box-title">
                 <ArrowRight :size="15" /> ค่าสำหรับรอบถัดไป (Carry-Forward)
             </div>
@@ -436,7 +433,7 @@ function saveToHistory() {
             </div>
         </div>
 
-        <div class="save-actions" style="margin-top:16px">
+        <div class="save-actions">
             <button class="btn btn-success" @click="saveToHistory">
                 <Save :size="15" /> บันทึกรอบนี้สู่ประวัติ
             </button>
@@ -447,50 +444,34 @@ function saveToHistory() {
 </template>
 
 <style scoped>
-.report-wrap {
-    width: 100%;
-}
-
-/* Banner */
-.info-banner {
-    background: linear-gradient(135deg, var(--c-primary-light) 0%, #FFD8C8 100%);
-    border-color: #F0C4B8;
-}
-
-.banner-title {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--c-primary);
-    margin-bottom: 5px;
-}
-
-.banner-desc {
-    font-size: 14px;
-    color: var(--c-primary-mid);
-}
-
 /* No data */
 .no-data {
     text-align: center;
-    padding: 20px;
+    padding: 24px;
     color: var(--c-warn);
     font-size: 15px;
     background: var(--c-warn-bg);
-    border-radius: var(--radius);
+    box-shadow: var(--shadow-ring);
+    border-radius: var(--radius-lg);
 }
 
 .period {
-    color: var(--c-primary) !important;
+    color: var(--c-text) !important;
 }
 
-/* Actions */
-.actions {
-    margin-top: 22px;
+.info-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.info-note-icon {
+    margin-top: 2px;
 }
 
 /* Editable table */
 .edit-table td {
-    padding: 4px 6px;
+    padding: 6px 8px;
     vertical-align: middle;
 }
 
@@ -508,21 +489,24 @@ function saveToHistory() {
 }
 
 .cell-input {
-    border: 1px solid var(--c-border);
-    border-radius: 4px;
-    padding: 3px 6px;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 8px;
     font-size: 13px;
     width: 100%;
     min-width: 70px;
-    background: transparent;
+    background: var(--c-surface-raised);
+    box-shadow: var(--shadow-ring);
     color: var(--c-text);
     font-family: inherit;
 }
 
 .cell-input:focus {
     outline: none;
-    border-color: var(--c-primary);
-    background: var(--c-primary-light);
+    box-shadow:
+        0 0 0 2px var(--c-primary),
+        rgba(200, 16, 46, 0.12) 0px 0px 0px 4px;
+    background: var(--c-surface);
 }
 
 .cell-input.wide {
@@ -535,11 +519,12 @@ function saveToHistory() {
 }
 
 .cell-select {
-    border: 1px solid var(--c-border);
-    border-radius: 4px;
-    padding: 3px 6px;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 8px;
     font-size: 13px;
-    background: var(--c-bg-card);
+    background: var(--c-surface-raised);
+    box-shadow: var(--shadow-ring);
     color: var(--c-text);
     font-family: inherit;
     cursor: pointer;
@@ -547,88 +532,13 @@ function saveToHistory() {
 
 .cell-select:focus {
     outline: none;
-    border-color: var(--c-primary);
+    box-shadow:
+        0 0 0 2px var(--c-primary),
+        rgba(200, 16, 46, 0.12) 0px 0px 0px 4px;
 }
 
 .total-cell {
     font-weight: 700;
     color: var(--c-primary);
-}
-
-/* Result card */
-.file-path {
-    font-size: 11px;
-    color: var(--c-text-muted);
-    word-break: break-all;
-    display: block;
-    margin-top: 2px;
-    padding-left: 20px;
-}
-
-.result-stats {
-    display: flex;
-    gap: 8px;
-    margin-top: 14px;
-    flex-wrap: wrap;
-}
-
-.stat-chip {
-    background: #dcfce7;
-    color: var(--c-success);
-    border: 1px solid #86efac;
-    border-radius: 999px;
-    padding: 4px 14px;
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.stat-chip.money {
-    background: var(--c-primary-light);
-    color: var(--c-primary);
-    border-color: #F0C4B8;
-}
-
-.save-actions {
-    display: flex;
-    gap: 10px;
-}
-
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-    .info-banner {
-        background: linear-gradient(135deg, #2A0808 0%, #350A0A 100%);
-        border-color: #501515;
-    }
-
-    .banner-desc {
-        color: var(--c-primary-mid);
-    }
-
-    .cell-input {
-        border-color: #444;
-        color: var(--c-text);
-    }
-
-    .cell-input:focus {
-        background: #2A0808;
-    }
-
-    .cell-select {
-        border-color: #444;
-        background: var(--c-bg-card);
-        color: var(--c-text);
-    }
-
-    .stat-chip {
-        background: #052e16;
-        color: #4ade80;
-        border-color: #166534;
-    }
-
-    .stat-chip.money {
-        background: #2A0808;
-        color: var(--c-primary);
-        border-color: #501515;
-    }
 }
 </style>

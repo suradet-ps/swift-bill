@@ -2,7 +2,7 @@
 import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useToast } from "../composables/useToast";
-import { ClipboardList, BarChart3, AlertTriangle, Hash, CalendarDays, Eye, XCircle, Pencil, FileSpreadsheet, CheckCircle, ArrowRight, Save, Package, Banknote, X } from 'lucide-vue-next'
+import { BarChart3, AlertTriangle, Hash, CalendarDays, Eye, XCircle, Pencil, FileSpreadsheet, CheckCircle, ArrowRight, Save, Package, Banknote, X } from 'lucide-vue-next'
 
 interface DbConfig {
     host: string;
@@ -272,12 +272,9 @@ function saveToHistory() {
 
 <template>
 <div class="report-wrap">
-    <!-- Info banner -->
-    <div class="card info-banner">
-        <div class="banner-title">
-            <ClipboardList :size="17" /> สรุปรับยา (Receiving Summary)
-        </div>
-        <div class="banner-desc">สร้างสรุปยอดรับยาประจำเดือน</div>
+    <div class="page-header">
+        <h2 class="page-title">สรุปรับยา</h2>
+        <p class="page-desc">Receiving Summary — สร้างสรุปยอดรับยาประจำเดือน</p>
     </div>
 
     <!-- Data summary -->
@@ -331,7 +328,7 @@ function saveToHistory() {
             </div>
         </div>
 
-        <div class="section-label" style="margin-top:16px">
+        <div class="section-label section-spaced">
             <Hash :size="14" /> เลขที่เอกสาร (ต่อเนื่องจากรอบก่อน)
         </div>
         <div class="form-grid">
@@ -384,7 +381,7 @@ function saveToHistory() {
             </button>
         </div>
 
-        <div v-if="previewError" class="status-msg status-error" style="margin-top:12px">
+        <div v-if="previewError" class="status-msg status-error status-stack">
             <XCircle :size="14" /> {{ previewError }}
         </div>
     </div>
@@ -454,7 +451,7 @@ function saveToHistory() {
             </button>
         </div>
 
-        <div v-if="exportError" class="status-msg status-error" style="margin-top:12px">
+        <div v-if="exportError" class="status-msg status-error status-stack">
             <XCircle :size="14" /> {{ exportError }}
         </div>
     </div>
@@ -486,7 +483,7 @@ function saveToHistory() {
         </div>
 
         <!-- Carry-forward info -->
-        <div v-if="carryForward" class="carry-box" style="margin-top:16px">
+        <div v-if="carryForward" class="carry-box section-spaced">
             <div class="carry-box-title">
                 <ArrowRight :size="15" /> ค่าสำหรับรอบถัดไป (Carry-Forward)
             </div>
@@ -510,7 +507,7 @@ function saveToHistory() {
             </div>
         </div>
 
-        <div class="save-actions" style="margin-top:16px">
+        <div class="save-actions">
             <button class="btn btn-success" @click="saveToHistory">
                 <Save :size="15" /> บันทึกรอบนี้สู่ประวัติ
             </button>
@@ -523,25 +520,27 @@ function saveToHistory() {
 .date-picker-row {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
 }
 
 .date-input-cal {
     flex: 1;
-    padding: 8px 10px;
-    border: 1.5px solid var(--clr-border, #d1d5db);
+    padding: 11px 13px;
+    border: none;
     border-radius: 8px;
     font-size: 14px;
-    background: var(--clr-surface, #fff);
-    color: var(--clr-text, #111827);
+    background: var(--c-surface-raised);
+    box-shadow: var(--shadow-ring);
+    color: var(--c-text);
     cursor: pointer;
-    transition: border-color 0.15s;
+    transition: box-shadow 0.15s, background 0.15s;
 }
 
 .date-input-cal:focus {
     outline: none;
-    border-color: var(--clr-primary, #2563eb);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    box-shadow:
+        0 0 0 2px var(--c-primary),
+        rgba(200, 16, 46, 0.12) 0px 0px 0px 4px;
 }
 
 .date-clear-btn {
@@ -549,9 +548,9 @@ function saveToHistory() {
     width: 28px;
     height: 28px;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     background: transparent;
-    color: var(--clr-text-muted, #6b7280);
+    color: var(--c-text-muted);
     cursor: pointer;
     font-size: 13px;
     display: flex;
@@ -561,51 +560,27 @@ function saveToHistory() {
 }
 
 .date-clear-btn:hover {
-    background: var(--clr-danger-bg, #fee2e2);
-    color: var(--clr-danger, #dc2626);
+    background: var(--c-error-bg);
+    color: var(--c-error);
 }
 
 .date-thai-preview {
-    color: var(--clr-primary, #2563eb);
-    font-weight: 600;
-}
-
-.report-wrap {
-    width: 100%;
-}
-
-.info-banner {
-    background: linear-gradient(135deg, var(--c-primary-light) 0%, #FFD8C8 100%);
-    border-color: #F0C4B8;
-}
-
-.banner-title {
-    font-size: 16px;
-    font-weight: 700;
     color: var(--c-primary);
-    margin-bottom: 5px;
-}
-
-.banner-desc {
-    font-size: 14px;
-    color: var(--c-primary-mid);
+    font-weight: 600;
 }
 
 .no-data {
     text-align: center;
-    padding: 22px;
+    padding: 24px;
     color: var(--c-warn);
     font-size: 15px;
     background: var(--c-warn-bg);
-    border-radius: var(--radius);
+    box-shadow: var(--shadow-ring);
+    border-radius: var(--radius-lg);
 }
 
 .period {
-    color: var(--c-primary) !important;
-}
-
-.actions {
-    margin-top: 22px;
+    color: var(--c-text) !important;
 }
 
 /* Editable table */
@@ -615,26 +590,29 @@ function saveToHistory() {
 }
 
 .edit-table td {
-    padding: 4px 5px;
+    padding: 6px 8px;
     vertical-align: middle;
 }
 
 .cell-input {
-    border: 1px solid var(--c-border);
-    border-radius: 4px;
-    padding: 3px 6px;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 8px;
     font-size: 12px;
     width: 100%;
     min-width: 64px;
-    background: transparent;
+    background: var(--c-surface-raised);
+    box-shadow: var(--shadow-ring);
     color: var(--c-text);
     font-family: inherit;
 }
 
 .cell-input:focus {
     outline: none;
-    border-color: var(--c-primary);
-    background: var(--c-primary-light);
+    box-shadow:
+        0 0 0 2px var(--c-primary),
+        rgba(200, 16, 46, 0.12) 0px 0px 0px 4px;
+    background: var(--c-surface);
 }
 
 .cell-input.amount {
@@ -650,7 +628,7 @@ function saveToHistory() {
 .readonly-cell {
     color: var(--c-text-muted);
     font-size: 12px;
-    background: var(--c-bg);
+    background: rgba(255, 248, 243, 0.72);
     white-space: nowrap;
 }
 
@@ -662,83 +640,5 @@ function saveToHistory() {
 .total-cell {
     font-weight: 700;
     color: var(--c-primary);
-}
-
-/* Result */
-
-.file-path {
-    font-size: 11px;
-    color: var(--c-text-muted);
-    word-break: break-all;
-    display: block;
-    margin-top: 2px;
-    padding-left: 20px;
-}
-
-.result-stats {
-    display: flex;
-    gap: 8px;
-    margin-top: 14px;
-    flex-wrap: wrap;
-}
-
-/* #166534 on #dcfce7 → 6.8:1 ✓ */
-.stat-chip {
-    background: #dcfce7;
-    color: var(--c-success);
-    border: 1px solid #86efac;
-    border-radius: 999px;
-    padding: 4px 14px;
-    font-size: 13px;
-    font-weight: 600;
-}
-
-/* #C8102E on #FFF0EC → ~7.8:1 ✓ */
-.stat-chip.money {
-    background: var(--c-primary-light);
-    color: var(--c-primary);
-    border-color: #F0C4B8;
-}
-
-.save-actions {
-    display: flex;
-    gap: 10px;
-}
-
-@media (prefers-color-scheme: dark) {
-    .info-banner {
-        background: linear-gradient(135deg, #2A0808 0%, #350A0A 100%);
-        border-color: #501515;
-    }
-
-    .banner-desc {
-        color: var(--c-primary-mid);
-    }
-
-    .cell-input {
-        border-color: #444;
-        color: var(--c-text);
-    }
-
-    .cell-input:focus {
-        border-color: var(--c-primary);
-        background: #2A0808;
-    }
-
-    .readonly-cell {
-        background: #1a1a1a;
-    }
-
-    .stat-chip {
-        background: #052e16;
-        color: #4ade80;
-        border-color: #166534;
-    }
-
-    .stat-chip.money {
-        background: #2A0808;
-        color: var(--c-primary);
-        border-color: #501515;
-    }
 }
 </style>

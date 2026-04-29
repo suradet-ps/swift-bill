@@ -10,7 +10,6 @@ import TabHistory from "./components/TabHistory.vue";
 import ToastContainer from "./components/ToastContainer.vue";
 import { useToast } from "./composables/useToast";
 import { Settings2, Database, FileText, ClipboardList, FileOutput, History } from 'lucide-vue-next'
-import type { Component } from 'vue'
 
 const toast = useToast();
 
@@ -223,1026 +222,385 @@ function applyHistoryEntry(entry: RoundHistoryEntry) {
     );
 }
 
-// Tabs metadata
-
-const tabIconMap: Record<TabId, Component> = {
-    settings: Settings2,
-    query: Database,
-    report1: FileText,
-    report2: ClipboardList,
-    report3: FileOutput,
-    history: History,
-}
-
-const tabs: { id: TabId; label: string }[] = [
-    { id: "settings", label: "ฐานข้อมูล" },
-    { id: "query", label: "ดึงข้อมูล" },
-    { id: "report1", label: "ส่งหนี้เบิกยา" },
-    { id: "report2", label: "สรุปรับยา" },
-    { id: "report3", label: "เบิกยาปะหน้า" },
-    { id: "history", label: "ประวัติรอบ" },
-]
+// Tabs metadata — icons used directly in sidebar template
 </script>
 
 <template>
 <div class="app-root">
-    <!-- Header -->
-    <header class="app-header">
-        <div class="header-inner">
-            <span class="header-icon">
-                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <filter id="softShadow" height="130%">
-                            <feGaussianBlur in="SourceAlpha" stdDeviation="1" result="blur" />
-                            <feOffset in="blur" dx="1" dy="1" result="offsetBlur" />
-                            <feFlood flood-color="rgba(0,0,0,0.18)" result="color" />
-                            <feComposite in="color" in2="offsetBlur" operator="in" result="shadow" />
-                            <feMerge>
-                                <feMergeNode in="shadow" />
-                                <feMergeNode in="SourceGraphic" />
-                            </feMerge>
-                        </filter>
-                    </defs>
-                    <g filter="url(#softShadow)">
-                        <path d="M10 4H18C19.1 4 20 4.9 20 6V16" stroke="#FDD835" stroke-width="2.2"
-                            stroke-linecap="round" />
-                        <path d="M7 7H15C16.1 7 17 7.9 17 9V19" stroke="#FBC02D" stroke-width="2.5"
-                            stroke-linecap="round" />
-                        <rect x="4" y="10" width="10" height="11" rx="1.5" stroke="#FFFFFF" stroke-width="2.8"
-                            fill="#fcfcfc" />
-                        <circle cx="7" cy="13.5" r="1.3" fill="#EF5350" />
-                        <circle cx="7" cy="17.5" r="1.3" fill="#EF5350" />
-                        <path d="M9.8 13.5H11.8M9.8 17.5H11.8" stroke="#EF5350" stroke-width="1.8"
-                            stroke-linecap="round" />
-                    </g>
-                </svg>
-            </span>
-            <div>
-                <h1 class="app-title">Swift Bill</h1>
-                <p class="app-subtitle">ระบบจัดการบิลยา · โรงพยาบาลสระโบสถ์</p>
+
+    <!-- ── Sidebar ─────────────────────────────────────────── -->
+    <aside class="sidebar">
+
+        <!-- Brand -->
+        <div class="sidebar-brand">
+            <div class="brand-icon" aria-hidden="true">
+                <img src="/swift-bill-icon.svg" alt="" class="brand-icon-img" />
             </div>
-            <div class="header-badge" v-if="previewData">
-                <span class="badge-dot"></span>
-                ข้อมูล {{ previewData.row_count }} รายการ
+            <div class="brand-text">
+                <span class="brand-name">Swift Bill</span>
+                <span class="brand-sub">โรงพยาบาลสระโบสถ์</span>
             </div>
         </div>
-    </header>
 
-    <!-- Tab Nav -->
-    <nav class="tab-nav">
-        <button v-for="tab in tabs" :key="tab.id" class="tab-btn" :class="{ active: activeTab === tab.id }"
-            @click="activeTab = (tab.id as TabId)">
-            <component :is="tabIconMap[tab.id]" :size="16" :stroke-width="2" />
-            <span class="tab-label">{{ tab.label }}</span>
-        </button>
-    </nav>
+        <!-- Data context chip (shown once data is loaded) -->
+        <div class="sidebar-context" v-if="previewData">
+            <div class="context-chip">
+                <span class="context-dot"></span>
+                ข้อมูล {{ previewData.row_count }} รายการพร้อม
+            </div>
+        </div>
 
-    <!-- Main Content -->
-    <main class="main-content">
+        <!-- Navigation -->
+        <nav class="sidebar-nav">
+            <span class="nav-section-label">ตั้งค่า</span>
+            <button class="nav-item" :class="{ active: activeTab === 'settings' }"
+                @click="activeTab = 'settings'">
+                <Settings2 :size="15" :stroke-width="2" />
+                <span class="nav-label">ฐานข้อมูล</span>
+            </button>
+            <button class="nav-item" :class="{ active: activeTab === 'query' }"
+                @click="activeTab = 'query'">
+                <Database :size="15" :stroke-width="2" />
+                <span class="nav-label">ดึงข้อมูล</span>
+            </button>
+
+            <span class="nav-section-label">รายงาน</span>
+            <button class="nav-item" :class="{ active: activeTab === 'report1' }"
+                @click="activeTab = 'report1'">
+                <FileText :size="15" :stroke-width="2" />
+                <span class="nav-label">ส่งหนี้เบิกยา</span>
+            </button>
+            <button class="nav-item" :class="{ active: activeTab === 'report2' }"
+                @click="activeTab = 'report2'">
+                <ClipboardList :size="15" :stroke-width="2" />
+                <span class="nav-label">สรุปรับยา</span>
+            </button>
+            <button class="nav-item" :class="{ active: activeTab === 'report3' }"
+                @click="activeTab = 'report3'">
+                <FileOutput :size="15" :stroke-width="2" />
+                <span class="nav-label">เบิกยาปะหน้า</span>
+            </button>
+
+            <div class="nav-divider"></div>
+            <button class="nav-item" :class="{ active: activeTab === 'history' }"
+                @click="activeTab = 'history'">
+                <History :size="15" :stroke-width="2" />
+                <span class="nav-label">ประวัติรอบ</span>
+            </button>
+        </nav>
+
+        <!-- Sidebar footer -->
+        <div class="sidebar-footer">
+            <div class="conn-indicator">
+                <span class="conn-dot"
+                    :class="dbConnected === true ? 'ok' : dbConnected === false ? 'fail' : 'unknown'">
+                </span>
+                <span class="conn-text">
+                    {{ dbConnected === true ? 'INVS เชื่อมต่อแล้ว'
+                     : dbConnected === false ? 'ยังไม่ได้เชื่อมต่อ'
+                     : 'ยังไม่ได้ทดสอบ' }}
+                </span>
+            </div>
+            <span class="sidebar-version">ภก.สุรเดช · v0.3.5</span>
+        </div>
+
+    </aside>
+
+    <!-- ── Main content area ────────────────────────────────── -->
+    <main class="main-area">
         <TabSettings v-show="activeTab === 'settings'" :db-config="dbConfig"
             @update:db-config="Object.assign(dbConfig, $event)" @save="saveDbConfig"
             @connection-status="handleConnectionStatus" />
-        <TabQuery v-show="activeTab === 'query'" :db-config="dbConfig" v-model:start-date-html="startDateHtml"
-            v-model:end-date-html="endDateHtml" v-model:output-dir="outputDir" v-model:preview-data="previewData"
+        <TabQuery v-show="activeTab === 'query'" :db-config="dbConfig"
+            v-model:start-date-html="startDateHtml"
+            v-model:end-date-html="endDateHtml"
+            v-model:output-dir="outputDir"
+            v-model:preview-data="previewData"
             v-model:round="round" />
-        <TabReport1 v-show="activeTab === 'report1'" :db-config="dbConfig" :date-from="dateFrom" :date-to="dateTo"
-            :year="year" :month="month" :round="round" :output-dir="outputDir" :preview-data="previewData"
-            v-model:start-reg-no="r1Form.startRegNo" v-model:start-running="r1Form.startRunning"
+        <TabReport1 v-show="activeTab === 'report1'" :db-config="dbConfig"
+            :date-from="dateFrom" :date-to="dateTo"
+            :year="year" :month="month" :round="round"
+            :output-dir="outputDir" :preview-data="previewData"
+            v-model:start-reg-no="r1Form.startRegNo"
+            v-model:start-running="r1Form.startRunning"
             @save-history="saveEntry" />
-
-        <TabReport3 v-show="activeTab === 'report3'" :db-config="dbConfig" :date-from="dateFrom" :date-to="dateTo"
-            :year="year" :month="month" :round="round" :output-dir="outputDir" :preview-data="previewData"
-            v-model:budget-total="r3Form.budgetTotal" v-model:previous-balance="r3Form.previousBalance"
-            v-model:approval-date="r3Form.approvalDate" :r2-carry="r2Carry" @save-history="saveEntry" />
-        <!-- TabReport2 carry-forward listener (invisible) -->
-        <TabReport2 v-show="activeTab === 'report2'" :db-config="dbConfig" :date-from="dateFrom" :date-to="dateTo"
-            :year="year" :month="month" :round="round" :output-dir="outputDir" :preview-data="previewData"
-            v-model:start-po-no="r2Form.startPoNo" v-model:start-purchase-no="r2Form.startPurchaseNo"
-            v-model:start-reg-no="r2Form.startRegNo" v-model:start-running="r2Form.startRunning"
-            v-model:approval-date="r2Form.approvalDate" @save-history="saveEntry" @carry-result="handleR2Carry" />
-        <TabHistory v-show="activeTab === 'history'" :entries="historyEntries" @load-entry="applyHistoryEntry"
+        <TabReport2 v-show="activeTab === 'report2'" :db-config="dbConfig"
+            :date-from="dateFrom" :date-to="dateTo"
+            :year="year" :month="month" :round="round"
+            :output-dir="outputDir" :preview-data="previewData"
+            v-model:start-po-no="r2Form.startPoNo"
+            v-model:start-purchase-no="r2Form.startPurchaseNo"
+            v-model:start-reg-no="r2Form.startRegNo"
+            v-model:start-running="r2Form.startRunning"
+            v-model:approval-date="r2Form.approvalDate"
+            @save-history="saveEntry" @carry-result="handleR2Carry" />
+        <TabReport3 v-show="activeTab === 'report3'" :db-config="dbConfig"
+            :date-from="dateFrom" :date-to="dateTo"
+            :year="year" :month="month" :round="round"
+            :output-dir="outputDir" :preview-data="previewData"
+            v-model:budget-total="r3Form.budgetTotal"
+            v-model:previous-balance="r3Form.previousBalance"
+            v-model:approval-date="r3Form.approvalDate"
+            :r2-carry="r2Carry" @save-history="saveEntry" />
+        <TabHistory v-show="activeTab === 'history'"
+            :entries="historyEntries"
+            @load-entry="applyHistoryEntry"
             @delete-entry="deleteEntry" />
     </main>
 
-    <!-- Footer -->
-    <footer class="app-footer">
-        <span class="footer-left">Copyright &copy; 2025 ภก.สุรเดช ประถมศักดิ์ &nbsp;·&nbsp; โรงพยาบาลสระโบสถ์
-            &nbsp;·&nbsp; Swift Bill v0.3.5</span>
-        <span class="footer-right">
-            <span v-if="dbConnected === true" class="conn-status conn-ok">● เชื่อมต่อแล้ว</span>
-            <span v-else-if="dbConnected === false" class="conn-status conn-fail">● ยังไม่ได้เชื่อมต่อ</span>
-            <span v-else class="conn-status conn-unknown">○ ยังไม่ได้ทดสอบ</span>
-        </span>
-    </footer>
-
-    <!-- Toast Notifications -->
     <ToastContainer />
 </div>
 </template>
 
 <style>
-/* Reset */
-*,
-*::before,
-*::after {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
+/* App shell only — design tokens and component styles in design-system.css */
 
-/* Design System: Colonel's Classic — KFC Red & Cream */
-/* All contrast ratios verified against WCAG AA (≥ 4.5:1 normal / ≥ 3:1 large)  */
-:root {
-    /* Primary KFC Red */
-    /* white on #C8102E → 8.6:1 ✓   #C8102E on #FFF0EC → 7.8:1 ✓               */
-    --c-primary: #C8102E;
-    --c-primary-light: #FFF0EC;
-    /* warm cream tint for hover / info areas    */
-    --c-primary-mid: #E03050;
-    /* lighter red for accents                   */
-    --c-primary-hover: #A50026;
-    /* deeper red on hover                       */
-
-    /* Semantic colours */
-    --c-success: #166534;
-    --c-success-bg: #f0fdf4;
-    --c-error: #b91c1c;
-    --c-error-bg: #fef2f2;
-    --c-warn: #92400e;
-    --c-warn-bg: #fefce8;
-
-    /* Layout / surface */
-    --c-bg: #FBF3EC;
-    /* warm cream page background                     */
-    --c-surface: #FFFCF9;
-    /* warm white card / panel surface                */
-    --c-border: #EDD5C8;
-    /* warm rose-cream border                         */
-    --c-border-focus: #C8102E;
-    /* red focus ring                                 */
-
-    /* Text */
-    /* #1C0A05 on #FFFCF9 → ~19:1 ✓                                               */
-    /* #5C2C1E on #FFFCF9 → ~11.5:1 ✓                                             */
-    /* #9C6A58 on #FFFCF9 →  ~4.6:1 ✓  (hints only)                              */
-    --c-text: #1C0A05;
-    --c-text-muted: #5C2C1E;
-    --c-text-light: #9C6A58;
-
-    /* Shape & depth */
-    --radius: 8px;
-    --radius-lg: 12px;
-    --radius-xl: 16px;
-    --shadow: 0 1px 3px rgba(140, 10, 20, 0.10), 0 1px 2px rgba(140, 10, 20, 0.06);
-    --shadow-md: 0 4px 16px rgba(140, 10, 20, 0.12);
-    --shadow-lg: 0 8px 32px rgba(140, 10, 20, 0.14);
-
-    font-family: "Segoe UI", "Sarabun", "Noto Sans Thai", system-ui, sans-serif;
-    font-size: 15px;
-    line-height: 1.55;
-    color: var(--c-text);
-    -webkit-font-smoothing: antialiased;
-}
-
-body {
-    background: var(--c-bg);
-    min-height: 100vh;
-}
-
-/* App Shell */
+/* ── Root: horizontal split ─────────────────────────────────── */
 .app-root {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--c-bg);
+}
+
+/* ══ SIDEBAR ══════════════════════════════════════════════════ */
+.sidebar {
+    width: 244px;
+    flex-shrink: 0;
+    background: var(--c-surface);
+    color: var(--c-text);
+    box-shadow: rgba(0, 0, 0, 0.08) 1px 0 0 0;
     display: flex;
     flex-direction: column;
     height: 100vh;
     overflow: hidden;
 }
 
-/* Header */
-.app-header {
-    background: linear-gradient(135deg, #C8102E 0%, #8B0000 100%);
-    color: #fff;
-    padding: 12px 24px;
-    flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(100, 0, 20, 0.40);
-}
-
-.header-inner {
+/* ── Brand ─────────────────────────────────────────────────── */
+.sidebar-brand {
+    padding: 22px 18px 18px;
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--c-border);
 }
 
-.header-icon {
-    width: 44px;
-    height: 44px;
-    flex-shrink: 0;
+.brand-icon {
+    width: 46px;
+    height: 46px;
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.app-title {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    line-height: 1.2;
-}
-
-.app-subtitle {
-    font-size: 13px;
-    opacity: 0.82;
-    margin-top: 2px;
-    letter-spacing: 0.01em;
-}
-
-.header-badge {
-    margin-left: auto;
-    background: rgba(255, 255, 255, 0.14);
-    border: 1px solid rgba(255, 255, 255, 0.26);
-    border-radius: 20px;
-    padding: 5px 14px;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    backdrop-filter: blur(4px);
-}
-
-.badge-dot {
-    width: 8px;
-    height: 8px;
-    background: #FFD4C0;
-    border-radius: 50%;
-    display: inline-block;
-    box-shadow: 0 0 7px rgba(255, 190, 160, 0.80);
-}
-
-/* Tab Nav */
-.tab-nav {
-    display: flex;
-    align-items: stretch;
-    gap: 0;
-    background: var(--c-surface);
-    border-bottom: 2px solid var(--c-border);
-    flex-shrink: 0;
-    padding: 0 16px;
-    overflow-x: auto;
-    scrollbar-width: none;
-}
-
-.tab-nav::-webkit-scrollbar {
-    display: none;
-}
-
-.tab-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 11px 16px;
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-    cursor: pointer;
-    color: var(--c-text-muted);
-    font-size: 13.5px;
-    font-weight: 500;
-    transition: color 0.15s, background 0.15s, border-color 0.15s;
-    white-space: nowrap;
-    font-family: inherit;
     flex-shrink: 0;
 }
 
-.tab-btn:hover {
-    color: var(--c-primary);
-    background: var(--c-primary-light);
+.brand-icon-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
 }
 
-.tab-btn.active {
-    color: var(--c-primary);
-    border-bottom-color: var(--c-primary);
-    font-weight: 700;
-}
-
-.tab-label {
-    font-size: 13.5px;
-}
-
-/* Main Content */
-.main-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 22px 28px;
-    background: var(--c-bg);
-}
-
-/* Footer */
-.app-footer {
-    background: var(--c-surface);
-    border-top: 1px solid var(--c-border);
-    padding: 7px 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    color: var(--c-text-light);
-    font-size: 12px;
-    flex-shrink: 0;
-    letter-spacing: 0.01em;
-}
-
-.footer-left {
-    color: var(--c-text-light);
-}
-
-.footer-right {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.conn-status {
-    font-size: 12px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.conn-ok {
-    color: #16A34A;
-}
-
-.conn-fail {
-    color: var(--c-error);
-}
-
-.conn-unknown {
-    color: var(--c-text-muted);
-}
-
-/* Shared component styles */
-
-/* Card */
-.card {
-    background: var(--c-surface);
-    border: 1px solid var(--c-border);
-    border-radius: var(--radius-lg);
-    padding: 22px 26px;
-    box-shadow: var(--shadow);
-    margin-bottom: 18px;
-}
-
-.card-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--c-text);
-    margin-bottom: 4px;
-}
-
-.card-desc {
-    font-size: 14px;
-    color: var(--c-text-muted);
-    margin-bottom: 18px;
-    line-height: 1.55;
-}
-
-.card-divider {
-    border: none;
-    border-top: 1px solid var(--c-border);
-    margin: 18px 0;
-}
-
-/* Section label */
-.section-label {
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--c-text-muted);
-    padding: 4px 0;
-    margin-bottom: 10px;
-    border-bottom: 1px solid var(--c-border);
-}
-
-/* Form grid */
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
-}
-
-.form-grid-2 {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
-}
-
-.form-grid-4 {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.form-group.full {
-    grid-column: 1 / -1;
-}
-
-/* Label: #4e5538 on #fdfdf6 → ~7:1 ✓ */
-.form-group label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--c-text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.form-group input,
-.form-group select {
-    padding: 9px 12px;
-    border: 1.5px solid var(--c-border);
-    border-radius: var(--radius);
-    font-size: 15px;
-    background: var(--c-bg);
-    color: var(--c-text);
-    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
-    font-family: inherit;
-    line-height: 1.4;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-    outline: none;
-    border-color: var(--c-border-focus);
-    box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.18);
-    background: var(--c-surface);
-}
-
-.form-group input::placeholder {
-    color: var(--c-text-light);
-}
-
-.form-group input[readonly] {
-    background: var(--c-primary-light);
-    color: var(--c-text-muted);
-    border-color: var(--c-border);
-    cursor: default;
-}
-
-.field-hint {
-    font-size: 12px;
-    color: var(--c-text-light);
-    line-height: 1.4;
-}
-
-/* Info box */
-/* #C8102E on #FFF0EC → ~7.8:1 ✓ */
-.info-box {
-    background: var(--c-primary-light);
-    border: 1px solid #F0C4B8;
-    border-radius: var(--radius);
-    padding: 11px 15px;
-    font-size: 14px;
-    color: var(--c-primary);
-    margin-bottom: 14px;
-    line-height: 1.55;
-}
-
-/* Preview summary stats */
-.preview-summary {
-    display: flex;
-    gap: 14px;
-    flex-wrap: wrap;
-    margin-bottom: 14px;
-}
-
-.summary-stat {
-    background: var(--c-primary-light);
-    border: 1px solid #F0C4B8;
-    border-radius: var(--radius);
-    padding: 12px 18px;
+.brand-text {
     display: flex;
     flex-direction: column;
     gap: 3px;
-    min-width: 145px;
+    min-width: 0;
 }
 
-.summary-stat-label {
-    font-size: 12px;
-    color: var(--c-text-muted);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.summary-stat-value {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--c-text);
-}
-
-.summary-stat-value.money {
-    color: var(--c-primary);
-}
-
-/* Buttons */
-.btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 9px 20px;
-    border: none;
-    border-radius: var(--radius);
+.brand-name {
     font-size: 15px;
     font-weight: 600;
-    cursor: pointer;
-    transition: background 0.15s, box-shadow 0.15s, transform 0.12s, border-color 0.15s;
-    font-family: inherit;
-    text-decoration: none;
-    line-height: 1.3;
-}
-
-.btn:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-    pointer-events: none;
-}
-
-/* white on #C8102E → 8.6:1 ✓ */
-.btn-primary {
-    background: var(--c-primary);
-    color: #fff;
-    box-shadow: 0 2px 6px rgba(150, 0, 30, 0.35);
-}
-
-.btn-primary:hover:not(:disabled) {
-    background: var(--c-primary-hover);
-    box-shadow: 0 4px 12px rgba(150, 0, 30, 0.45);
-    transform: translateY(-1px);
-}
-
-.btn-secondary {
-    background: var(--c-surface);
     color: var(--c-text);
-    border: 1.5px solid var(--c-border);
+    letter-spacing: -0.2px;
+    line-height: 1.25;
 }
 
-.btn-secondary:hover:not(:disabled) {
-    background: var(--c-primary-light);
-    border-color: var(--c-primary-mid);
-    color: var(--c-primary);
+.brand-sub {
+    font-size: 11px;
+    color: var(--c-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.45;
 }
 
-.btn-danger {
-    background: #fee2e2;
-    color: var(--c-error);
-    border: 1px solid #fca5a5;
-}
-
-.btn-danger:hover:not(:disabled) {
-    background: #fecaca;
-}
-
-.btn-success {
-    background: #dcfce7;
-    color: var(--c-success);
-    border: 1px solid #86efac;
-}
-
-.btn-success:hover:not(:disabled) {
-    background: #bbf7d0;
-}
-
-.btn-lg {
-    padding: 12px 28px;
-    font-size: 16px;
-    border-radius: var(--radius-lg);
-}
-
-/* Spinner */
-.spinner {
-    width: 17px;
-    height: 17px;
-    border: 2.5px solid currentColor;
-    border-top-color: transparent;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    display: inline-block;
-    opacity: 0.8;
+/* ── Context chip ───────────────────────────────────────────── */
+.sidebar-context {
+    padding: 14px 14px 6px;
     flex-shrink: 0;
 }
 
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* Status messages */
-.status-msg {
+.context-chip {
     display: flex;
-    align-items: flex-start;
-    gap: 9px;
-    padding: 11px 15px;
-    border-radius: var(--radius);
-    font-size: 14px;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    background: var(--c-primary-light);
+    box-shadow: rgba(200, 16, 46, 0.12) 0px 0px 0px 1px;
+    border-radius: 9999px;
+    font-size: 11.5px;
     font-weight: 500;
-    line-height: 1.55;
-}
-
-/* #166534 on #f0fdf4 → 6.8:1 ✓ */
-.status-success {
-    background: var(--c-success-bg);
-    color: var(--c-success);
-    border: 1px solid #86efac;
-}
-
-/* #b91c1c on #fef2f2 → 6.0:1 ✓ */
-.status-error {
-    background: var(--c-error-bg);
-    color: var(--c-error);
-    border: 1px solid #fca5a5;
-}
-
-/* #C8102E on #FFF0EC → ~7.8:1 ✓ */
-.status-info {
-    background: var(--c-primary-light);
     color: var(--c-primary);
-    border: 1px solid #F0C4B8;
+    line-height: 1.4;
 }
 
-/* #92400e on #fefce8 → 7.0:1 ✓ */
-.status-warn {
-    background: var(--c-warn-bg);
-    color: var(--c-warn);
-    border: 1px solid #fde68a;
+.context-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--c-primary);
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: pulse-dot 2.4s ease-in-out infinite;
 }
 
-/* Result card */
-.result-card {
-    background: var(--c-success-bg);
-    border: 1px solid #86efac;
-    border-radius: var(--radius);
-    padding: 16px 18px;
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
 }
 
-.result-card-title {
-    font-weight: 700;
-    color: var(--c-success);
-    margin-bottom: 10px;
-    font-size: 15px;
-}
-
-.file-list {
-    list-style: none;
+/* ── Navigation ─────────────────────────────────────────────── */
+.sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 12px;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    scrollbar-width: none;
 }
+.sidebar-nav::-webkit-scrollbar { display: none; }
 
-.file-list li {
-    font-size: 13px;
-    color: var(--c-success);
-    display: flex;
-    align-items: flex-start;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-
-.file-list code {
-    font-family: "Consolas", "Fira Code", monospace;
-    font-size: 12px;
-    background: rgba(22, 101, 52, 0.10);
-    padding: 2px 7px;
-    border-radius: 4px;
-    word-break: break-all;
-}
-
-/* Table */
-.table-wrap {
-    overflow-x: auto;
-    border-radius: var(--radius);
-    border: 1px solid var(--c-border);
-}
-
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-}
-
-/* #5C2C1E on #FFF0EC → ~11:1 ✓ */
-.data-table th {
-    background: var(--c-primary-light);
-    color: var(--c-text-muted);
-    font-weight: 700;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 11px 14px;
-    text-align: left;
-    border-bottom: 2px solid #F0C4B8;
-    white-space: nowrap;
-}
-
-.data-table td {
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--c-border);
-    color: var(--c-text);
-}
-
-.data-table tbody tr:hover td {
-    background: var(--c-primary-light);
-}
-
-/* #C8102E on #FFF0EC → ~7.8:1 ✓ */
-.data-table tfoot td {
-    background: var(--c-primary-light);
-    font-weight: 700;
-    border-top: 2px solid var(--c-primary-mid);
-    border-bottom: none;
-    color: var(--c-primary);
-}
-
-.text-right {
-    text-align: right !important;
-}
-
-.text-center {
-    text-align: center !important;
-}
-
-/* Category badges */
-.cat-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 3px 10px;
-    border-radius: 999px;
-    font-size: 12px;
+.nav-section-label {
+    font-size: 10px;
     font-weight: 600;
-}
-
-/* #C8102E on #FFF0EC → ~7.8:1 ✓ */
-.cat-drug {
-    background: var(--c-primary-light);
-    color: var(--c-primary);
-    border: 1px solid #F0C4B8;
-}
-
-/* #92400e on #fef3c7 → 7.0:1 ✓ */
-.cat-supply {
-    background: #fef3c7;
-    color: #92400e;
-    border: 1px solid #fde68a;
-}
-
-/* Carry-forward box */
-.carry-box {
-    background: var(--c-primary-light);
-    border: 1px solid #F0C4B8;
-    border-radius: var(--radius);
-    padding: 14px 18px;
-}
-
-.carry-box-title {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--c-primary);
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.carry-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-}
-
-.carry-item {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.carry-label {
-    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--c-text-muted);
-    font-weight: 600;
+    color: var(--c-text-light);
+    padding: 14px 10px 6px;
+    display: block;
+    line-height: 1.4;
 }
 
-.carry-val {
-    font-size: 15px;
-    font-weight: 700;
+.nav-divider {
+    height: 1px;
+    background: var(--c-border);
+    margin: 10px 2px;
+}
+
+.nav-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px 11px 14px;
+    border-radius: 100px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--c-text-muted);
+    text-align: left;
+    width: 100%;
+    transition: background 0.12s, color 0.12s, box-shadow 0.12s;
+    font-family: inherit;
+    line-height: 1.45;
+    flex-shrink: 0;
+}
+
+.nav-item svg {
+    stroke: currentColor;
+    flex-shrink: 0;
+}
+
+.nav-item:hover {
+    background: var(--c-primary-light);
     color: var(--c-text);
 }
 
-/* History empty */
-.history-empty {
-    text-align: center;
-    padding: 40px;
-    color: var(--c-text-light);
-    font-size: 15px;
-}
-
-/* Period badge */
-.period-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--c-primary-light);
-    color: var(--c-primary);
-    border: 1px solid #F0C4B8;
-    border-radius: 20px;
-    padding: 5px 16px;
-    font-size: 14px;
+.nav-item.active {
+    background: #fff;
+    color: var(--c-text);
+    box-shadow: var(--shadow-ring);
     font-weight: 600;
-    margin-bottom: 14px;
 }
 
-/* Dark Mode */
-/* All text/bg contrast re-verified for dark palette                              */
+.nav-label {
+    flex: 1;
+    letter-spacing: 0;
+}
+
+/* ── Sidebar footer ──────────────────────────────────────────── */
+.sidebar-footer {
+    padding: 16px 18px 18px;
+    border-top: 1px solid var(--c-border);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.conn-indicator {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.conn-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.conn-dot.ok {
+    background: #16A34A;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.14);
+}
+
+.conn-dot.fail {
+    background: var(--c-error);
+    box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.14);
+}
+
+.conn-dot.unknown {
+    background: var(--c-border);
+}
+
+.conn-text {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--c-text-muted);
+    line-height: 1.4;
+}
+
+.sidebar-version {
+    font-size: 10.5px;
+    color: var(--c-text-light);
+    letter-spacing: 0;
+    line-height: 1.35;
+}
+
+/* ══ MAIN CONTENT AREA ════════════════════════════════════════ */
+.main-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px 40px 40px;
+    background: var(--c-bg);
+    min-width: 0;
+}
+
+.main-area > * {
+    max-width: 1240px;
+    margin: 0 auto;
+}
+
+/* ── Dark mode ───────────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
-    :root {
-        /* #FF6B80 on #220A08 → ~8.5:1 ✓  (used as primary accent on dark bg)    */
-        --c-primary: #FF6B80;
-        --c-primary-light: #2A0808;
-        /* dark red tint for hover / info areas  */
-        --c-primary-mid: #D93050;
-        --c-primary-hover: #FF8A98;
-
-        --c-success: #4ade80;
-        --c-success-bg: #052e16;
-        --c-error: #f87171;
-        --c-error-bg: #450a0a;
-        --c-warn: #fbbf24;
-        --c-warn-bg: #451a03;
-
-        /* very dark red-black page */
-        --c-bg: #1A0505;
-        /* dark warm card surface   */
-        --c-surface: #220A08;
-        --c-border: #3D1515;
-        --c-border-focus: #D93050;
-
-        /* #F5E8DC on #220A08 → ~14:1 ✓ */
-        --c-text: #F5E8DC;
-        /* #D4A090 on #220A08 → ~7.2:1 ✓ */
-        --c-text-muted: #D4A090;
-        /* #8A6A60 on #220A08 → ~3.8:1  (used only for placeholder / hints)      */
-        --c-text-light: #8A6A60;
-
-        --shadow: 0 1px 3px rgba(0, 0, 0, 0.50), 0 1px 2px rgba(0, 0, 0, 0.35);
-        --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.60);
-        --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.70);
-    }
-
-    /* Table overrides */
-    .data-table th {
-        background: #300A0A;
-        border-bottom-color: #501515;
-    }
-
-    .data-table tbody tr:hover td {
-        background: #300A0A;
-    }
-
-    .data-table tfoot td {
-        background: #300A0A;
-        color: var(--c-primary);
-        border-top-color: var(--c-primary-mid);
-    }
-
-    /* Nav / footer chrome */
-    .tab-nav {
-        background: var(--c-surface);
-        border-bottom-color: var(--c-border);
-    }
-
-    .app-footer {
-        background: var(--c-surface);
-        border-top-color: var(--c-border);
-    }
-
-    .conn-ok {
-        color: #4ADE80;
-    }
-
-    /* Form inputs */
-    .form-group input,
-    .form-group select {
-        background: #200808;
-        border-color: #3D1515;
-        color: var(--c-text);
-    }
-
-    .form-group input:focus,
-    .form-group select:focus {
-        background: var(--c-surface);
-        border-color: var(--c-border-focus);
-    }
-
-    .form-group input[readonly] {
-        background: #2A0808;
-        color: var(--c-text-muted);
-        border-color: var(--c-border);
-    }
-
-    /* Info / status boxes */
-    .info-box {
-        background: #2A0808;
-        border-color: #501515;
-        color: var(--c-primary);
-    }
-
-    .status-info {
-        background: #2A0808;
-        border-color: #501515;
-        color: var(--c-primary);
-    }
-
-    /* Summary stats */
-    .summary-stat {
-        background: #2A0808;
-        border-color: #501515;
-    }
-
-    /* Carry-forward box */
-    .carry-box {
-        background: #2A0808;
-        border-color: #501515;
-    }
-
-    .carry-box-title {
-        color: var(--c-primary);
-    }
-
-    /* Period badge */
-    .period-badge {
-        background: #2A0808;
-        border-color: #501515;
-    }
-
-    /* Result card */
-    .result-card {
-        background: #052e16;
-        border-color: #166534;
-    }
-
-    .file-list code {
-        background: rgba(74, 222, 128, 0.12);
-    }
-
-    /* Buttons */
-    .btn-primary {
-        box-shadow: 0 2px 8px rgba(140, 0, 20, 0.50);
-    }
-
-    .btn-primary:hover:not(:disabled) {
-        box-shadow: 0 4px 14px rgba(140, 0, 20, 0.65);
-    }
-
-    .btn-success {
-        background: #052e16;
-        color: #4ade80;
-        border-color: #166534;
-    }
-
-    .btn-success:hover:not(:disabled) {
-        background: #064e24;
-    }
-
-    .btn-danger {
-        background: #450a0a;
-        color: #f87171;
-        border-color: #991b1b;
-    }
-
-    .btn-danger:hover:not(:disabled) {
-        background: #5c0a0a;
-    }
-
-    .btn-secondary {
-        background: var(--c-surface);
-        border-color: var(--c-border);
-    }
-
-    /* Category badges */
-    .cat-drug {
-        background: #2A0808;
-        color: var(--c-primary);
-        border-color: #501515;
+    .conn-dot.ok {
+        background: #4ADE80;
+        box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.14);
     }
 }
 </style>

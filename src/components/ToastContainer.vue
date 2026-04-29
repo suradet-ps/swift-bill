@@ -66,55 +66,48 @@ const icons: Record<string, string> = {
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    padding: 14px 16px 16px;
-    border-radius: 12px;
-    background: #FFFCF9;
-    border: 1px solid #EDD5C8;
-    box-shadow:
-        0 8px 30px rgba(140, 10, 20, 0.12),
-        0 2px 8px rgba(140, 10, 20, 0.08);
+    padding: 15px 16px 17px;
+    border-radius: 16px;
+    background: var(--c-surface);
+    border: none;
+    box-shadow: var(--shadow-card);
     position: relative;
     overflow: hidden;
-    backdrop-filter: blur(12px);
     cursor: default;
     min-width: 320px;
 }
 
 /* Type variants */
 .toast--success {
-    border-left: 4px solid #16A34A;
     color: #166534;
 }
 
 .toast--success .toast__progress-bar {
-    background: linear-gradient(90deg, #16A34A, #4ade80);
+    background: #16A34A;
 }
 
 .toast--error {
-    border-left: 4px solid #DC2626;
     color: #991B1B;
 }
 
 .toast--error .toast__progress-bar {
-    background: linear-gradient(90deg, #DC2626, #f87171);
+    background: #DC2626;
 }
 
 .toast--warning {
-    border-left: 4px solid #D97706;
     color: #92400E;
 }
 
 .toast--warning .toast__progress-bar {
-    background: linear-gradient(90deg, #D97706, #fbbf24);
+    background: #D97706;
 }
 
 .toast--info {
-    border-left: 4px solid #C8102E;
     color: #C8102E;
 }
 
 .toast--info .toast__progress-bar {
-    background: linear-gradient(90deg, #C8102E, #E03050);
+    background: #C8102E;
 }
 
 /* Toast children */
@@ -135,17 +128,17 @@ const icons: Record<string, string> = {
 
 .toast__title {
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.35;
-    letter-spacing: 0.01em;
+    letter-spacing: 0;
     color: inherit;
 }
 
 .toast__message {
     font-size: 13px;
-    line-height: 1.45;
-    margin-top: 3px;
-    opacity: 0.78;
+    line-height: 1.55;
+    margin-top: 4px;
+    opacity: 0.84;
     color: #5C2C1E;
     word-break: break-word;
 }
@@ -174,16 +167,16 @@ const icons: Record<string, string> = {
 /* Progress bar */
 .toast__progress {
     position: absolute;
-    bottom: 0;
+    top: 0;
     left: 0;
     right: 0;
     height: 3px;
-    background: rgba(0, 0, 0, 0.06);
+    background: rgba(0, 0, 0, 0.04);
 }
 
 .toast__progress-bar {
     height: 100%;
-    border-radius: 0 3px 3px 0;
+    border-radius: 0 0 3px 3px;
     transition: width 0.05s linear;
 }
 
@@ -226,30 +219,10 @@ const icons: Record<string, string> = {
 @media (prefers-color-scheme: dark) {
     .toast {
         background: #220A08;
-        border-color: #3D1515;
         box-shadow:
-            0 8px 30px rgba(0, 0, 0, 0.50),
-            0 2px 8px rgba(0, 0, 0, 0.35);
-    }
-
-    .toast--success {
-        border-left-color: #4ade80;
-        color: #4ade80;
-    }
-
-    .toast--error {
-        border-left-color: #f87171;
-        color: #f87171;
-    }
-
-    .toast--warning {
-        border-left-color: #fbbf24;
-        color: #fbbf24;
-    }
-
-    .toast--info {
-        border-left-color: #FF6B80;
-        color: #FF6B80;
+            rgba(255, 255, 255, 0.06) 0px 0px 0px 1px,
+            0 18px 34px -22px rgba(0, 0, 0, 0.50),
+            0 8px 18px -18px rgba(0, 0, 0, 0.35);
     }
 
     .toast__message {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { Settings2, Table2, Save, Plug, CheckCircle, XCircle, Loader2 } from 'lucide-vue-next'
+import { Table2, Save, Plug, CheckCircle, XCircle, Loader2 } from 'lucide-vue-next'
 
 interface DbConfig {
     host: string;
@@ -78,11 +78,12 @@ async function testConnection() {
 
 <template>
 <div class="settings-wrap">
+    <div class="page-header">
+        <h2 class="page-title">ฐานข้อมูล</h2>
+        <p class="page-desc">เชื่อมต่อ SQL Server (INVS) ผ่าน TDS Protocol — ไม่ต้องติดตั้ง ODBC Driver</p>
+    </div>
+
     <div class="card">
-        <div class="card-title">
-            <Settings2 :size="17" /> ตั้งค่าการเชื่อมต่อฐานข้อมูล
-        </div>
-        <div class="card-desc">เชื่อมต่อ SQL Server (INVS) ผ่าน TDS Protocol โดยตรง — ไม่ต้องติดตั้ง ODBC Driver</div>
 
         <div class="form-grid">
             <div class="form-group">
@@ -116,7 +117,7 @@ async function testConnection() {
             </div>
         </div>
 
-        <div class="actions" style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div class="actions actions-row">
             <button class="btn btn-success btn-lg" :disabled="!isValid" @click="saveConfig">
                 <CheckCircle v-if="saveStatus === 'saved'" :size="16" />
                 <Save v-else :size="16" />
@@ -129,7 +130,7 @@ async function testConnection() {
             </button>
         </div>
 
-        <div v-if="message" :class="['status-msg', statusClass]" style="margin-top:12px">
+        <div v-if="message" :class="['status-msg', statusClass, 'status-stack']">
             <component :is="statusIcon" :size="15" />
             {{ message }}
         </div>
@@ -141,52 +142,35 @@ async function testConnection() {
         <div class="card-title">
             <Table2 :size="17" /> ข้อมูลที่ระบบดึงจาก INVS
         </div>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>ตาราง</th>
-                    <th>คอลัมน์ที่ใช้</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><code>MS_IVO</code></td>
-                    <td><code>INVOICE_NO, VENDOR_CODE, TOTAL_COST, RECEIVE_DATE</code></td>
-                </tr>
-                <tr>
-                    <td><code>COMPANY</code></td>
-                    <td><code>COMPANY_CODE, COMPANY_NAME, KEY_WORD</code></td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="card-desc">
+            ตารางที่ใช้งานถูกจำกัดเฉพาะข้อมูลอ่านอย่างเดียว เพื่อให้การเชื่อมต่อปลอดภัยและคงรูปแบบรายงานเดิม
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ตาราง</th>
+                        <th>คอลัมน์ที่ใช้</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>MS_IVO</code></td>
+                        <td><code>INVOICE_NO, VENDOR_CODE, TOTAL_COST, RECEIVE_DATE</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>COMPANY</code></td>
+                        <td><code>COMPANY_CODE, COMPANY_NAME, KEY_WORD</code></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 </template>
 
 <style scoped>
-.settings-wrap {
-    width: 100%;
-}
-
-.actions {
-    margin-top: 22px;
-}
-
-code {
-    font-family: "Consolas", "Fira Code", monospace;
-    font-size: 12px;
-    background: var(--c-primary-light);
-    padding: 2px 6px;
-    border-radius: 4px;
-    color: var(--c-primary);
-    border: 1px solid #F0C4B8;
-}
-
-@media (prefers-color-scheme: dark) {
-    code {
-        background: #2A0808;
-        color: var(--c-primary);
-        border-color: #501515;
-    }
+.data-table td code {
+    white-space: nowrap;
 }
 </style>

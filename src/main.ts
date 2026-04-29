@@ -1,3 +1,4 @@
+import "./assets/design-system.css";
 import { createApp } from "vue";
 import App from "./App.vue";
 

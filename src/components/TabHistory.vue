@@ -72,15 +72,9 @@ function doDelete(id: string) {
 
 <template>
 <div class="history-wrap">
-    <!-- Header card -->
-    <div class="card header-card">
-        <div class="card-title">
-            <FolderOpen :size="17" /> ประวัติรอบการทำงาน
-        </div>
-        <div class="card-desc">
-            บันทึกข้อมูล carry-forward แต่ละรอบไว้ที่นี่ เพื่อดึงค่าไปใช้ในรอบถัดไปได้ทันที
-            (บันทึกได้จากแต่ละหน้ารายงานหลังสร้าง PDF สำเร็จ)
-        </div>
+    <div class="page-header">
+        <h2 class="page-title">ประวัติรอบ</h2>
+        <p class="page-desc">ค่า carry-forward แต่ละรอบ — กด "โหลด" เพื่อนำค่าไปใช้ในรอบถัดไป</p>
     </div>
 
     <!-- Empty state -->
@@ -188,34 +182,25 @@ function doDelete(id: string) {
 </template>
 
 <style scoped>
-.history-wrap {
-    width: 100%;
-}
-
-/* #C8102E on #FFF0EC → ~7.8:1 ✓ */
-.header-card {
-    background: linear-gradient(135deg, var(--c-primary-light) 0%, #FFD8C8 100%);
-    border-color: #F0C4B8;
-}
-
 /* Empty state */
 .empty-card {
     text-align: center;
-    padding: 60px 20px !important;
+    padding: 64px 28px !important;
 }
 
 .empty-icon {
     color: var(--c-text-light);
-    margin-bottom: 18px;
+    margin-bottom: 20px;
     display: flex;
     justify-content: center;
 }
 
 .empty-title {
-    font-size: 17px;
+    font-size: 18px;
     font-weight: 600;
-    color: var(--c-text-muted);
-    margin-bottom: 8px;
+    color: var(--c-text);
+    margin-bottom: 10px;
+    letter-spacing: -0.3px;
 }
 
 .empty-desc {
@@ -230,81 +215,85 @@ function doDelete(id: string) {
 .entries {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 16px;
 }
 
 .entry-card {
     background: var(--c-surface);
-    border: 1px solid var(--c-border);
+    box-shadow: var(--shadow-card);
     border-radius: var(--radius-lg);
-    padding: 18px 22px;
-    box-shadow: var(--shadow);
-    transition: border-color 0.15s, box-shadow 0.15s;
+    padding: 24px 26px;
+    transition: box-shadow 0.15s, transform 0.15s;
 }
 
 .entry-card:hover {
-    border-color: var(--c-primary-mid);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-card);
+    transform: translateY(-1px);
 }
 
 .entry-header {
-    margin-bottom: 14px;
+    margin-bottom: 18px;
 }
 
 .entry-title-row {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
 }
 
 .entry-label {
-    font-size: 17px;
-    font-weight: 700;
+    font-size: 18px;
+    font-weight: 600;
     color: var(--c-text);
+    letter-spacing: -0.36px;
 }
 
 /* #C8102E on #FFF0EC → ~7.8:1 ✓ */
 .entry-round-badge {
-    background: var(--c-primary-light);
+    background: rgba(255, 240, 236, 0.8);
     color: var(--c-primary);
-    border: 1px solid #F0C4B8;
+    box-shadow: rgba(200, 16, 46, 0.10) 0px 0px 0px 1px;
     border-radius: 999px;
-    padding: 3px 12px;
+    padding: 5px 12px;
     font-size: 13px;
     font-weight: 600;
 }
 
 .source-tab-badge {
-    background: #EFF6FF;
-    color: #1D4ED8;
-    border: 1px solid #BFDBFE;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--c-text-muted);
+    box-shadow: var(--shadow-ring);
     border-radius: 999px;
-    padding: 3px 12px;
+    padding: 5px 12px;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .entry-meta {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     flex-wrap: wrap;
 }
 
 .meta-chip {
     font-size: 13px;
     color: var(--c-text-muted);
-    background: var(--c-bg);
-    border: 1px solid var(--c-border);
+    background: rgba(255, 255, 255, 0.76);
+    box-shadow: var(--shadow-ring);
     border-radius: 999px;
-    padding: 3px 11px;
+    padding: 6px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 /* #C8102E on #FFF0EC → ~7.8:1 ✓ */
 .meta-chip.money {
     color: var(--c-primary);
-    background: var(--c-primary-light);
-    border-color: #F0C4B8;
+    background: rgba(255, 240, 236, 0.84);
+    box-shadow: rgba(200, 16, 46, 0.10) 0px 0px 0px 1px;
 }
 
 .meta-chip.muted {
@@ -315,31 +304,35 @@ function doDelete(id: string) {
 /* Carry values */
 .carry-section {
     background: var(--c-primary-light);
-    border: 1px solid #F0C4B8;
-    border-radius: var(--radius);
-    padding: 13px 16px;
-    margin-bottom: 14px;
+    box-shadow: var(--shadow-ring);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    margin-bottom: 16px;
 }
 
 /* #C8102E on #FFF0EC → ~7.8:1 ✓ */
 .carry-title {
-    font-size: 13px;
-    font-weight: 700;
+    font-size: 14px;
+    font-weight: 600;
     color: var(--c-primary);
-    margin-bottom: 10px;
+    margin-bottom: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .carry-values {
     display: flex;
-    gap: 24px;
+    gap: 16px;
     flex-wrap: wrap;
 }
 
 .cv-item {
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    min-width: 130px;
+    gap: 5px;
+    min-width: 150px;
+    flex: 1 1 150px;
 }
 
 /* #5C2C1E on #FFF0EC → ~11:1 ✓ */
@@ -353,7 +346,7 @@ function doDelete(id: string) {
 
 .cv-val {
     font-size: 16px;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--c-text);
 }
 
@@ -370,8 +363,9 @@ function doDelete(id: string) {
 /* Entry actions */
 .entry-actions {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .confirm-text {
@@ -385,12 +379,11 @@ function doDelete(id: string) {
 /* Tip card — warm cream tint */
 .tip-card {
     background: var(--c-primary-light);
-    border-color: #F0C4B8;
 }
 
 .tip-list {
     padding-left: 20px;
-    line-height: 2.1;
+    line-height: 1.95;
     font-size: 14px;
     color: var(--c-text-muted);
 }
@@ -401,40 +394,5 @@ function doDelete(id: string) {
 
 .tip-list strong {
     color: var(--c-text);
-}
-
-/* Dark Mode */
-@media (prefers-color-scheme: dark) {
-    .header-card {
-        background: linear-gradient(135deg, #2A0808 0%, #350A0A 100%);
-        border-color: #501515;
-    }
-
-    .entry-round-badge {
-        background: #2A0808;
-        border-color: #501515;
-    }
-
-    .source-tab-badge {
-        background: #1E3A5F;
-        color: #93C5FD;
-        border-color: #1E40AF;
-    }
-
-    .meta-chip.money {
-        background: #2A0808;
-        color: var(--c-primary);
-        border-color: #501515;
-    }
-
-    .carry-section {
-        background: #2A0808;
-        border-color: #501515;
-    }
-
-    .tip-card {
-        background: #2A0808;
-        border-color: #501515;
-    }
 }
 </style>

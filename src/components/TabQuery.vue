@@ -155,14 +155,21 @@ async function fetchData() {
 
 <template>
 <div class="query-wrap">
+    <div class="page-header">
+        <h2 class="page-title">ดึงข้อมูล</h2>
+        <p class="page-desc">เลือกช่วงวันที่แล้วกด "ดึงข้อมูล" เพื่อโหลดรายการบิลจาก INVS</p>
+    </div>
+
     <!-- Date range card -->
     <div class="card">
         <div class="card-title">
-            <Search :size="17" /> เลือกช่วงวันที่และดึงข้อมูล
+            <CalendarDays :size="17" /> ช่วงวันที่และตำแหน่งจัดเก็บไฟล์
         </div>
-        <div class="card-desc">เลือกช่วงวันที่แล้วกด "ดึงข้อมูล" เพื่อโหลดรายการบิลจาก INVS</div>
+        <div class="card-desc">
+            เลือกช่วงวันที่ของบิล กำหนดรอบ และระบุโฟลเดอร์ปลายทางสำหรับไฟล์รายงาน
+        </div>
 
-        <div class="form-grid-2" style="margin-top:12px">
+        <div class="form-grid-2 query-form-grid">
             <div class="form-group">
                 <label>วันที่เริ่มต้น</label>
                 <input type="date" :value="startDateHtml"
@@ -197,18 +204,18 @@ async function fetchData() {
             <CalendarDays :size="14" /> {{ periodLabel }}
         </div>
 
-        <div v-if="!isDbReady" class="status-msg status-warn" style="margin-top:12px">
+        <div v-if="!isDbReady" class="status-msg status-warn status-stack">
             <AlertTriangle :size="14" /> กรุณาตั้งค่าการเชื่อมต่อฐานข้อมูลก่อน (แท็บ ฐานข้อมูล)
         </div>
 
-        <div class="actions">
+        <div class="actions actions-row">
             <button class="btn btn-primary btn-lg" :disabled="!canFetch || loading" @click="fetchData">
                 <span v-if="loading" class="spinner"></span>
                 {{ loading ? "กำลังโหลดข้อมูล..." : "ดึงข้อมูล" }}
             </button>
         </div>
 
-        <div v-if="error" class="status-msg status-error" style="margin-top:12px">
+        <div v-if="error" class="status-msg status-error status-stack">
             <XCircle :size="14" /> {{ error }}
         </div>
     </div>
@@ -296,43 +303,44 @@ async function fetchData() {
 </template>
 
 <style scoped>
-.query-wrap {
-    width: 100%;
-}
-
-.actions {
-    margin-top: 16px;
+.query-form-grid {
+    margin-top: 2px;
 }
 
 .empty-result {
     text-align: center;
-    padding: 20px;
+    padding: 24px;
     color: var(--c-warn);
     font-size: 15px;
+    background: var(--c-warn-bg);
+    box-shadow: var(--shadow-ring);
+    border-radius: var(--radius-lg);
 }
 
 .empty-card {
     text-align: center;
-    padding: 56px 20px !important;
+    padding: 64px 28px !important;
 }
 
 .empty-icon {
     color: var(--c-text-light);
-    margin-bottom: 14px;
+    margin-bottom: 18px;
     display: flex;
     justify-content: center;
 }
 
 .empty-text {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
-    color: var(--c-text-muted);
-    margin-bottom: 6px;
+    color: var(--c-text);
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
 }
 
 .empty-hint {
     font-size: 14px;
     color: var(--c-text-light);
+    line-height: 1.65;
 }
 
 .num {
@@ -356,7 +364,7 @@ code {
 
 .input-with-browse {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     align-items: stretch;
 }
 
@@ -367,26 +375,26 @@ code {
 
 .btn-browse {
     white-space: nowrap;
-    padding: 8px 16px;
+    padding: 0 16px;
     font-size: 14px;
-    font-weight: 600;
-    border: 1px solid var(--c-border);
-    border-radius: var(--radius);
-    background: var(--c-surface);
+    font-weight: 500;
+    border: none;
+    border-radius: 10px;
+    background: var(--c-surface-raised);
+    box-shadow: var(--shadow-ring);
     color: var(--c-text);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s, transform 0.15s;
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
 }
 
 .btn-browse:hover {
-    background: var(--c-primary);
-    color: #fff;
-    border-color: var(--c-primary);
+    background: rgba(255, 240, 236, 0.92);
+    color: var(--c-primary);
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+    box-shadow: var(--shadow-card);
 }
 
 .btn-browse:active {

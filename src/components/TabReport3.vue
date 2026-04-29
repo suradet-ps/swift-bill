@@ -218,14 +218,9 @@ function saveToHistory() {
 
 <template>
 <div class="report-wrap">
-    <!-- Info banner -->
-    <div class="card info-banner">
-        <div class="banner-title">
-            <FileOutput :size="17" /> เบิกยาปะหน้า (Disbursement Cover Letters)
-        </div>
-        <div class="banner-desc">
-            สร้างบันทึกข้อความขออนุมัติเบิกเงิน — A4 Portrait PDF รวมทุกฉบับในไฟล์เดียว (1 หน้า/บิล)
-        </div>
+    <div class="page-header">
+        <h2 class="page-title">เบิกยาปะหน้า</h2>
+        <p class="page-desc">Disbursement Cover Letters — A4 Portrait PDF · 1 หน้า/บิล รวมในไฟล์เดียว</p>
     </div>
 
     <!-- Data summary -->
@@ -282,7 +277,7 @@ function saveToHistory() {
             </div>
         </div>
 
-        <div class="section-label" style="margin-top:16px">
+        <div class="section-label section-spaced">
             <Banknote :size="14" /> งบประมาณ
         </div>
         <div class="form-grid">
@@ -351,7 +346,7 @@ function saveToHistory() {
             </button>
         </div>
 
-        <div v-if="error" class="status-msg status-error" style="margin-top:12px">
+        <div v-if="error" class="status-msg status-error status-stack">
             <XCircle :size="14" /> {{ error }}
         </div>
     </div>
@@ -383,7 +378,7 @@ function saveToHistory() {
         </div>
 
         <!-- Carry-forward info -->
-        <div class="carry-box" style="margin-top:16px">
+        <div class="carry-box section-spaced">
             <div class="carry-box-title">
                 <ArrowRight :size="15" /> ค่าสำหรับรอบถัดไป (Carry-Forward)
             </div>
@@ -399,7 +394,7 @@ function saveToHistory() {
             </div>
         </div>
 
-        <div class="save-actions" style="margin-top:16px">
+        <div class="save-actions">
             <button class="btn btn-success" @click="saveToHistory">
                 <Save :size="15" /> บันทึกรอบนี้สู่ประวัติ
             </button>
@@ -412,25 +407,27 @@ function saveToHistory() {
 .date-picker-row {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
 }
 
 .date-input-cal {
     flex: 1;
-    padding: 8px 10px;
-    border: 1.5px solid var(--clr-border, #d1d5db);
+    padding: 11px 13px;
+    border: none;
     border-radius: 8px;
     font-size: 14px;
-    background: var(--clr-surface, #fff);
-    color: var(--clr-text, #111827);
+    background: var(--c-surface-raised);
+    box-shadow: var(--shadow-ring);
+    color: var(--c-text);
     cursor: pointer;
-    transition: border-color 0.15s;
+    transition: box-shadow 0.15s, background 0.15s;
 }
 
 .date-input-cal:focus {
     outline: none;
-    border-color: var(--clr-primary, #2563eb);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    box-shadow:
+        0 0 0 2px var(--c-primary),
+        rgba(200, 16, 46, 0.12) 0px 0px 0px 4px;
 }
 
 .date-clear-btn {
@@ -438,9 +435,9 @@ function saveToHistory() {
     width: 28px;
     height: 28px;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     background: transparent;
-    color: var(--clr-text-muted, #6b7280);
+    color: var(--c-text-muted);
     cursor: pointer;
     font-size: 13px;
     display: flex;
@@ -450,81 +447,57 @@ function saveToHistory() {
 }
 
 .date-clear-btn:hover {
-    background: var(--clr-danger-bg, #fee2e2);
-    color: var(--clr-danger, #dc2626);
+    background: var(--c-error-bg);
+    color: var(--c-error);
 }
 
 .date-thai-preview {
-    color: var(--clr-primary, #2563eb);
-    font-weight: 600;
-}
-
-.report-wrap {
-    width: 100%;
-}
-
-/* Info banner */
-.info-banner {
-    background: linear-gradient(135deg, var(--c-primary-light) 0%, #FFD8C8 100%);
-    border-color: #F0C4B8;
-}
-
-.banner-title {
-    font-size: 16px;
-    font-weight: 700;
     color: var(--c-primary);
-    margin-bottom: 5px;
-}
-
-.banner-desc {
-    font-size: 14px;
-    color: var(--c-primary-mid);
+    font-weight: 600;
 }
 
 /* No-data placeholder */
 .no-data {
     text-align: center;
-    padding: 22px;
+    padding: 24px;
     color: var(--c-warn);
     font-size: 15px;
     background: var(--c-warn-bg);
-    border-radius: var(--radius);
+    box-shadow: var(--shadow-ring);
+    border-radius: var(--radius-lg);
 }
 
 .period {
-    color: var(--c-primary) !important;
-}
-
-.actions {
-    margin-top: 22px;
+    color: var(--c-text) !important;
 }
 
 /* Budget preview calculation */
 /* #5C2C1E on #FFF0EC → ~11:1 ✓ */
 .budget-preview {
     background: var(--c-primary-light);
-    border: 1px solid #F0C4B8;
-    border-radius: var(--radius);
-    padding: 16px 18px;
-    margin: 18px 0;
+    box-shadow: var(--shadow-ring);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    margin: 20px 0 0;
 }
 
 .budget-preview-title {
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--c-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
 }
 
 .budget-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 6px 0;
-    border-bottom: 1px solid #F0C4B8;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--c-border-soft);
     font-size: 14px;
+    gap: 16px;
 }
 
 .budget-row:last-child {
@@ -533,19 +506,19 @@ function saveToHistory() {
 
 /* warm amber highlight for debit row  */
 .budget-row.highlight {
-    background: rgba(251, 191, 36, 0.15);
-    margin: 0 -6px;
-    padding: 6px 6px;
-    border-radius: 4px;
+    background: rgba(251, 191, 36, 0.12);
+    margin: 2px -8px;
+    padding: 8px 8px;
+    border-radius: 10px;
     border-bottom-color: transparent;
 }
 
 .budget-row.total {
-    font-weight: 700;
+    font-weight: 600;
     font-size: 15px;
-    margin-top: 4px;
-    padding-top: 10px;
-    border-top: 2px solid var(--c-primary-mid);
+    margin-top: 6px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(200, 16, 46, 0.18);
     border-bottom: none;
 }
 
@@ -571,95 +544,5 @@ function saveToHistory() {
 
 .budget-val.negative {
     color: var(--c-error);
-}
-
-/* Result section */
-.file-path {
-    font-size: 11px;
-    color: var(--c-text-muted);
-    word-break: break-all;
-    display: block;
-    margin-top: 2px;
-    padding-left: 20px;
-}
-
-.result-stats {
-    display: flex;
-    gap: 8px;
-    margin-top: 14px;
-    flex-wrap: wrap;
-}
-
-/* #166534 on #dcfce7 → 6.8:1 ✓ */
-.stat-chip {
-    background: #dcfce7;
-    color: var(--c-success);
-    border: 1px solid #86efac;
-    border-radius: 999px;
-    padding: 4px 14px;
-    font-size: 13px;
-    font-weight: 600;
-}
-
-/* #C8102E on #FFF0EC → ~7.8:1 ✓ */
-.stat-chip.money {
-    background: var(--c-primary-light);
-    color: var(--c-primary);
-    border-color: #F0C4B8;
-}
-
-.save-actions {
-    display: flex;
-    gap: 10px;
-}
-
-/* Dark mode overrides */
-@media (prefers-color-scheme: dark) {
-    .info-banner {
-        background: linear-gradient(135deg, #2A0808 0%, #350A0A 100%);
-        border-color: #501515;
-    }
-
-    .banner-desc {
-        color: var(--c-primary-mid);
-    }
-
-    .budget-preview {
-        background: #2A0808;
-        border-color: #501515;
-    }
-
-    .budget-row {
-        border-bottom-color: #2e3820;
-    }
-
-    .budget-row.highlight {
-        background: rgba(251, 191, 36, 0.10);
-        border-bottom-color: transparent;
-    }
-
-    .budget-row.total {
-        border-top-color: var(--c-primary-mid);
-    }
-
-    .budget-val.debit {
-        color: var(--c-error);
-    }
-
-    .budget-val.positive {
-        color: var(--c-success);
-    }
-
-    .stat-chip {
-        background: #052e16;
-        color: #4ade80;
-        border-color: #166534;
-    }
-
-    .stat-chip.money {
-        background: #2A0808;
-        color: var(--c-primary);
-        border-color: #501515;
-    }
 }
 </style>
