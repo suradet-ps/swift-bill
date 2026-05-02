@@ -3,13 +3,14 @@ import { ref, reactive, computed, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import TabSettings from "./components/TabSettings.vue";
 import TabQuery from "./components/TabQuery.vue";
+import TabNumberLocks from "./components/TabNumberLocks.vue";
 import TabReport1 from "./components/TabReport1.vue";
 import TabReport2 from "./components/TabReport2.vue";
 import TabReport3 from "./components/TabReport3.vue";
 import TabHistory from "./components/TabHistory.vue";
 import ToastContainer from "./components/ToastContainer.vue";
 import { useToast } from "./composables/useToast";
-import { Settings2, Database, FileText, ClipboardList, FileOutput, History } from 'lucide-vue-next'
+import { Settings2, Database, Lock, FileText, ClipboardList, FileOutput, History } from 'lucide-vue-next'
 
 const toast = useToast();
 
@@ -54,6 +55,20 @@ export interface GenerateResult {
     carry_forward: CarryForward;
 }
 
+export interface SkippedLockedNumberSet {
+    request_no: number;
+    report_no: number;
+    purchase_no: number;
+    reason: string;
+    note: string;
+}
+
+export interface ReceivingNumberingInfo {
+    start_po_no: number;
+    start_purchase_no: number;
+    skipped_locked_sets: SkippedLockedNumberSet[];
+}
+
 export interface RoundHistoryEntry {
     id: string;
     label: string;
@@ -75,7 +90,7 @@ export interface RoundHistoryEntry {
 
 // Shared State
 
-type TabId = "settings" | "query" | "report1" | "report2" | "report3" | "history";
+type TabId = "settings" | "query" | "numberLocks" | "report1" | "report2" | "report3" | "history";
 const activeTab = ref<TabId>("settings");
 
 const dbConfig = reactive<DbConfig>({
@@ -195,7 +210,21 @@ function handleR2Carry(carry: { next_reg_no: string; next_running: number; next_
     r2Carry.value = carry;
 }
 
-function applyHistoryEntry(entry: RoundHistoryEntry) {
+async function applyHistoryEntry(entry: RoundHistoryEntry) {
+    let numberingInfo: ReceivingNumberingInfo;
+    try {
+        numberingInfo = await invoke<ReceivingNumberingInfo>("normalize_receiving_start", {
+            params: {
+                fiscal_year: entry.fiscal_year,
+                start_po_no: entry.next_po_no,
+                start_purchase_no: entry.next_purchase_no ?? 1,
+            },
+        });
+    } catch (e) {
+        toast.error("โหลดประวัติล้มเหลว", `ไม่สามารถตรวจสอบเลขล็อกได้: ${String(e)}`);
+        return;
+    }
+
     // Pre-fill shared state
     round.value = entry.round + 1;
 
@@ -204,8 +233,8 @@ function applyHistoryEntry(entry: RoundHistoryEntry) {
     r1Form.startRunning = entry.next_running;
 
     // Pre-fill report 2 form
-    r2Form.startPoNo = entry.next_po_no;
-    r2Form.startPurchaseNo = entry.next_purchase_no ?? 1;
+    r2Form.startPoNo = numberingInfo.start_po_no;
+    r2Form.startPurchaseNo = numberingInfo.start_purchase_no;
     r2Form.startRegNo = entry.next_reg_no;
     r2Form.startRunning = entry.next_running;
 
@@ -215,6 +244,14 @@ function applyHistoryEntry(entry: RoundHistoryEntry) {
 
     // Switch to query tab so user can pick the new date range
     activeTab.value = "query";
+
+    if (numberingInfo.skipped_locked_sets.length > 0) {
+        toast.info(
+            "โหลดประวัติสำเร็จ",
+            `โหลดค่า carry-forward จากรอบ ${entry.round} แล้ว — ข้ามเลขล็อก ${numberingInfo.skipped_locked_sets.length} ชุดให้อัตโนมัติ`
+        );
+        return;
+    }
 
     toast.info(
         "โหลดประวัติสำเร็จ",
@@ -262,6 +299,11 @@ function applyHistoryEntry(entry: RoundHistoryEntry) {
                 @click="activeTab = 'query'">
                 <Database :size="15" :stroke-width="2" />
                 <span class="nav-label">ดึงข้อมูล</span>
+            </button>
+            <button class="nav-item" :class="{ active: activeTab === 'numberLocks' }"
+                @click="activeTab = 'numberLocks'">
+                <Lock :size="15" :stroke-width="2" />
+                <span class="nav-label">ล็อกเลข</span>
             </button>
 
             <span class="nav-section-label">รายงาน</span>
@@ -317,6 +359,7 @@ function applyHistoryEntry(entry: RoundHistoryEntry) {
             v-model:output-dir="outputDir"
             v-model:preview-data="previewData"
             v-model:round="round" />
+        <TabNumberLocks v-show="activeTab === 'numberLocks'" />
         <TabReport1 v-show="activeTab === 'report1'" :db-config="dbConfig"
             :date-from="dateFrom" :date-to="dateTo"
             :year="year" :month="month" :round="round"

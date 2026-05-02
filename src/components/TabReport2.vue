@@ -26,6 +26,20 @@ interface CarryForward {
     remaining_balance: number;
 }
 
+interface SkippedLockedNumberSet {
+    request_no: number;
+    report_no: number;
+    purchase_no: number;
+    reason: string;
+    note: string;
+}
+
+interface ReceivingNumberingInfo {
+    start_po_no: number;
+    start_purchase_no: number;
+    skipped_locked_sets: SkippedLockedNumberSet[];
+}
+
 interface ReceivingSummaryRow {
     approval_date: string;
     po_date: string;
@@ -46,13 +60,15 @@ interface ReceivingSummaryPreview {
     carry_forward: CarryForward;
     total_rows: number;
     total_amount: number;
+    numbering_info: ReceivingNumberingInfo;
 }
 
-interface GenerateResult {
+interface ReceivingSummaryGenerateResult {
     files: string[];
     total_rows: number;
     total_amount: number;
     carry_forward: CarryForward;
+    numbering_info: ReceivingNumberingInfo;
 }
 
 interface RoundHistoryEntry {
@@ -118,6 +134,7 @@ const previewError = ref("");
 const exportError = ref("");
 const editableRows = ref<ReceivingSummaryRow[]>([]);
 const carryForward = ref<CarryForward | null>(null);
+const numberingInfo = ref<ReceivingNumberingInfo | null>(null);
 const exportedFile = ref<string | null>(null);
 
 // Thai date picker for Approval Date
@@ -152,7 +169,9 @@ const canPreview = computed(
         props.previewData.row_count > 0 &&
         props.dateFrom !== "" &&
         props.dateTo !== "" &&
-        props.startRegNo.trim() !== ""
+        props.startRegNo.trim() !== "" &&
+        props.startPoNo > 0 &&
+        props.startPurchaseNo > 0
 );
 
 const canExport = computed(() => editableRows.value.length > 0 && !previewLoading.value);
@@ -177,6 +196,7 @@ async function previewReport() {
     exportedFile.value = null;
     exportError.value = "";
     carryForward.value = null;
+    numberingInfo.value = null;
 
     try {
         const preview = await invoke<ReceivingSummaryPreview>("preview_receiving_summary", {
@@ -197,6 +217,7 @@ async function previewReport() {
         });
         editableRows.value = preview.rows.map((r) => ({ ...r }));
         carryForward.value = preview.carry_forward;
+        numberingInfo.value = preview.numbering_info;
         toast.success("โหลดตัวอย่างสำเร็จ", `พบ ${preview.rows.length} รายการ`);
     } catch (e) {
         previewError.value = String(e);
@@ -213,7 +234,7 @@ async function exportExcel() {
     exportedFile.value = null;
 
     try {
-        const res = await invoke<GenerateResult>("export_receiving_summary_excel", {
+        const res = await invoke<ReceivingSummaryGenerateResult>("export_receiving_summary_excel", {
             params: {
                 rows: editableRows.value,
                 year: props.year,
@@ -228,6 +249,7 @@ async function exportExcel() {
         });
         exportedFile.value = res.files[0];
         carryForward.value = res.carry_forward;
+        numberingInfo.value = res.numbering_info;
         emit("carryResult", {
             next_reg_no: res.carry_forward.next_reg_no,
             next_running: res.carry_forward.next_running,
@@ -383,6 +405,41 @@ function saveToHistory() {
 
         <div v-if="previewError" class="status-msg status-error status-stack">
             <XCircle :size="14" /> {{ previewError }}
+        </div>
+    </div>
+
+    <div v-if="numberingInfo && numberingInfo.skipped_locked_sets.length > 0" class="card">
+        <div class="card-title">
+            <AlertTriangle :size="17" /> พบเลขล็อกที่ระบบข้ามให้อัตโนมัติ
+        </div>
+        <div class="status-msg status-warn status-stack">
+            <AlertTriangle :size="14" />
+            เริ่มใช้เลขจริงที่ ขอซื้อ/รายงาน {{ numberingInfo.start_po_no }} และ ใบสั่งซื้อ {{ numberingInfo.start_purchase_no }}
+            โดยข้ามเลขล็อก {{ numberingInfo.skipped_locked_sets.length }} ชุด
+        </div>
+
+        <div class="table-wrap locked-table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th class="text-center">เลขขอซื้อ</th>
+                        <th class="text-center">รายงาน</th>
+                        <th class="text-center">ใบสั่งซื้อ</th>
+                        <th>เหตุผล</th>
+                        <th>หมายเหตุ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="locked in numberingInfo.skipped_locked_sets"
+                        :key="`${locked.request_no}-${locked.purchase_no}`">
+                        <td class="text-center">{{ locked.request_no }}</td>
+                        <td class="text-center">{{ locked.report_no }}</td>
+                        <td class="text-center">{{ locked.purchase_no }}</td>
+                        <td>{{ locked.reason }}</td>
+                        <td>{{ locked.note || "—" }}</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -581,6 +638,10 @@ function saveToHistory() {
 
 .period {
     color: var(--c-text) !important;
+}
+
+.locked-table-wrap {
+    margin-top: 14px;
 }
 
 /* Editable table */

@@ -55,6 +55,31 @@ pub struct GenerateResult {
   pub carry_forward: CarryForward,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SkippedLockedNumberSet {
+  pub request_no: u32,
+  pub report_no: u32,
+  pub purchase_no: u32,
+  pub reason: String,
+  pub note: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReceivingNumberingInfo {
+  pub start_po_no: u32,
+  pub start_purchase_no: u32,
+  pub skipped_locked_sets: Vec<SkippedLockedNumberSet>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReceivingSummaryGenerateResult {
+  pub files: Vec<String>,
+  pub total_rows: usize,
+  pub total_amount: f64,
+  pub carry_forward: CarryForward,
+  pub numbering_info: ReceivingNumberingInfo,
+}
+
 // Intermediate row types
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -84,6 +109,13 @@ pub struct ReceivingSummaryRow {
   pub request_no: u32,
   pub report_no: u32,
   pub po_no: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReceivingNumberAssignment {
+  pub request_no: u32,
+  pub report_no: u32,
+  pub purchase_no: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -191,6 +223,24 @@ pub struct RoundHistory {
   pub entries: Vec<RoundHistoryEntry>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NumberLockEntry {
+  pub id: String,
+  pub fiscal_year: i32,
+  pub request_no: u32,
+  pub report_no: u32,
+  pub purchase_no: u32,
+  pub reason: String,
+  #[serde(default)]
+  pub note: String,
+  pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct NumberLockStore {
+  pub entries: Vec<NumberLockEntry>,
+}
+
 // Preview results
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -207,6 +257,7 @@ pub struct ReceivingSummaryPreview {
   pub carry_forward: CarryForward,
   pub total_rows: usize,
   pub total_amount: f64,
+  pub numbering_info: ReceivingNumberingInfo,
 }
 
 // Excel export parameters
@@ -233,4 +284,22 @@ pub struct ReceivingSummaryExcelParams {
   pub start_reg_no: String,
   pub start_running: u32,
   pub output_dir: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NumberLockBatchParams {
+  pub fiscal_year: i32,
+  pub start_request_no: u32,
+  pub start_purchase_no: u32,
+  pub count: u32,
+  pub reason: String,
+  #[serde(default)]
+  pub note: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NormalizeReceivingStartParams {
+  pub fiscal_year: i32,
+  pub start_po_no: u32,
+  pub start_purchase_no: u32,
 }

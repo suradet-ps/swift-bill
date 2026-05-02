@@ -215,14 +215,14 @@ fn build_w_array(face: &Face) -> Vec<Object> {
 
   for &(start, end) in &[(0x0020u32, 0x007Eu32), (0x0E00u32, 0x0E7Fu32)] {
     for cp in start..=end {
-      if let Some(ch) = char::from_u32(cp) {
-        if let Some(g) = face.glyph_index(ch) {
-          let adv = face.glyph_hor_advance(g).unwrap_or(0) as i64;
-          let pdf_w = adv * 1000 / upm;
-          // W format: gid  [width]
-          entries.push(Object::Integer(g.0 as i64));
-          entries.push(Object::Array(vec![Object::Integer(pdf_w)]));
-        }
+      if let Some(ch) = char::from_u32(cp)
+        && let Some(g) = face.glyph_index(ch)
+      {
+        let adv = face.glyph_hor_advance(g).unwrap_or(0) as i64;
+        let pdf_w = adv * 1000 / upm;
+        // W format: gid  [width]
+        entries.push(Object::Integer(g.0 as i64));
+        entries.push(Object::Array(vec![Object::Integer(pdf_w)]));
       }
     }
   }

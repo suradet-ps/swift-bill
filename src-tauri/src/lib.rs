@@ -2,6 +2,8 @@ mod db;
 mod excel;
 mod history;
 mod models;
+mod number_locks;
+mod numbering;
 mod pdf;
 mod pdf_template;
 mod queries;
@@ -9,8 +11,10 @@ mod reports;
 
 use models::{
   CarryForward, CoverLettersParams, DbConfig, GenerateResult, InvoiceSubmissionExcelParams,
-  InvoiceSubmissionParams, InvoiceSubmissionPreview, PreviewData, ReceivingSummaryExcelParams,
-  ReceivingSummaryParams, ReceivingSummaryPreview, RoundHistoryEntry,
+  InvoiceSubmissionParams, InvoiceSubmissionPreview, NormalizeReceivingStartParams,
+  NumberLockBatchParams, NumberLockEntry, PreviewData, ReceivingSummaryExcelParams,
+  ReceivingSummaryGenerateResult, ReceivingSummaryParams, ReceivingSummaryPreview,
+  RoundHistoryEntry,
 };
 
 // Helpers
@@ -125,6 +129,7 @@ async fn export_invoice_submission_excel(
 
 #[tauri::command]
 async fn preview_receiving_summary(
+  app: tauri::AppHandle,
   params: ReceivingSummaryParams,
 ) -> Result<ReceivingSummaryPreview, String> {
   let invoices =
@@ -136,10 +141,16 @@ async fn preview_receiving_summary(
   let n = invoices.len() as u32;
   let (next_reg_no, next_running) =
     reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
-  // request_no increments by 2 per row, so the next batch starts at start_po_no + n * 2
-  let next_po_no = params.start_po_no + n * 2;
-
-  let rows = reports::process_receiving_summary(&invoices, &params);
+  let locks = number_locks::load_number_locks(&app)?;
+  let allocation = numbering::allocate_receiving_numbers(
+    params.year,
+    params.start_po_no,
+    params.start_purchase_no,
+    n,
+    &locks,
+  );
+  let rows =
+    reports::process_receiving_summary_with_numbers(&invoices, &params, &allocation.assignments);
   let total_amount: f64 = invoices.iter().map(|i| i.total_cost).sum();
 
   Ok(ReceivingSummaryPreview {
@@ -147,24 +158,32 @@ async fn preview_receiving_summary(
     carry_forward: CarryForward {
       next_reg_no,
       next_running,
-      next_po_no,
-      next_purchase_no: params.start_purchase_no + n,
+      next_po_no: allocation.next_po_no,
+      next_purchase_no: allocation.next_purchase_no,
       remaining_balance: 0.0,
     },
     total_rows: invoices.len(),
     total_amount,
+    numbering_info: allocation.numbering_info,
   })
 }
 
 #[tauri::command]
 async fn export_receiving_summary_excel(
+  app: tauri::AppHandle,
   params: ReceivingSummaryExcelParams,
-) -> Result<GenerateResult, String> {
+) -> Result<ReceivingSummaryGenerateResult, String> {
   let n = params.rows.len() as u32;
   let (next_reg_no, next_running) =
     reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
-  // request_no increments by 2 per row, so the next batch starts at start_po_no + n * 2
-  let next_po_no = params.start_po_no + n * 2;
+  let locks = number_locks::load_number_locks(&app)?;
+  let allocation = numbering::allocate_receiving_numbers(
+    params.year,
+    params.start_po_no,
+    params.start_purchase_no,
+    n,
+    &locks,
+  );
 
   let total_amount: f64 = params.rows.iter().map(|r| r.total_amount).sum();
   let total_rows = params.rows.len();
@@ -178,17 +197,18 @@ async fn export_receiving_summary_excel(
     &output_dir,
   )?;
 
-  Ok(GenerateResult {
+  Ok(ReceivingSummaryGenerateResult {
     files: vec![file],
     total_rows,
     total_amount,
     carry_forward: CarryForward {
       next_reg_no,
       next_running,
-      next_po_no,
-      next_purchase_no: params.start_purchase_no + n,
+      next_po_no: allocation.next_po_no,
+      next_purchase_no: allocation.next_purchase_no,
       remaining_balance: 0.0,
     },
+    numbering_info: allocation.numbering_info,
   })
 }
 
@@ -247,6 +267,38 @@ async fn delete_round_entry(app: tauri::AppHandle, id: String) -> Result<(), Str
   history::delete_entry(&app, &id)
 }
 
+#[tauri::command]
+async fn load_number_locks(app: tauri::AppHandle) -> Result<Vec<NumberLockEntry>, String> {
+  number_locks::load_number_locks(&app)
+}
+
+#[tauri::command]
+async fn create_number_locks(
+  app: tauri::AppHandle,
+  params: NumberLockBatchParams,
+) -> Result<Vec<NumberLockEntry>, String> {
+  number_locks::create_number_locks(&app, params)
+}
+
+#[tauri::command]
+async fn delete_number_lock(app: tauri::AppHandle, id: String) -> Result<(), String> {
+  number_locks::delete_number_lock(&app, &id)
+}
+
+#[tauri::command]
+async fn normalize_receiving_start(
+  app: tauri::AppHandle,
+  params: NormalizeReceivingStartParams,
+) -> Result<models::ReceivingNumberingInfo, String> {
+  let locks = number_locks::load_number_locks(&app)?;
+  Ok(numbering::normalize_receiving_start_numbers(
+    params.fiscal_year,
+    params.start_po_no,
+    params.start_purchase_no,
+    &locks,
+  ))
+}
+
 // App entrypoint
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -265,6 +317,10 @@ pub fn run() {
       load_round_history,
       save_round_entry,
       delete_round_entry,
+      load_number_locks,
+      create_number_locks,
+      delete_number_lock,
+      normalize_receiving_start,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

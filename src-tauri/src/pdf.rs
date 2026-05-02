@@ -478,7 +478,7 @@ pub fn generate_invoice_submission_pdf(
     // Header labels
     // Single-row headers: visually centred in hdr_h
     let hdr_y_single = table_top + hdr_h * 0.58; // ~9.3 mm below table_top
-                                                 // Two-row headers: upper line and lower sub-label
+    // Two-row headers: upper line and lower sub-label
     let hdr_y1 = table_top + hdr_h * 0.34; // ~5.4 mm — top row baseline
     let hdr_y2 = table_top + hdr_h * 0.76; // ~12.2 mm — bottom row baseline
 

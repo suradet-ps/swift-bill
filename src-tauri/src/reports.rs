@@ -2,7 +2,7 @@ use chrono::{Datelike, NaiveDate};
 
 use crate::models::{
   CoverLetterPage, CoverLettersParams, InvoiceRow, InvoiceSubmissionParams, InvoiceSubmissionRow,
-  ReceivingSummaryParams, ReceivingSummaryRow,
+  ReceivingNumberAssignment, ReceivingSummaryParams, ReceivingSummaryRow,
 };
 
 /// Format a NaiveDate as a Thai short date string, e.g. "5 ม.ค. 69"
@@ -129,16 +129,31 @@ pub fn process_invoice_submission(
 
 // 2. Receiving Summary (สรุปรับยา)
 
+#[cfg(test)]
 pub fn process_receiving_summary(
   invoices: &[InvoiceRow],
   params: &ReceivingSummaryParams,
 ) -> Vec<ReceivingSummaryRow> {
+  let assignments: Vec<ReceivingNumberAssignment> = invoices
+    .iter()
+    .enumerate()
+    .map(|(index, _)| ReceivingNumberAssignment {
+      request_no: params.start_po_no + (index as u32 * 2),
+      report_no: params.start_po_no + (index as u32 * 2) + 1,
+      purchase_no: params.start_purchase_no + index as u32,
+    })
+    .collect();
+
+  process_receiving_summary_with_numbers(invoices, params, &assignments)
+}
+
+pub fn process_receiving_summary_with_numbers(
+  invoices: &[InvoiceRow],
+  params: &ReceivingSummaryParams,
+  assignments: &[ReceivingNumberAssignment],
+) -> Vec<ReceivingSummaryRow> {
   let (reg_prefix, reg_start_num) = parse_reg_no(&params.start_reg_no);
   let mut rows: Vec<ReceivingSummaryRow> = Vec::with_capacity(invoices.len());
-
-  let mut request_no = params.start_po_no;
-  let mut report_no = params.start_po_no + 1;
-  let mut po_no = params.start_purchase_no;
 
   // Fallback to first invoice's receive_date if approval_date is blank, matching UI behavior.
   let approval_date_str = params
@@ -153,7 +168,7 @@ pub fn process_receiving_summary(
         .unwrap_or_default()
     });
 
-  for (i, inv) in invoices.iter().enumerate() {
+  for (i, (inv, assigned)) in invoices.iter().zip(assignments.iter()).enumerate() {
     let (reg_num, running) = compute_reg_for_item(i as u32, params.start_running, reg_start_num);
     let reg_no = format_reg_no(&reg_prefix, reg_num);
 
@@ -172,14 +187,10 @@ pub fn process_receiving_summary(
       reg_no,
       running_in_reg: running,
       invoice_no: inv.invoice_no.clone(),
-      request_no,
-      report_no,
-      po_no,
+      request_no: assigned.request_no,
+      report_no: assigned.report_no,
+      po_no: assigned.purchase_no,
     });
-
-    request_no += 2;
-    report_no += 2;
-    po_no += 1;
   }
 
   rows
