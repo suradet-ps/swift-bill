@@ -1,2 +1,14 @@
-// Placeholder — will be filled in during the workspace refactor.
-fn main() {}
+//! Database access for the INVS SQL Server.
+//!
+//! Uses `tiberius` over plain TCP/TDS — no ODBC driver required. All
+//! public APIs are async and return `Result<_, DbError>` so callers can
+//! format their own user-facing error strings.
+
+#![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
+
+pub mod connect;
+pub mod invoices;
+
+pub use connect::{connect, TiberiusClient};
+pub use invoices::fetch_invoices;
