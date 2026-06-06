@@ -1,9 +1,10 @@
 [package]
 name = "swift-bill"
 version = "0.3.5"
-description = "Swift Bill - Hospital Pharmaceutical Disbursement Reports"
-authors = ["Suradet Pratomsak"]
 edition = "2024"
+authors = ["Suradet Pratomsak"]
+license = "MIT"
+description = "Swift Bill - Hospital Pharmaceutical Disbursement Reports (Tauri shell)"
 
 [lib]
 name = "swift_bill"
@@ -13,16 +14,14 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+swift-bill-core = { path = "../crates/swift-bill-core" }
+swift-bill-db = { path = "../crates/swift-bill-db" }
+swift-bill-excel = { path = "../crates/swift-bill-excel" }
+swift-bill-pdf = { path = "../crates/swift-bill-pdf" }
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2.5"
 tauri-plugin-dialog = "2.7"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tiberius = { version = "0.12", default-features = false, features = ["rustls", "chrono"] }
-tokio = { version = "1", features = ["full"] }
-tokio-util = { version = "0.7", features = ["compat"] }
-chrono = { version = "0.4", features = ["serde"] }
-printpdf = "0.9.1"
-rust_xlsxwriter = "0"
-lopdf = "0.41"
-ttf-parser = "0.25"
+chrono = { version = "0.4", default-features = false, features = ["serde", "std"] }
+thiserror = "2"

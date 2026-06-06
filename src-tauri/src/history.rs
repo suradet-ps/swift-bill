@@ -1,7 +1,14 @@
+//! Persistent round history storage.
+//!
+//! History is stored as `round_history.json` in the per-user Tauri app
+//! data directory. This module is intentionally Tauri-specific because
+//! it needs the [`tauri::AppHandle`] to resolve the data dir; the JSON
+//! schema itself lives in `swift_bill_core::RoundHistoryEntry`.
+
 use std::fs;
 use tauri::Manager;
 
-use crate::models::{RoundHistory, RoundHistoryEntry};
+use swift_bill_core::{RoundHistory, RoundHistoryEntry};
 
 pub fn load_history(app: &tauri::AppHandle) -> Result<Vec<RoundHistoryEntry>, String> {
   let path = get_history_path(app)?;

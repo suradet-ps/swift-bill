@@ -1,21 +1,29 @@
-mod db;
-mod excel;
-mod history;
-mod models;
-mod number_locks;
-mod numbering;
-mod pdf;
-mod pdf_template;
-mod queries;
-mod reports;
+//! Tauri shell for Swift Bill.
+//!
+//! This module is a *thin* wrapper. It contains only:
+//! * Tauri command handlers that delegate to the pure-Rust workspace crates
+//!   (`swift-bill-core`, `swift-bill-db`, `swift-bill-excel`, `swift-bill-pdf`).
+//! * Tauri-specific persistence (`history`, `number_locks`) that needs
+//!   access to the [`tauri::AppHandle`] for resolving the per-user data dir.
+//! * Tauri plugin setup and command registration in [`run`].
+//!
+//! No business logic, no report algorithms, no PDF rendering, no SQL —
+//! those live in the workspace crates where they are independently
+//! testable and free of any Tauri / GUI dependency.
 
-use models::{
+mod history;
+mod number_locks;
+
+use swift_bill_core::{
   CarryForward, CoverLettersParams, DbConfig, GenerateResult, InvoiceSubmissionExcelParams,
   InvoiceSubmissionParams, InvoiceSubmissionPreview, NormalizeReceivingStartParams,
   NumberLockBatchParams, NumberLockEntry, PreviewData, ReceivingSummaryExcelParams,
   ReceivingSummaryGenerateResult, ReceivingSummaryParams, ReceivingSummaryPreview,
   RoundHistoryEntry,
 };
+use swift_bill_db::fetch_invoices;
+use swift_bill_excel::{generate_invoice_submission_excel, generate_receiving_summary_excel};
+use swift_bill_pdf::generate_cover_letters_pdf_template as generate_cover_letters_pdf;
 
 // Helpers
 
@@ -34,7 +42,9 @@ fn prepare_output_dir(raw: &str) -> Result<String, String> {
 
 #[tauri::command]
 async fn test_connection(config: DbConfig) -> Result<String, String> {
-  let mut client = db::connect(&config).await?;
+  let mut client = swift_bill_db::connect(&config)
+    .await
+    .map_err(|e| e.to_string())?;
   client
     .simple_query("SELECT 1")
     .await
@@ -48,7 +58,9 @@ async fn fetch_preview(
   date_from: String,
   date_to: String,
 ) -> Result<PreviewData, String> {
-  let invoices = queries::fetch_invoices(&config, &date_from, &date_to).await?;
+  let invoices = fetch_invoices(&config, &date_from, &date_to)
+    .await
+    .map_err(|e| e.to_string())?;
   let total_amount: f64 = invoices.iter().map(|i| i.total_cost).sum();
   let row_count = invoices.len();
   Ok(PreviewData {
@@ -64,17 +76,18 @@ async fn fetch_preview(
 async fn preview_invoice_submission(
   params: InvoiceSubmissionParams,
 ) -> Result<InvoiceSubmissionPreview, String> {
-  let invoices =
-    queries::fetch_invoices(&params.db_config, &params.date_from, &params.date_to).await?;
+  let invoices = fetch_invoices(&params.db_config, &params.date_from, &params.date_to)
+    .await
+    .map_err(|e| e.to_string())?;
   if invoices.is_empty() {
     return Err("ไม่พบข้อมูลในช่วงวันที่ที่เลือก".to_string());
   }
 
   let n = invoices.len() as u32;
   let (next_reg_no, next_running) =
-    reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
+    swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
 
-  let rows = reports::process_invoice_submission(&invoices, &params);
+  let rows = swift_bill_core::reports::process_invoice_submission(&invoices, &params);
   let total_amount: f64 = invoices.iter().map(|i| i.total_cost).sum();
 
   Ok(InvoiceSubmissionPreview {
@@ -97,13 +110,13 @@ async fn export_invoice_submission_excel(
 ) -> Result<GenerateResult, String> {
   let n = params.rows.len() as u32;
   let (next_reg_no, next_running) =
-    reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
+    swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
 
   let total_amount: f64 = params.rows.iter().map(|r| r.total_amount).sum();
   let total_rows = params.rows.len();
 
   let output_dir = prepare_output_dir(&params.output_dir)?;
-  let file = excel::generate_invoice_submission_excel(
+  let file = generate_invoice_submission_excel(
     &params.rows,
     params.year,
     params.month,
@@ -132,25 +145,29 @@ async fn preview_receiving_summary(
   app: tauri::AppHandle,
   params: ReceivingSummaryParams,
 ) -> Result<ReceivingSummaryPreview, String> {
-  let invoices =
-    queries::fetch_invoices(&params.db_config, &params.date_from, &params.date_to).await?;
+  let invoices = fetch_invoices(&params.db_config, &params.date_from, &params.date_to)
+    .await
+    .map_err(|e| e.to_string())?;
   if invoices.is_empty() {
     return Err("ไม่พบข้อมูลในช่วงวันที่ที่เลือก".to_string());
   }
 
   let n = invoices.len() as u32;
   let (next_reg_no, next_running) =
-    reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
+    swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
   let locks = number_locks::load_number_locks(&app)?;
-  let allocation = numbering::allocate_receiving_numbers(
+  let allocation = swift_bill_core::numbering::allocate_receiving_numbers(
     params.year,
     params.start_po_no,
     params.start_purchase_no,
     n,
     &locks,
   );
-  let rows =
-    reports::process_receiving_summary_with_numbers(&invoices, &params, &allocation.assignments);
+  let rows = swift_bill_core::reports::process_receiving_summary_with_numbers(
+    &invoices,
+    &params,
+    &allocation.assignments,
+  );
   let total_amount: f64 = invoices.iter().map(|i| i.total_cost).sum();
 
   Ok(ReceivingSummaryPreview {
@@ -175,9 +192,9 @@ async fn export_receiving_summary_excel(
 ) -> Result<ReceivingSummaryGenerateResult, String> {
   let n = params.rows.len() as u32;
   let (next_reg_no, next_running) =
-    reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
+    swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
   let locks = number_locks::load_number_locks(&app)?;
-  let allocation = numbering::allocate_receiving_numbers(
+  let allocation = swift_bill_core::numbering::allocate_receiving_numbers(
     params.year,
     params.start_po_no,
     params.start_purchase_no,
@@ -189,7 +206,7 @@ async fn export_receiving_summary_excel(
   let total_rows = params.rows.len();
 
   let output_dir = prepare_output_dir(&params.output_dir)?;
-  let file = excel::generate_receiving_summary_excel(
+  let file = generate_receiving_summary_excel(
     &params.rows,
     params.year,
     params.month,
@@ -216,13 +233,14 @@ async fn export_receiving_summary_excel(
 
 #[tauri::command]
 async fn generate_cover_letters(params: CoverLettersParams) -> Result<GenerateResult, String> {
-  let invoices =
-    queries::fetch_invoices(&params.db_config, &params.date_from, &params.date_to).await?;
+  let invoices = fetch_invoices(&params.db_config, &params.date_from, &params.date_to)
+    .await
+    .map_err(|e| e.to_string())?;
   if invoices.is_empty() {
     return Err("ไม่พบข้อมูลในช่วงวันที่ที่เลือก".to_string());
   }
 
-  let pages = reports::process_cover_letters(&invoices, &params);
+  let pages = swift_bill_core::reports::process_cover_letters(&invoices, &params);
   let remaining_balance = pages
     .last()
     .map(|p| p.remaining_balance)
@@ -234,7 +252,7 @@ async fn generate_cover_letters(params: CoverLettersParams) -> Result<GenerateRe
     output_dir,
     ..params
   };
-  let file = pdf_template::generate(&pages, &params_out)?;
+  let file = generate_cover_letters_pdf(&pages, &params_out)?;
 
   Ok(GenerateResult {
     files: vec![file],
@@ -289,14 +307,16 @@ async fn delete_number_lock(app: tauri::AppHandle, id: String) -> Result<(), Str
 async fn normalize_receiving_start(
   app: tauri::AppHandle,
   params: NormalizeReceivingStartParams,
-) -> Result<models::ReceivingNumberingInfo, String> {
+) -> Result<swift_bill_core::ReceivingNumberingInfo, String> {
   let locks = number_locks::load_number_locks(&app)?;
-  Ok(numbering::normalize_receiving_start_numbers(
-    params.fiscal_year,
-    params.start_po_no,
-    params.start_purchase_no,
-    &locks,
-  ))
+  Ok(
+    swift_bill_core::numbering::normalize_receiving_start_numbers(
+      params.fiscal_year,
+      params.start_po_no,
+      params.start_purchase_no,
+      &locks,
+    ),
+  )
 }
 
 // App entrypoint

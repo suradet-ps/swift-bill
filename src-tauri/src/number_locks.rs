@@ -1,9 +1,14 @@
-use std::fs;
+//! Persistent number-lock storage.
+//!
+//! Locks are stored as `number_locks.json` in the per-user Tauri app
+//! data directory. This module is Tauri-specific because it needs the
+//! [`tauri::AppHandle`] to resolve the data dir; the lock entry schema
+//! itself lives in `swift_bill_core::NumberLockEntry`.
 
-use chrono::Utc;
+use std::fs;
 use tauri::Manager;
 
-use crate::models::{NumberLockBatchParams, NumberLockEntry, NumberLockStore};
+use swift_bill_core::{NumberLockBatchParams, NumberLockEntry, NumberLockStore};
 
 pub fn load_number_locks(app: &tauri::AppHandle) -> Result<Vec<NumberLockEntry>, String> {
   let mut store = load_number_lock_store(app)?;
@@ -19,7 +24,7 @@ pub fn create_number_locks(
 
   let path = get_number_lock_path(app)?;
   let mut store = load_number_lock_store(app)?;
-  let created_at = Utc::now().to_rfc3339();
+  let created_at = chrono::Utc::now().to_rfc3339();
   let mut created: Vec<NumberLockEntry> = Vec::with_capacity(params.count as usize);
 
   for offset in 0..params.count {
