@@ -21,7 +21,7 @@ A specialized desktop application designed for hospitals to automate the generat
 ### Prerequisites
 
 - [Rust](https://www.rust-lang.org/tools/install) (stable)
-- [Node.js](https://nodejs.org/) (v18+)
+- [Bun](https://bun.sh/) (v1.3+)
 - Tauri CLI dependencies for your OS (see [Tauri Setup Guide](https://tauri.app/v1/guides/getting-started/prerequisites))
 
 ### Starting the Development Server
@@ -36,13 +36,13 @@ A specialized desktop application designed for hospitals to automate the generat
 2. Install frontend dependencies:
 
    ```bash
-   npm install
+   bun install
    ```
 
 3. Run the development server (starts Vue and the Tauri desktop window):
 
    ```bash
-   npm run tauri dev
+   bun run tauri dev
    ```
 
 ## Production Build
@@ -50,7 +50,7 @@ A specialized desktop application designed for hospitals to automate the generat
 To build the application for release:
 
 ```bash
-npm run tauri build
+bun run tauri build
 ```
 
 This will produce native executables in `src-tauri/target/release/bundle`.

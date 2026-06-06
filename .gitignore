@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Bun — install cache (binary lockfile .lockb is also produced by
+# older bun versions but is git-unfriendly; we track bun.lock).
+.bun/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
