@@ -23,6 +23,16 @@ dist-ssr
 *.sln
 *.sw?
 
+# Rust / Cargo workspace artifacts
+# The workspace root produces a single shared /target/ now that all
+# members (crates/* and src-tauri) live under one Cargo workspace.
+# /target/ at the workspace root supersedes the per-crate /target/
+# entries that src-tauri/.gitignore used to carry.
+# Cargo.lock is intentionally NOT ignored — Swift Bill is a binary
+# application, so reproducible builds require locking the dep graph.
+target/
+src-tauri/target/
+
 # Generated output
 src-tauri/output/
 output/
