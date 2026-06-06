@@ -1,0 +1,32 @@
+# Shared Cargo configuration for the Swift Bill workspace.
+#
+# Cargo automatically picks this file up for every member crate under
+# crates/* and src-tauri/. Per-target overrides below let us tune
+# rustflags for the host platform (aarch64-apple-darwin in development)
+# without leaking platform-specific flags into a different build host.
+
+# Faster incremental rebuilds during development. Cargo enables this by
+# default for the `dev` profile, but we make it explicit so a future
+# `--profile` override can't silently disable it.
+[build]
+incremental = true
+
+# Default rustflags applied to every `cargo build` / `cargo test`
+# invocation in the workspace. Left empty on purpose: the new pure-Rust
+# crates under crates/* opt into `#![warn(clippy::pedantic)]` /
+# `#![warn(clippy::nursery)]` individually, and any blanket `-D
+# warnings` here would also fail on inherited warnings from upstream
+# dependencies (tiberius, lopdf, printpdf, …). CI runs
+# `cargo clippy --all-targets -- -D warnings` separately to catch
+# lint failures without breaking local builds.
+rustflags = []
+
+# Host (Apple Silicon macOS — the primary development target).
+# Keep this section as the template for adding additional targets
+# (e.g. `x86_64-apple-darwin`, `x86_64-pc-windows-msvc`) when the
+# Tauri build matrix expands.
+[target.aarch64-apple-darwin]
+# `cargo tauri build` links the final binary with the system C
+# toolchain. No override required; the section exists as documentation
+# and to anchor future per-target tweaks (e.g. LTO, codegen-units).
+rustflags = []
