@@ -55,23 +55,32 @@ pub fn generate_receiving_summary_excel(
   }
   // Col 11: dynamic header that includes the year
   let year_header = format!("ใบสั่งซื้อ…/{}", year);
-  ws.write(1, 11_u16, year_header.as_str()).map_err(map_xlsx_err)?;
+  ws.write(1, 11_u16, year_header.as_str())
+    .map_err(map_xlsx_err)?;
 
   // Rows 2+: data
   let mut grand_total = 0.0_f64;
   for (i, row) in rows.iter().enumerate() {
     let r = (i as u32) + 2;
-    ws.write(r, 0, row.approval_date.as_str()).map_err(map_xlsx_err)?;
+    ws.write(r, 0, row.approval_date.as_str())
+      .map_err(map_xlsx_err)?;
     ws.write(r, 1, row.po_date.as_str()).map_err(map_xlsx_err)?;
-    ws.write(r, 2, row.receive_date.as_str()).map_err(map_xlsx_err)?;
-    ws.write(r, 3, row.company_code.as_str()).map_err(map_xlsx_err)?;
+    ws.write(r, 2, row.receive_date.as_str())
+      .map_err(map_xlsx_err)?;
+    ws.write(r, 3, row.company_code.as_str())
+      .map_err(map_xlsx_err)?;
     ws.write(r, 4, row.total_amount).map_err(map_xlsx_err)?;
-    ws.write(r, 5, row.receiving_code as f64).map_err(map_xlsx_err)?;
+    ws.write(r, 5, row.receiving_code as f64)
+      .map_err(map_xlsx_err)?;
     ws.write(r, 6, row.reg_no.as_str()).map_err(map_xlsx_err)?;
-    ws.write(r, 7, row.running_in_reg as f64).map_err(map_xlsx_err)?;
-    ws.write(r, 8, row.invoice_no.as_str()).map_err(map_xlsx_err)?;
-    ws.write(r, 9, row.request_no as f64).map_err(map_xlsx_err)?;
-    ws.write(r, 10, row.report_no as f64).map_err(map_xlsx_err)?;
+    ws.write(r, 7, row.running_in_reg as f64)
+      .map_err(map_xlsx_err)?;
+    ws.write(r, 8, row.invoice_no.as_str())
+      .map_err(map_xlsx_err)?;
+    ws.write(r, 9, row.request_no as f64)
+      .map_err(map_xlsx_err)?;
+    ws.write(r, 10, row.report_no as f64)
+      .map_err(map_xlsx_err)?;
     ws.write(r, 11, row.po_no as f64).map_err(map_xlsx_err)?;
     grand_total += row.total_amount;
   }
@@ -129,12 +138,17 @@ mod tests {
   #[test]
   fn generate_writes_file() {
     let tmp = tempdir("rec");
-    let result = generate_receiving_summary_excel(&sample_rows(), 2569, 1, 1, tmp.to_str().unwrap());
+    let result =
+      generate_receiving_summary_excel(&sample_rows(), 2569, 1, 1, tmp.to_str().unwrap());
     assert!(result.is_ok(), "generate failed: {:?}", result.err());
 
     let path = result.unwrap();
     let meta = std::fs::metadata(&path).expect("output file should exist");
-    assert!(meta.len() > 1000, "xlsx output too small: {} bytes", meta.len());
+    assert!(
+      meta.len() > 1000,
+      "xlsx output too small: {} bytes",
+      meta.len()
+    );
 
     let _ = std::fs::remove_dir_all(&tmp);
   }

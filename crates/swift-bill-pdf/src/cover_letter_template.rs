@@ -480,8 +480,8 @@ pub fn generate(pages: &[CoverLetterPage], params: &CoverLettersParams) -> Resul
 #[cfg(test)]
 mod tests {
   use super::*;
-  use swift_bill_core::CoverLetterPage;
   use std::fs;
+  use swift_bill_core::CoverLetterPage;
 
   // fmt_amount tests
 

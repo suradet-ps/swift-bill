@@ -39,8 +39,7 @@ pub fn normalize_receiving_start_numbers(
   let mut current_purchase_no = start_purchase_no;
   let mut skipped_locked_sets = Vec::new();
 
-  while let Some(lock) =
-    find_matching_lock(fiscal_year, current_po_no, current_purchase_no, locks)
+  while let Some(lock) = find_matching_lock(fiscal_year, current_po_no, current_purchase_no, locks)
   {
     skipped_locked_sets.push(to_skipped_locked_set(lock));
     current_po_no += 2;
@@ -71,9 +70,7 @@ pub fn allocate_receiving_numbers(
   let mut assignments = Vec::with_capacity(count as usize);
 
   while assignments.len() < count as usize {
-    if let Some(lock) =
-      find_matching_lock(fiscal_year, current_po_no, current_purchase_no, locks)
-    {
+    if let Some(lock) = find_matching_lock(fiscal_year, current_po_no, current_purchase_no, locks) {
       skipped_locked_sets.push(to_skipped_locked_set(lock));
       current_po_no += 2;
       current_purchase_no += 1;

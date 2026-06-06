@@ -10,5 +10,5 @@
 pub mod connect;
 pub mod invoices;
 
-pub use connect::{connect, TiberiusClient};
+pub use connect::{TiberiusClient, connect};
 pub use invoices::fetch_invoices;

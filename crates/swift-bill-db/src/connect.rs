@@ -30,7 +30,9 @@ pub async fn connect(db_config: &DbConfig) -> Result<TiberiusClient, DbError> {
     .await
     .map_err(|e| DbError::Tcp(e.to_string()))?;
 
-  tcp.set_nodelay(true).map_err(|e| DbError::Tcp(e.to_string()))?;
+  tcp
+    .set_nodelay(true)
+    .map_err(|e| DbError::Tcp(e.to_string()))?;
 
   let client = Client::connect(config, tcp.compat_write())
     .await

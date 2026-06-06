@@ -12,9 +12,8 @@ use printpdf::{FontId, Op, PdfDocument};
 use swift_bill_core::{CoverLetterPage, CoverLettersParams};
 
 use crate::shared::{
-  fmt_money, load_fonts, make_portrait_page, op_box_rect, op_filled_rect, op_hline, op_text,
-  op_text_center, op_text_right, op_vline, output_path, pt_f, PageCtx, A4_PORT_H, A4_PORT_W,
-  MARGIN,
+  A4_PORT_H, A4_PORT_W, MARGIN, PageCtx, fmt_money, load_fonts, make_portrait_page, op_box_rect,
+  op_filled_rect, op_hline, op_text, op_text_center, op_text_right, op_vline, output_path, pt_f,
 };
 
 /// Public entry point — builds a multi-page A4 portrait PDF where each

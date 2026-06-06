@@ -10,9 +10,8 @@ use printpdf::{Op, PdfDocument};
 use swift_bill_core::{ReceivingSummaryParams, ReceivingSummaryRow};
 
 use crate::shared::{
-  fmt_money, load_fonts, make_landscape_page, op_box_rect, op_filled_rect, op_hline, op_text,
-  op_text_center, op_text_right, op_vline, output_path, pt_f, PageCtx, A4_LAND_H, A4_LAND_W,
-  MARGIN,
+  A4_LAND_H, A4_LAND_W, MARGIN, PageCtx, fmt_money, load_fonts, make_landscape_page, op_box_rect,
+  op_filled_rect, op_hline, op_text, op_text_center, op_text_right, op_vline, output_path, pt_f,
 };
 
 const ROWS_PER_PAGE: usize = 10;
@@ -197,14 +196,7 @@ pub fn generate_receiving_summary_pdf(
         top_lbl,
       );
       op_text_center(
-        &mut ops,
-        &ctx,
-        &font_id,
-        11.5,
-        col_x[ci],
-        cw[ci],
-        hdr_y2,
-        bot_lbl,
+        &mut ops, &ctx, &font_id, 11.5, col_x[ci], cw[ci], hdr_y2, bot_lbl,
       );
     }
     op_text_center(

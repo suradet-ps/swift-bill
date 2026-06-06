@@ -56,13 +56,19 @@ pub fn generate_invoice_submission_excel(
   for (i, row) in rows.iter().enumerate() {
     let r = (i as u32) + 2;
     ws.write(r, 0, row.seq as f64).map_err(map_xlsx_err)?;
-    ws.write(r, 1, row.receive_date.as_str()).map_err(map_xlsx_err)?;
-    ws.write(r, 2, row.invoice_no.as_str()).map_err(map_xlsx_err)?;
+    ws.write(r, 1, row.receive_date.as_str())
+      .map_err(map_xlsx_err)?;
+    ws.write(r, 2, row.invoice_no.as_str())
+      .map_err(map_xlsx_err)?;
     ws.write(r, 3, row.reg_no.as_str()).map_err(map_xlsx_err)?;
-    ws.write(r, 4, row.running_in_reg as f64).map_err(map_xlsx_err)?;
-    ws.write(r, 5, row.invoice_date.as_str()).map_err(map_xlsx_err)?;
-    ws.write(r, 6, row.company_name.as_str()).map_err(map_xlsx_err)?;
-    ws.write(r, 7, row.category.as_str()).map_err(map_xlsx_err)?;
+    ws.write(r, 4, row.running_in_reg as f64)
+      .map_err(map_xlsx_err)?;
+    ws.write(r, 5, row.invoice_date.as_str())
+      .map_err(map_xlsx_err)?;
+    ws.write(r, 6, row.company_name.as_str())
+      .map_err(map_xlsx_err)?;
+    ws.write(r, 7, row.category.as_str())
+      .map_err(map_xlsx_err)?;
     ws.write(r, 8, row.total_amount).map_err(map_xlsx_err)?;
     grand_total += row.total_amount;
   }
@@ -130,12 +136,17 @@ mod tests {
   #[test]
   fn generate_writes_file() {
     let tmp = tempdir("sub");
-    let result = generate_invoice_submission_excel(&sample_rows(), 2569, 1, 1, tmp.to_str().unwrap());
+    let result =
+      generate_invoice_submission_excel(&sample_rows(), 2569, 1, 1, tmp.to_str().unwrap());
     assert!(result.is_ok(), "generate failed: {:?}", result.err());
 
     let path = result.unwrap();
     let meta = std::fs::metadata(&path).expect("output file should exist");
-    assert!(meta.len() > 1000, "xlsx output too small: {} bytes", meta.len());
+    assert!(
+      meta.len() > 1000,
+      "xlsx output too small: {} bytes",
+      meta.len()
+    );
 
     let _ = std::fs::remove_dir_all(&tmp);
   }

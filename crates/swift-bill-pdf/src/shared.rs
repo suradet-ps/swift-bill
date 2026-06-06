@@ -371,7 +371,10 @@ pub fn make_portrait_page(ops: Vec<Op>) -> PdfPage {
 
 /// Build the output path `<output_dir>/<filename>` and return its string form.
 pub fn output_path(output_dir: &str, filename: String) -> String {
-  Path::new(output_dir).join(&filename).to_string_lossy().to_string()
+  Path::new(output_dir)
+    .join(&filename)
+    .to_string_lossy()
+    .to_string()
 }
 
 #[cfg(test)]

@@ -16,7 +16,18 @@ use chrono::{Datelike, NaiveDate};
 #[must_use]
 pub fn format_thai_date(date: &NaiveDate) -> String {
   const THAI_MONTHS: &[&str] = &[
-    "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
+    "ม.ค.",
+    "ก.พ.",
+    "มี.ค.",
+    "เม.ย.",
+    "พ.ค.",
+    "มิ.ย.",
+    "ก.ค.",
+    "ส.ค.",
+    "ก.ย.",
+    "ต.ค.",
+    "พ.ย.",
+    "ธ.ค.",
   ];
   let buddhist_year = date.year() + 543;
   let short_year = buddhist_year % 100;
