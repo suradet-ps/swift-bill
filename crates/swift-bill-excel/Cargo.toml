@@ -1,0 +1,15 @@
+[package]
+name = "swift-bill-excel"
+version = "0.3.5"
+edition = "2024"
+authors = ["Suradet Pratomsak"]
+license = "MIT"
+description = "Excel (.xlsx) export for Invoice Submission and Receiving Summary reports"
+
+[lints]
+workspace = true
+
+[dependencies]
+swift-bill-core = { path = "../swift-bill-core" }
+rust_xlsxwriter = "0"
+thiserror = "2"

@@ -1,0 +1,21 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/swift-bill-core",
+  "crates/swift-bill-db",
+  "crates/swift-bill-excel",
+  "crates/swift-bill-pdf",
+  "src-tauri",
+]
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "symbols"

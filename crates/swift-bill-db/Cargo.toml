@@ -1,0 +1,18 @@
+[package]
+name = "swift-bill-db"
+version = "0.3.5"
+edition = "2024"
+authors = ["Suradet Pratomsak"]
+license = "MIT"
+description = "Tiberius-based database access for the INVS SQL Server (pure Rust, no ODBC)"
+
+[lints]
+workspace = true
+
+[dependencies]
+swift-bill-core = { path = "../swift-bill-core" }
+tiberius = { version = "0.12", default-features = false, features = ["rustls", "chrono"] }
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["compat"] }
+chrono = { version = "0.4", default-features = false, features = ["serde", "std"] }
+thiserror = "2"

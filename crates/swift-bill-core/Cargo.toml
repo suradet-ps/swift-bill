@@ -1,0 +1,15 @@
+[package]
+name = "swift-bill-core"
+version = "0.3.5"
+edition = "2024"
+authors = ["Suradet Pratomsak"]
+license = "MIT"
+description = "Pure Rust domain models and business logic for Swift Bill reports"
+
+[lints]
+workspace = true
+
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["serde", "std"] }
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
