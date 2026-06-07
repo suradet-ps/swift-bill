@@ -41,4 +41,4 @@ src-tauri/target/
 src-tauri/output/
 output/
 *.pdf
-!src-tauri/src/template_cover.pdf
+!crates/swift-bill-pdf/assets/template_cover.pdf
