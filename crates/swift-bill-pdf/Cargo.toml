@@ -12,6 +12,6 @@ workspace = true
 [dependencies]
 swift-bill-core = { path = "../swift-bill-core" }
 printpdf = "0.9.1"
-lopdf = "0.41"
+lopdf = "0.43"
 ttf-parser = "0.25"
 thiserror = "2"
