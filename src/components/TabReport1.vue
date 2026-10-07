@@ -210,7 +210,6 @@ function saveToHistory() {
         next_reg_no: carryForward.value.next_reg_no,
         next_running: carryForward.value.next_running,
         next_po_no: carryForward.value.next_po_no,
-        next_purchase_no: carryForward.value.next_purchase_no,
         remaining_balance: carryForward.value.remaining_balance,
         budget_total: 0,
         total_amount: exportedTotal.value,

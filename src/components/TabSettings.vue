@@ -25,7 +25,7 @@ const props = defineProps<{
 const emit = defineEmits<{
     (e: "update:dbConfig", val: DbConfig): void;
     (e: "save"): void;
-    (e: "connectionStatus", connected: boolean): void;
+    (e: "connectionStatus", connected: boolean | null): void;
 }>();
 
 const status = ref<"idle" | "testing" | "success" | "error">("idle");
@@ -44,6 +44,12 @@ const isValid = computed(
 
 function update(field: keyof DbConfig, value: string | number) {
     emit("update:dbConfig", { ...props.dbConfig, [field]: value });
+    // Editing the connection data invalidates the previous test result.
+    if (props.dbConnected !== null) {
+        emit("connectionStatus", null);
+    }
+    status.value = "idle";
+    message.value = "";
 }
 
 function saveConfig() {
@@ -60,16 +66,20 @@ async function testConnection() {
         status.value = "error";
         return;
     }
+    const testedConfig = JSON.stringify(props.dbConfig);
     status.value = "testing";
     message.value = "กำลังทดสอบการเชื่อมต่อ...";
     try {
         const msg = await invoke<string>("test_connection", {
             config: { ...props.dbConfig },
         });
+        // Ignore the response if the user edited the form while it was in flight.
+        if (JSON.stringify(props.dbConfig) !== testedConfig) return;
         status.value = "success";
         message.value = msg;
         emit("connectionStatus", true);
     } catch (e) {
+        if (JSON.stringify(props.dbConfig) !== testedConfig) return;
         status.value = "error";
         message.value = String(e);
         emit("connectionStatus", false);
@@ -148,7 +158,7 @@ async function testConnection() {
 
         <div class="info-box section-spaced">
             <ShieldCheck :size="15" />
-            <span>รหัสผ่านถูกเข้ารหัสและเก็บใน Keychain ของเครื่อง</span>
+            <span>รหัสผ่านถูกเข้ารหัสและเก็บไว้ในเครื่อง ส่วนกุญแจถอดรหัสเก็บใน Keychain</span>
         </div>
 
         <div class="actions actions-row">

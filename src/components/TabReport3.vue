@@ -152,7 +152,6 @@ function saveToHistory() {
         next_reg_no: regNo,
         next_running: running,
         next_po_no: poNo,
-        next_purchase_no: props.r2Carry ? undefined : result.value.carry_forward.next_purchase_no,
         remaining_balance: result.value.carry_forward.remaining_balance,
         budget_total: props.budgetTotal,
         total_amount: result.value.total_amount,

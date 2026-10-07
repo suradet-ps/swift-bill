@@ -192,6 +192,9 @@ onMounted(loadEntries);
                 </tbody>
             </table>
         </div>
+        <p v-if="form.count > previewRows.length" class="preview-note">
+            แสดง {{ previewRows.length }} จาก {{ form.count }} ชุด ส่วนที่เหลือระบบจะสร้างให้ครบเมื่อบันทึก
+        </p>
     </div>
 
     <div class="card">
@@ -275,5 +278,11 @@ onMounted(loadEntries);
     gap: 6px;
     align-items: center;
     white-space: nowrap;
+}
+
+.preview-note {
+    margin-top: var(--sp-2);
+    font-size: var(--fs-xs);
+    color: var(--c-text-light);
 }
 </style>

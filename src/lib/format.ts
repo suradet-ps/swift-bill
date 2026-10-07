@@ -84,5 +84,8 @@ export function formatPeriodLabel(startHtml: string, endHtml: string): string {
     if (sm === em && sy === ey) {
         return `${sd}-${ed} ${THAI_MONTHS[sm - 1]} ${sy}`;
     }
-    return `${sd} ${THAI_MONTHS_SHORT[sm - 1]} - ${ed} ${THAI_MONTHS_SHORT[em - 1]} ${ey}`;
+    if (sy === ey) {
+        return `${sd} ${THAI_MONTHS_SHORT[sm - 1]} - ${ed} ${THAI_MONTHS_SHORT[em - 1]} ${ey}`;
+    }
+    return `${sd} ${THAI_MONTHS_SHORT[sm - 1]} ${sy} - ${ed} ${THAI_MONTHS_SHORT[em - 1]} ${ey}`;
 }

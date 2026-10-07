@@ -108,11 +108,14 @@ function stepBadge(state: StepState): { text: string; cls: string } {
 
 async function testConnection() {
     if (!isConfigured.value || testing.value) return;
+    const testedConfig = JSON.stringify(props.dbConfig);
     testing.value = true;
     try {
         await invoke<string>("test_connection", { config: { ...props.dbConfig } });
+        if (JSON.stringify(props.dbConfig) !== testedConfig) return;
         emit("connectionStatus", true);
     } catch {
+        if (JSON.stringify(props.dbConfig) !== testedConfig) return;
         emit("connectionStatus", false);
     } finally {
         testing.value = false;

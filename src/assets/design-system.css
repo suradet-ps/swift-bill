@@ -27,6 +27,7 @@
   --c-primary-light: #fff0ec;
   --c-primary-soft: #fff7f4;
   --c-primary-border: rgba(200, 16, 46, 0.14);
+  --c-on-primary: #ffffff;
 
   /* Semantic */
   --c-success: #166534;
@@ -163,7 +164,7 @@ h4 {
   left: 16px;
   z-index: 100000;
   background: var(--c-primary);
-  color: #fff;
+  color: var(--c-on-primary);
   padding: 10px 16px;
   border-radius: var(--radius-md);
   font-size: var(--fs-sm);
@@ -389,7 +390,7 @@ h4 {
 
 .nav-item.active .nav-step {
   background: var(--c-primary);
-  color: #fff;
+  color: var(--c-on-primary);
   box-shadow: none;
 }
 
@@ -768,7 +769,7 @@ textarea.input {
 
 .btn-primary {
   background: var(--c-primary);
-  color: #fff;
+  color: var(--c-on-primary);
   box-shadow: 0 1px 2px rgba(150, 0, 30, 0.24);
 }
 
@@ -1311,7 +1312,7 @@ textarea.input {
 
 .flow-step.ready .flow-index {
   background: var(--c-primary);
-  color: #fff;
+  color: var(--c-on-primary);
   box-shadow: none;
 }
 
@@ -1759,6 +1760,7 @@ code {
     --c-primary-light: #2f0d0d;
     --c-primary-soft: #251010;
     --c-primary-border: rgba(255, 107, 128, 0.18);
+    --c-on-primary: #1c0a05;
 
     --c-success: #4ade80;
     --c-success-bg: #0b2b1a;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useToast } from "../composables/useToast";
@@ -38,6 +38,16 @@ const emit = defineEmits<{
 
 const loading = ref(false);
 const error = ref("");
+// Invalidates in-flight fetches when the date range changes.
+let fetchGen = 0;
+
+watch(
+    () => [props.startDateHtml, props.endDateHtml],
+    () => {
+        fetchGen++;
+        loading.value = false;
+    }
+);
 
 function toApiDate(html: string): string {
     return html.replace(/-/g, "");
@@ -49,11 +59,17 @@ const periodLabel = computed(() =>
 
 const activePeriod = computed(() => {
     if (!props.startDateHtml || !props.endDateHtml) return 0;
+    // Only a full match counts, so the highlighted preset always describes
+    // the exact range that will be fetched.
+    if (props.startDateHtml.substring(0, 7) !== props.endDateHtml.substring(0, 7)) return 0;
     const sd = parseInt(props.startDateHtml.substring(8, 10), 10);
     const ed = parseInt(props.endDateHtml.substring(8, 10), 10);
+    const y = parseInt(props.startDateHtml.substring(0, 4), 10);
+    const m = parseInt(props.startDateHtml.substring(5, 7), 10);
+    const last = new Date(y, m, 0).getDate();
     if (sd === 1 && ed === 10) return 1;
     if (sd === 11 && ed === 20) return 2;
-    if (sd >= 21) return 3;
+    if (sd === 21 && ed === last) return 3;
     return 0;
 });
 
@@ -107,6 +123,7 @@ async function browseFolder() {
 
 async function fetchData() {
     if (!canFetch.value) return;
+    const gen = ++fetchGen;
     loading.value = true;
     error.value = "";
     emit("update:previewData", null);
@@ -116,6 +133,7 @@ async function fetchData() {
             dateFrom: toApiDate(props.startDateHtml),
             dateTo: toApiDate(props.endDateHtml),
         });
+        if (gen !== fetchGen) return;
         emit("update:previewData", data);
         if (data.row_count === 0) {
             toast.warning("ไม่พบข้อมูล", "ไม่พบรายการบิลในช่วงวันที่ที่เลือก");
@@ -126,10 +144,13 @@ async function fetchData() {
             );
         }
     } catch (e) {
+        if (gen !== fetchGen) return;
         error.value = String(e);
         toast.error("ดึงข้อมูลล้มเหลว", String(e));
     } finally {
-        loading.value = false;
+        if (gen === fetchGen) {
+            loading.value = false;
+        }
     }
 }
 </script>

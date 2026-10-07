@@ -51,9 +51,11 @@ const dateTo = computed(() => endDateHtml.value.replace(/-/g, ""));
 // Fiscal year: derived from the start date by default, editable in the report tabs.
 const year = ref(0);
 watch(
-    startDateHtml,
-    (value) => {
-        year.value = value ? parseInt(value.substring(0, 4)) + 543 : 0;
+    [startDateHtml, endDateHtml],
+    ([start]) => {
+        year.value = start ? parseInt(start.substring(0, 4)) + 543 : 0;
+        // A new date range needs a fresh fetch; never generate from stale rows.
+        previewData.value = null;
     },
     { immediate: true }
 );
@@ -83,14 +85,40 @@ const r3Form = reactive({
 });
 
 // Per-report completion flags for the overview stepper, reset when the
-// underlying data changes so the checklist always reflects reality.
+// inputs that invalidate a report's output change.
 const generated = reactive({ report1: false, report2: false, report3: false });
 
-watch(previewData, () => {
+function resetGenerated() {
     generated.report1 = false;
     generated.report2 = false;
     generated.report3 = false;
+}
+
+// A new dataset invalidates every report and Report 2's carry values.
+watch(previewData, () => {
+    resetGenerated();
+    r2Carry.value = null;
 });
+
+// Shared period values invalidate all three reports.
+watch(
+    () => [year.value, month.value, round.value, dateFrom.value, dateTo.value],
+    resetGenerated
+);
+
+// Per-report parameters invalidate only the report they belong to.
+watch(
+    () => [r1Form.startRegNo, r1Form.startRunning],
+    () => { generated.report1 = false; }
+);
+watch(
+    () => [r2Form.startPoNo, r2Form.startPurchaseNo, r2Form.startRegNo, r2Form.startRunning, r2Form.approvalDate],
+    () => { generated.report2 = false; }
+);
+watch(
+    () => [r3Form.budgetTotal, r3Form.previousBalance, r3Form.approvalDate],
+    () => { generated.report3 = false; }
+);
 
 const dataLoaded = computed(() => (previewData.value?.row_count ?? 0) > 0);
 
@@ -129,6 +157,11 @@ async function refreshHistory() {
 }
 
 async function saveEntry(entry: RoundHistoryEntry) {
+    // Report 2 owns purchase-order numbering; carry it into a round saved
+    // from another report as long as it belongs to the same dataset.
+    if (entry.next_purchase_no === undefined && r2Carry.value) {
+        entry.next_purchase_no = r2Carry.value.next_purchase_no;
+    }
     try {
         await invoke("save_round_entry", { entry });
         await refreshHistory();
@@ -157,11 +190,11 @@ async function saveDbConfig() {
     }
 }
 
-function handleConnectionStatus(ok: boolean) {
+function handleConnectionStatus(ok: boolean | null) {
     dbConnected.value = ok;
-    if (ok) {
+    if (ok === true) {
         toast.success("เชื่อมต่อสำเร็จ", "เชื่อมต่อฐานข้อมูล INVS ได้เรียบร้อย");
-    } else {
+    } else if (ok === false) {
         toast.error("เชื่อมต่อล้มเหลว", "ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาตรวจสอบการตั้งค่า");
     }
 }
@@ -202,8 +235,10 @@ async function applyHistoryEntry(entry: RoundHistoryEntry) {
     r3Form.budgetTotal = entry.budget_total;
     r3Form.previousBalance = entry.remaining_balance;
 
-    // A new round needs a fresh date range, so drop the previous dataset.
+    // A new round needs a fresh date range, so drop the previous dataset
+    // and any carry values that belong to the old round.
     previewData.value = null;
+    r2Carry.value = null;
 
     // Switch to query tab so user can pick the new date range
     activeTab.value = "query";
