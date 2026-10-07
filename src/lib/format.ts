@@ -71,6 +71,11 @@ export function formatDateTime(iso: string): string {
     }
 }
 
+/** Strip leading icons/emoji from legacy stored labels, e.g. "📄 เบิกยาปะหน้า". */
+export function cleanSourceLabel(value: string): string {
+    return value.replace(/^[^0-9A-Za-zก-๙]+/u, "").trim();
+}
+
 /** Period label from a YYYY-MM-DD range, e.g. "1-10 ตุลาคม 2568". */
 export function formatPeriodLabel(startHtml: string, endHtml: string): string {
     if (!startHtml || !endHtml) return "";

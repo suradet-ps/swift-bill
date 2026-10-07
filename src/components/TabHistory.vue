@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { formatBuddhistDate, formatDateTime, formatMoney } from "../lib/format";
+import { cleanSourceLabel, formatBuddhistDate, formatDateTime, formatMoney } from "../lib/format";
 import type { RoundHistoryEntry } from "../lib/types";
 import {
     ArrowRight,
@@ -55,7 +55,7 @@ function doDelete(id: string) {
             <div class="entry-header">
                 <div class="entry-title-row">
                     <span class="entry-label">{{ entry.label }}</span>
-                    <span v-if="entry.source_tab" class="badge badge-neutral">{{ entry.source_tab }}</span>
+                    <span v-if="entry.source_tab" class="badge badge-neutral">{{ cleanSourceLabel(entry.source_tab) }}</span>
                 </div>
                 <div class="entry-meta">
                     <span class="meta-chip">
