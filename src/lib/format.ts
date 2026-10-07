@@ -67,7 +67,7 @@ export function formatDateTime(iso: string): string {
     }
 }
 
-/** Strip leading icons/emoji from legacy stored labels, e.g. "📄 เบิกยาปะหน้า". */
+/** Strip leading icons from legacy stored labels, e.g. an icon prefix before "เบิกยาปะหน้า". */
 export function cleanSourceLabel(value: string): string {
     return value.replace(/^[^0-9A-Za-zก-๙]+/u, "").trim();
 }
