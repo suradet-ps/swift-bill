@@ -19,11 +19,11 @@ use crate::shared::{
 const ROWS_PER_PAGE: usize = 20;
 const TABLE_TOP: f64 = 29.0;
 const HDR_H: f64 = 15.0;
-const ROW_H: f64 = 6.5;
+const ROW_H: f64 = 7.2;
 
 /// Column widths (mm), summing to the printable width of 267 mm.
 const COL_W: [f64; 12] = [
-  26.0, 24.0, 24.0, 18.0, 30.0, 18.0, 20.0, 12.0, 22.0, 24.0, 25.0, 24.0,
+  24.0, 24.0, 24.0, 18.0, 28.0, 18.0, 20.0, 12.0, 28.0, 25.0, 25.0, 21.0,
 ];
 
 /// Left edge (mm) of every column, including both outer table edges.
@@ -134,7 +134,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_bold_id,
-        10.5,
+        11.5,
         xs[ci],
         COL_W[ci],
         y1,
@@ -145,7 +145,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_bold_id,
-        10.5,
+        11.5,
         xs[ci],
         COL_W[ci],
         y2,
@@ -165,7 +165,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_bold_id,
-        11.0,
+        12.0,
         xs[ci],
         COL_W[ci],
         y_single,
@@ -179,7 +179,7 @@ pub fn generate_receiving_summary_pdf(
       &mut ops,
       &ctx,
       &font_bold_id,
-      10.5,
+      12.0,
       xs[6],
       COL_W[6] + COL_W[7],
       y1,
@@ -190,7 +190,7 @@ pub fn generate_receiving_summary_pdf(
       &mut ops,
       &ctx,
       &font_bold_id,
-      10.0,
+      11.0,
       xs[6],
       COL_W[6],
       y2,
@@ -201,7 +201,7 @@ pub fn generate_receiving_summary_pdf(
       &mut ops,
       &ctx,
       &font_bold_id,
-      10.5,
+      12.0,
       xs[7],
       COL_W[7],
       y2,
@@ -214,7 +214,7 @@ pub fn generate_receiving_summary_pdf(
       &mut ops,
       &ctx,
       &font_bold_id,
-      10.5,
+      11.5,
       xs[9],
       COL_W[9],
       y1,
@@ -225,7 +225,7 @@ pub fn generate_receiving_summary_pdf(
       &mut ops,
       &ctx,
       &font_bold_id,
-      9.5,
+      10.5,
       xs[9],
       COL_W[9],
       y3,
@@ -238,7 +238,7 @@ pub fn generate_receiving_summary_pdf(
       &mut ops,
       &ctx,
       &font_bold_id,
-      10.5,
+      11.5,
       xs[10],
       COL_W[10],
       y1,
@@ -249,7 +249,7 @@ pub fn generate_receiving_summary_pdf(
       &mut ops,
       &ctx,
       &font_bold_id,
-      10.5,
+      11.5,
       xs[10],
       COL_W[10],
       y2,
@@ -260,7 +260,7 @@ pub fn generate_receiving_summary_pdf(
       &mut ops,
       &ctx,
       &font_bold_id,
-      9.5,
+      10.5,
       xs[10],
       COL_W[10],
       y3,
@@ -273,7 +273,7 @@ pub fn generate_receiving_summary_pdf(
       &mut ops,
       &ctx,
       &font_bold_id,
-      10.5,
+      11.5,
       xs[11],
       COL_W[11],
       y1,
@@ -284,7 +284,7 @@ pub fn generate_receiving_summary_pdf(
       &mut ops,
       &ctx,
       &font_bold_id,
-      10.0,
+      11.0,
       xs[11],
       COL_W[11],
       y2,
@@ -309,12 +309,12 @@ pub fn generate_receiving_summary_pdf(
           COLOR_ZEBRA.2,
         );
       }
-      let ty = cur_y + 4.5;
+      let ty = cur_y + 5.2;
       op_text_center(
         &mut ops,
         &ctx,
         &font_id,
-        11.0,
+        16.0,
         xs[0],
         COL_W[0],
         ty,
@@ -324,7 +324,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        11.0,
+        16.0,
         xs[1],
         COL_W[1],
         ty,
@@ -334,7 +334,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        11.0,
+        16.0,
         xs[2],
         COL_W[2],
         ty,
@@ -344,7 +344,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        11.0,
+        16.0,
         xs[3],
         COL_W[3],
         ty,
@@ -354,7 +354,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        11.0,
+        16.0,
         xs[4],
         COL_W[4],
         ty,
@@ -365,7 +365,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        11.0,
+        16.0,
         xs[5],
         COL_W[5],
         ty,
@@ -375,7 +375,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        11.0,
+        16.0,
         xs[6],
         COL_W[6],
         ty,
@@ -385,7 +385,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        11.0,
+        16.0,
         xs[7],
         COL_W[7],
         ty,
@@ -395,7 +395,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        11.0,
+        16.0,
         xs[8],
         COL_W[8],
         ty,
@@ -405,7 +405,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        11.0,
+        16.0,
         xs[9],
         COL_W[9],
         ty,
@@ -415,7 +415,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        11.0,
+        16.0,
         xs[10],
         COL_W[10],
         ty,
@@ -425,7 +425,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        11.0,
+        16.0,
         xs[11],
         COL_W[11],
         ty,
@@ -457,12 +457,12 @@ pub fn generate_receiving_summary_pdf(
         COLOR_TINT.2,
       );
       op_hline_colored(&mut ops, &ctx, xs[0], table_right, cur_y, 0.8, COLOR_ACCENT);
-      let ty = cur_y + 4.5;
+      let ty = cur_y + 5.2;
       op_text_center_colored(
         &mut ops,
         &ctx,
         &font_bold_id,
-        12.0,
+        16.0,
         xs[0],
         xs[4] - xs[0],
         ty,
@@ -473,7 +473,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_bold_id,
-        12.0,
+        16.0,
         xs[4],
         COL_W[4],
         ty,
@@ -515,9 +515,9 @@ mod tests {
   fn sample_rows(count: usize) -> Vec<ReceivingSummaryRow> {
     (0..count)
       .map(|i| ReceivingSummaryRow {
-        approval_date: format!("{}/7/2569", (i % 28) + 1),
-        po_date: format!("{}/7/2569", (i % 28) + 2),
-        receive_date: format!("{}/7/2569", (i % 28) + 3),
+        approval_date: format!("{} ก.ค. 69", (i % 28) + 1),
+        po_date: format!("{} ก.ค. 69", (i % 28) + 2),
+        receive_date: format!("{} ก.ค. 69", (i % 28) + 3),
         company_code: format!("C{:03}", (i % 5) + 1),
         total_amount: 500.0 + i as f64 * 321.21,
         receiving_code: (i + 1) as u32,
@@ -551,6 +551,14 @@ mod tests {
   fn generates_pdf_file_without_rows() {
     let path =
       generate_receiving_summary_pdf(&[], 2569, 10, 1, &test_dir("sb-pdf-rec-empty")).unwrap();
+    assert!(std::fs::metadata(&path).unwrap().len() > 1000);
+  }
+
+  #[test]
+  fn generates_pdf_with_a_full_first_page() {
+    let path =
+      generate_receiving_summary_pdf(&sample_rows(20), 2569, 10, 1, &test_dir("sb-pdf-rec-full"))
+        .unwrap();
     assert!(std::fs::metadata(&path).unwrap().len() > 1000);
   }
 }
