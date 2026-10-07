@@ -2,94 +2,35 @@
 import { ref, computed, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useToast } from "../composables/useToast";
-import { BarChart3, AlertTriangle, Hash, CalendarDays, Eye, XCircle, Pencil, FileSpreadsheet, FileText, CheckCircle, ArrowRight, Save, Package, Banknote, X } from 'lucide-vue-next'
-
-interface DbConfig {
-    host: string;
-    port: number;
-    database: string;
-    username: string;
-    password: string;
-}
-
-interface PreviewData {
-    invoices: unknown[];
-    total_amount: number;
-    row_count: number;
-}
-
-interface CarryForward {
-    next_reg_no: string;
-    next_running: number;
-    next_po_no: number;
-    next_purchase_no: number;
-    remaining_balance: number;
-}
-
-interface SkippedLockedNumberSet {
-    request_no: number;
-    report_no: number;
-    purchase_no: number;
-    reason: string;
-    note: string;
-}
-
-interface ReceivingNumberingInfo {
-    start_po_no: number;
-    start_purchase_no: number;
-    skipped_locked_sets: SkippedLockedNumberSet[];
-}
-
-interface ReceivingSummaryRow {
-    approval_date: string;
-    po_date: string;
-    receive_date: string;
-    company_code: string;
-    total_amount: number;
-    receiving_code: number;
-    reg_no: string;
-    running_in_reg: number;
-    invoice_no: string;
-    request_no: number;
-    report_no: number;
-    po_no: number;
-}
-
-interface ReceivingSummaryPreview {
-    rows: ReceivingSummaryRow[];
-    carry_forward: CarryForward;
-    total_rows: number;
-    total_amount: number;
-    numbering_info: ReceivingNumberingInfo;
-}
-
-interface ReceivingSummaryGenerateResult {
-    files: string[];
-    total_rows: number;
-    total_amount: number;
-    carry_forward: CarryForward;
-    numbering_info: ReceivingNumberingInfo;
-}
-
-interface RoundHistoryEntry {
-    id: string;
-    label: string;
-    fiscal_year: number;
-    month: number;
-    round: number;
-    date_from: string;
-    date_to: string;
-    next_reg_no: string;
-    next_running: number;
-    next_po_no: number;
-    next_purchase_no?: number;
-    remaining_balance: number;
-    budget_total: number;
-    total_amount: number;
-    invoice_count: number;
-    created_at: string;
-    source_tab?: string;
-}
+import { fileName, formatMoney, toThaiShortDate, THAI_MONTHS, THAI_MONTHS_SHORT } from "../lib/format";
+import type {
+    CarryForward,
+    DbConfig,
+    PreviewData,
+    ReceivingNumberingInfo,
+    ReceivingSummaryGenerateResult,
+    ReceivingSummaryPreview,
+    ReceivingSummaryRow,
+    RoundHistoryEntry,
+    TabId,
+} from "../lib/types";
+import {
+    AlertTriangle,
+    ArrowRight,
+    Banknote,
+    CalendarDays,
+    CheckCircle,
+    Database,
+    Eye,
+    FileSpreadsheet,
+    FileText,
+    Hash,
+    Package,
+    Pencil,
+    Save,
+    X,
+    XCircle,
+} from "lucide-vue-next";
 
 const props = defineProps<{
     dbConfig: DbConfig;
@@ -116,6 +57,8 @@ const emit = defineEmits<{
     (e: "update:approvalDate", v: string): void;
     (e: "saveHistory", entry: RoundHistoryEntry): void;
     (e: "carryResult", carry: { next_reg_no: string; next_running: number; next_po_no: number; next_purchase_no: number }): void;
+    (e: "navigate", tab: TabId): void;
+    (e: "generated"): void;
 }>();
 
 function onYearInput(e: Event) {
@@ -123,15 +66,6 @@ function onYearInput(e: Event) {
 }
 
 const toast = useToast();
-
-const THAI_MONTHS = [
-    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
-    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
-];
-const THAI_MONTHS_SHORT = [
-    "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
-    "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
-];
 
 const previewLoading = ref(false);
 const exportLoading = ref(false);
@@ -156,22 +90,9 @@ watch(
     }
 );
 
-// Thai date picker for Approval Date
-// Holds the native <input type="date"> value (YYYY-MM-DD).
-// When changed, converts to Thai short format and emits to parent.
+// Holds the native <input type="date"> value (YYYY-MM-DD) and converts
+// it to the Thai short format expected by the PDF.
 const approvalDatePicker = ref("");
-
-function toThaiShortDate(htmlDate: string): string {
-    if (!htmlDate) return "";
-    const parts = htmlDate.split("-");
-    if (parts.length !== 3) return "";
-    const year = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10);
-    const day = parseInt(parts[2], 10);
-    if (isNaN(year) || isNaN(month) || isNaN(day)) return "";
-    const thaiYear = (year + 543) % 100;
-    return `${day} ${THAI_MONTHS_SHORT[month - 1] ?? ""} ${thaiYear}`;
-}
 
 function onApprovalDatePick() {
     emit("update:approvalDate", toThaiShortDate(approvalDatePicker.value));
@@ -198,14 +119,6 @@ const canExport = computed(() => editableRows.value.length > 0 && !previewLoadin
 const exportedTotal = computed(() =>
     editableRows.value.reduce((s, r) => s + r.total_amount, 0)
 );
-
-function formatMoney(n: number): string {
-    return n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function fileName(path: string): string {
-    return path.split(/[\\/]/).pop() ?? path;
-}
 
 async function previewReport() {
     if (!canPreview.value) return;
@@ -276,7 +189,8 @@ async function exportExcel() {
             next_po_no: res.carry_forward.next_po_no,
             next_purchase_no: res.carry_forward.next_purchase_no,
         });
-        toast.success("ส่งออก Excel สำเร็จ", `บันทึกไฟล์เรียบร้อยแล้ว`);
+        emit("generated");
+        toast.success("ส่งออก Excel สำเร็จ", "บันทึกไฟล์เรียบร้อยแล้ว");
     } catch (e) {
         exportError.value = String(e);
         toast.error("ส่งออก Excel ล้มเหลว", String(e));
@@ -314,7 +228,8 @@ async function exportPdf() {
             next_po_no: res.carry_forward.next_po_no,
             next_purchase_no: res.carry_forward.next_purchase_no,
         });
-        toast.success("บันทึก PDF สำเร็จ", `บันทึกไฟล์เรียบร้อยแล้ว`);
+        emit("generated");
+        toast.success("บันทึก PDF สำเร็จ", "บันทึกไฟล์เรียบร้อยแล้ว");
     } catch (e) {
         exportError.value = String(e);
         toast.error("บันทึก PDF ล้มเหลว", String(e));
@@ -343,7 +258,7 @@ function saveToHistory() {
         budget_total: 0,
         total_amount: exportedTotal.value,
         invoice_count: editableRows.value.length,
-        source_tab: "📊 สรุปรับยา",
+        source_tab: "สรุปรับยา",
         created_at: now,
     };
     emit("saveHistory", entry);
@@ -353,422 +268,317 @@ function saveToHistory() {
 <template>
 <div class="report-wrap">
     <div class="page-header">
-        <h2 class="page-title">สรุปรับยา</h2>
-        <p class="page-desc">Receiving Summary - สร้างสรุปยอดรับยาประจำเดือน</p>
-    </div>
-
-    <!-- Data summary -->
-    <div class="card">
-        <div class="card-title">
-            <BarChart3 :size="17" /> ข้อมูลที่จะใช้สร้างรายงาน
+        <div class="page-header-text">
+            <h2 class="page-title">สรุปรับยา</h2>
         </div>
-        <div v-if="!previewData" class="no-data">
-            <AlertTriangle :size="14" /> ยังไม่มีข้อมูล - กรุณาไปที่แท็บ ดึงข้อมูล ก่อน
-        </div>
-        <div v-else>
-            <div class="preview-summary">
-                <div class="summary-stat">
-                    <span class="summary-stat-label">ช่วงเวลา</span>
-                    <span class="summary-stat-value period">{{ periodText }}</span>
-                </div>
-                <div class="summary-stat">
-                    <span class="summary-stat-label">จำนวนบิล</span>
-                    <span class="summary-stat-value">{{ previewData.row_count }} รายการ</span>
-                </div>
-                <div class="summary-stat">
-                    <span class="summary-stat-label">ยอดรวม</span>
-                    <span class="summary-stat-value money">{{ formatMoney(previewData.total_amount) }} บาท</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Report params -->
-    <div class="card">
-        <div class="card-title">
-            <Hash :size="17" /> ตั้งค่าเลขที่เอกสาร
-        </div>
-        <div class="card-desc">ค่าเหล่านี้ต่อเนื่องจากรอบก่อน - สามารถโหลดจากประวัติรอบได้</div>
-
-        <div class="section-label">
-            <CalendarDays :size="14" /> ข้อมูลงวด
-        </div>
-        <div class="form-grid">
-            <div class="form-group">
-                <label>ปีงบประมาณ</label>
-                <input type="number" min="2500" max="2700" :value="year > 0 ? year : ''" placeholder="เช่น 2569"
-                    @input="onYearInput" />
-                <span class="field-hint">แก้ไขได้ (ค่าเริ่มต้นจากช่วงวันที่)</span>
-            </div>
-            <div class="form-group">
-                <label>เดือน</label>
-                <input type="text" :value="month > 0 ? THAI_MONTHS[month - 1] : '-'" readonly />
-            </div>
-            <div class="form-group">
-                <label>รอบที่</label>
-                <input type="text" :value="round" readonly />
-            </div>
-        </div>
-
-        <div class="section-label section-spaced">
-            <Hash :size="14" /> เลขที่เอกสาร (ต่อเนื่องจากรอบก่อน)
-        </div>
-        <div class="form-grid">
-            <div class="form-group">
-                <label>เลขขอซื้อ / รายงาน เริ่มต้น</label>
-                <input type="number" min="1" :value="startPoNo"
-                    @input="emit('update:startPoNo', parseInt(($event.target as HTMLInputElement).value) || 1)" />
-                <span class="field-hint">ขอซื้อ (ลบ0033.302/) และ รายงาน/อนุมัติ</span>
-            </div>
-            <div class="form-group">
-                <label>เลขใบสั่งซื้อ เริ่มต้น</label>
-                <input type="number" min="1" :value="startPurchaseNo"
-                    @input="emit('update:startPurchaseNo', parseInt(($event.target as HTMLInputElement).value) || 1)" />
-                <span class="field-hint">ใบสั่งซื้อ…/{year} - นับอิสระจากเลขขอซื้อ</span>
-            </div>
-            <div class="form-group">
-                <label>เลขทะเบียนคุมเริ่มต้น</label>
-                <input type="text" :value="startRegNo"
-                    @input="emit('update:startRegNo', ($event.target as HTMLInputElement).value)"
-                    placeholder="เช่น 69ภ12" />
-            </div>
-            <div class="form-group">
-                <label>ลำดับเริ่มต้นในสมุด (0–9)</label>
-                <input type="number" min="0" max="9" :value="startRunning"
-                    @input="emit('update:startRunning', parseInt(($event.target as HTMLInputElement).value) || 0)" />
-            </div>
-            <div class="form-group">
-                <label>วันที่ขออนุมัติ (แสดงบนเอกสาร)</label>
-                <div class="date-picker-row">
-                    <input type="date" v-model="approvalDatePicker" @change="onApprovalDatePick"
-                        class="date-input-cal" />
-                    <button v-if="approvalDate || approvalDatePicker" type="button" class="date-clear-btn"
-                        @click="approvalDatePicker = ''; emit('update:approvalDate', '')" title="ล้างวันที่">
-                        <X :size="14" />
-                    </button>
-                </div>
-                <span v-if="approvalDate" class="field-hint date-thai-preview">
-                    <CalendarDays :size="13" /> {{ approvalDate }}
-                </span>
-                <span v-else class="field-hint">ปล่อยว่าง = ใช้วันที่รับของจากบิลแรก</span>
-            </div>
-        </div>
-
-        <!-- Preview button -->
-        <div class="actions">
-            <button class="btn btn-primary btn-lg" :disabled="!canPreview || previewLoading" @click="previewReport">
-                <span v-if="previewLoading" class="spinner"></span>
-                <Eye v-if="!previewLoading" :size="16" />
-                {{ previewLoading ? "กำลังโหลดตัวอย่าง..." : "แสดงตัวอย่าง" }}
+        <div class="page-actions">
+            <span v-if="previewData" class="badge badge-brand">{{ periodText }}</span>
+            <button class="btn btn-ghost btn-sm" @click="emit('navigate', 'query')">
+                <Database :size="14" /> ดึงข้อมูลใหม่
             </button>
         </div>
+    </div>
 
-        <div v-if="previewError" class="status-msg status-error status-stack">
-            <XCircle :size="14" /> {{ previewError }}
+    <!-- No data -->
+    <div v-if="!previewData" class="card">
+        <div class="empty-state">
+            <div class="empty-icon"><Database :size="40" stroke-width="1.5" /></div>
+            <div class="empty-title">ยังไม่มีข้อมูลสำหรับสร้างรายงาน</div>
+            <p class="empty-desc">ดึงข้อมูลก่อนสร้างรายงาน</p>
+            <div class="empty-actions">
+                <button class="btn btn-primary" @click="emit('navigate', 'query')">
+                    ไปที่ดึงข้อมูล
+                </button>
+            </div>
         </div>
     </div>
 
-    <div v-if="numberingInfo && numberingInfo.skipped_locked_sets.length > 0" class="card">
-        <div class="card-title">
-            <AlertTriangle :size="17" /> พบเลขล็อกที่ระบบข้ามให้อัตโนมัติ
-        </div>
-        <div class="status-msg status-warn status-stack">
-            <AlertTriangle :size="14" />
-            เริ่มใช้เลขจริงที่ ขอซื้อ/รายงาน {{ numberingInfo.start_po_no }} และ ใบสั่งซื้อ {{ numberingInfo.start_purchase_no }}
-            โดยข้ามเลขล็อก {{ numberingInfo.skipped_locked_sets.length }} ชุด
-        </div>
-
-        <div class="table-wrap locked-table-wrap">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th class="text-center">เลขขอซื้อ</th>
-                        <th class="text-center">รายงาน</th>
-                        <th class="text-center">ใบสั่งซื้อ</th>
-                        <th>เหตุผล</th>
-                        <th>หมายเหตุ</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="locked in numberingInfo.skipped_locked_sets"
-                        :key="`${locked.request_no}-${locked.purchase_no}`">
-                        <td class="text-center">{{ locked.request_no }}</td>
-                        <td class="text-center">{{ locked.report_no }}</td>
-                        <td class="text-center">{{ locked.purchase_no }}</td>
-                        <td>{{ locked.reason }}</td>
-                        <td>{{ locked.note || "-" }}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Editable preview table -->
-    <div v-if="editableRows.length > 0" class="card">
-        <div class="card-title">
-            <Pencil :size="17" /> ตัวอย่างข้อมูล (แก้ไขได้)
-        </div>
-        <div class="card-desc">ตรวจสอบและแก้ไขข้อมูลก่อนส่งออก Excel - คอลัมน์สีเทาคำนวณอัตโนมัติ</div>
-
-        <div class="table-wrap">
-            <table class="data-table edit-table">
-                <thead>
-                    <tr>
-                        <th>วันที่ขออนุมัติ</th>
-                        <th>วันที่สั่งซื้อ</th>
-                        <th>วันที่รับของ</th>
-                        <th>รหัสบริษัท</th>
-                        <th class="text-right">จำนวนเงินรวม</th>
-                        <th class="text-center">รหัสลงรับยา</th>
-                        <th class="text-center">เลขทะเบียนคุม</th>
-                        <th class="text-center">ลำดับ</th>
-                        <th>เลขที่ลงรับ</th>
-                        <th class="text-center readonly-col">ขอซื้อ</th>
-                        <th class="text-center readonly-col">รายงาน</th>
-                        <th class="text-center readonly-col">ใบสั่งซื้อ</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="(row, idx) in editableRows" :key="idx">
-                        <td><input v-model="row.approval_date" class="cell-input" /></td>
-                        <td><input v-model="row.po_date" class="cell-input" /></td>
-                        <td class="readonly-cell">{{ row.receive_date }}</td>
-                        <td><input v-model="row.company_code" class="cell-input" /></td>
-                        <td class="text-right">
-                            <input v-model.number="row.total_amount" type="number" step="0.01"
-                                class="cell-input amount" />
-                        </td>
-                        <td class="text-center">
-                            <input v-model.number="row.receiving_code" type="number" class="cell-input num-center" />
-                        </td>
-                        <td class="text-center readonly-cell">{{ row.reg_no }}</td>
-                        <td class="text-center readonly-cell">{{ row.running_in_reg }}</td>
-                        <td class="readonly-cell">{{ row.invoice_no }}</td>
-                        <td class="text-center readonly-cell">{{ row.request_no }}</td>
-                        <td class="text-center readonly-cell">{{ row.report_no }}</td>
-                        <td class="text-center readonly-cell">{{ row.po_no }}</td>
-                    </tr>
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="4" class="text-right">รวมทั้งสิ้น</td>
-                        <td class="text-right total-cell">{{ formatMoney(exportedTotal) }}</td>
-                        <td colspan="7"></td>
-                    </tr>
-                </tfoot>
-            </table>
+    <template v-else>
+        <!-- Data context -->
+        <div class="context-bar">
+            <span>ช่วงเวลา <strong>{{ periodText }}</strong></span>
+            <span class="context-sep"></span>
+            <span>บิลในรอบนี้ <strong>{{ previewData.row_count }} รายการ</strong></span>
+            <span class="context-sep"></span>
+            <span>ยอดรวม <strong>{{ formatMoney(previewData.total_amount) }} บาท</strong></span>
+            <span class="context-right">
+                <span class="badge badge-success">ข้อมูลพร้อม</span>
+            </span>
         </div>
 
-        <!-- Export buttons -->
-        <div class="actions">
-            <button class="btn btn-success btn-lg" :disabled="!canExport || exportLoading" @click="exportExcel">
-                <span v-if="exportLoading" class="spinner"></span>
-                <FileSpreadsheet v-if="!exportLoading" :size="16" />
-                {{ exportLoading ? "กำลังส่งออก Excel..." : "ส่งออก Excel" }}
-            </button>
-            <button class="btn btn-primary btn-lg" :disabled="!canExport || pdfLoading" @click="exportPdf">
-                <span v-if="pdfLoading" class="spinner"></span>
-                <FileText v-if="!pdfLoading" :size="16" />
-                {{ pdfLoading ? "กำลังบันทึก PDF..." : "บันทึก PDF" }}
-            </button>
-        </div>
-
-        <div v-if="exportError" class="status-msg status-error status-stack">
-            <XCircle :size="14" /> {{ exportError }}
-        </div>
-    </div>
-
-    <!-- Export result -->
-    <div v-if="exportedFile || exportedPdfFile" class="card">
-        <div class="card-title">
-            <CheckCircle :size="17" /> ส่งออกสำเร็จ
-        </div>
-
-        <div class="result-card">
-            <div class="result-card-title">
-                <FileSpreadsheet :size="15" /> ไฟล์ที่สร้าง
+        <!-- Report params -->
+        <div class="card">
+            <div class="card-head">
+                <div>
+                    <div class="card-title"><Hash :size="16" /> ตั้งค่าเลขที่เอกสาร</div>
+                </div>
             </div>
-            <ul class="file-list">
-                <li v-if="exportedFile">
-                    <FileSpreadsheet :size="14" /> <code>{{ fileName(exportedFile) }}</code>
-                    <span class="file-path">{{ exportedFile }}</span>
-                </li>
-                <li v-if="exportedPdfFile">
-                    <FileText :size="14" /> <code>{{ fileName(exportedPdfFile) }}</code>
-                    <span class="file-path">{{ exportedPdfFile }}</span>
-                </li>
-            </ul>
-            <div class="result-stats">
-                <span class="stat-chip">
-                    <Package :size="13" /> {{ editableRows.length }} รายการ
-                </span>
-                <span class="stat-chip money">
-                    <Banknote :size="13" /> {{ formatMoney(exportedTotal) }} บาท
-                </span>
+
+            <div class="section-label"><CalendarDays :size="13" /> ข้อมูลงวด</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="r2-year">ปีงบประมาณ</label>
+                    <input id="r2-year" type="number" min="2500" max="2700"
+                        :value="year > 0 ? year : ''" placeholder="เช่น 2569" @input="onYearInput" />
+                </div>
+                <div class="form-group">
+                    <label for="r2-month">เดือน</label>
+                    <input id="r2-month" type="text" :value="month > 0 ? THAI_MONTHS[month - 1] : '-'" readonly />
+                </div>
+                <div class="form-group">
+                    <label for="r2-round">รอบที่</label>
+                    <input id="r2-round" type="text" :value="round" readonly />
+                </div>
+            </div>
+
+            <div class="section-label section-spaced"><Hash :size="13" /> เลขที่เอกสารต่อเนื่องจากรอบก่อน</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="r2-po">เลขขอซื้อ / รายงาน เริ่มต้น</label>
+                    <input id="r2-po" type="number" min="1" :value="startPoNo"
+                        @input="emit('update:startPoNo', parseInt(($event.target as HTMLInputElement).value) || 1)" />
+                    <span class="field-hint">รายงาน = ขอซื้อ + 1</span>
+                </div>
+                <div class="form-group">
+                    <label for="r2-purchase">เลขใบสั่งซื้อ เริ่มต้น</label>
+                    <input id="r2-purchase" type="number" min="1" :value="startPurchaseNo"
+                        @input="emit('update:startPurchaseNo', parseInt(($event.target as HTMLInputElement).value) || 1)" />
+                </div>
+                <div class="form-group">
+                    <label for="r2-reg">เลขทะเบียนคุมเริ่มต้น</label>
+                    <input id="r2-reg" type="text" :value="startRegNo"
+                        @input="emit('update:startRegNo', ($event.target as HTMLInputElement).value)"
+                        placeholder="เช่น 69ภ12" />
+                </div>
+                <div class="form-group">
+                    <label for="r2-running">ลำดับเริ่มต้นในสมุด (0-9)</label>
+                    <input id="r2-running" type="number" min="0" max="9" :value="startRunning"
+                        @input="emit('update:startRunning', parseInt(($event.target as HTMLInputElement).value) || 0)" />
+                </div>
+                <div class="form-group">
+                    <label for="r2-approval">วันที่ขออนุมัติ (แสดงบนเอกสาร)</label>
+                    <div class="input-group">
+                        <input id="r2-approval" type="date" v-model="approvalDatePicker"
+                            @change="onApprovalDatePick" />
+                        <button v-if="approvalDate || approvalDatePicker" type="button"
+                            class="btn btn-secondary btn-icon" aria-label="ล้างวันที่"
+                            @click="approvalDatePicker = ''; emit('update:approvalDate', '')">
+                            <X :size="15" />
+                        </button>
+                    </div>
+                    <span v-if="approvalDate" class="field-hint approval-preview">
+                        <CalendarDays :size="12" /> {{ approvalDate }}
+                    </span>
+                    <span v-else class="field-hint">ปล่อยว่าง = ใช้วันที่รับของจากบิลแรก</span>
+                </div>
+            </div>
+
+            <div class="actions actions-row">
+                <button class="btn btn-primary btn-lg" :disabled="!canPreview || previewLoading" @click="previewReport">
+                    <span v-if="previewLoading" class="spinner"></span>
+                    <Eye v-else :size="16" />
+                    {{ previewLoading ? "กำลังโหลดตัวอย่าง..." : "แสดงตัวอย่าง" }}
+                </button>
+            </div>
+
+            <div v-if="previewError" class="status-msg status-error status-stack">
+                <XCircle :size="15" /> {{ previewError }}
             </div>
         </div>
 
-        <!-- Carry-forward info -->
-        <div v-if="carryForward" class="carry-box section-spaced">
-            <div class="carry-box-title">
-                <ArrowRight :size="15" /> ค่าสำหรับรอบถัดไป (Carry-Forward)
+        <!-- Skipped locked numbers -->
+        <div v-if="numberingInfo && numberingInfo.skipped_locked_sets.length > 0" class="card">
+            <div class="card-head">
+                <div>
+                    <div class="card-title"><AlertTriangle :size="16" /> เลขล็อกที่ระบบข้ามให้อัตโนมัติ</div>
+                </div>
             </div>
-            <div class="carry-grid">
-                <div class="carry-item">
-                    <span class="carry-label">เลขทะเบียนคุมถัดไป</span>
-                    <span class="carry-val">{{ carryForward.next_reg_no }}</span>
+            <div class="callout callout-warn">
+                <AlertTriangle :size="15" />
+                <div class="callout-body">
+                    <span class="callout-title">
+                        เริ่มใช้เลขจริงที่ ขอซื้อ/รายงาน {{ numberingInfo.start_po_no }}
+                        และใบสั่งซื้อ {{ numberingInfo.start_purchase_no }} (ข้าม {{ numberingInfo.skipped_locked_sets.length }} ชุด)
+                    </span>
                 </div>
-                <div class="carry-item">
-                    <span class="carry-label">ลำดับถัดไปในสมุด</span>
-                    <span class="carry-val">{{ carryForward.next_running }}</span>
-                </div>
-                <div class="carry-item">
-                    <span class="carry-label">เลขขอซื้อ/รายงาน ถัดไป</span>
-                    <span class="carry-val">{{ carryForward.next_po_no }}</span>
-                </div>
-                <div class="carry-item">
-                    <span class="carry-label">เลขใบสั่งซื้อ ถัดไป</span>
-                    <span class="carry-val">{{ carryForward.next_purchase_no }}</span>
-                </div>
+            </div>
+            <div class="table-wrap section-spaced">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th class="text-center">เลขขอซื้อ</th>
+                            <th class="text-center">รายงาน</th>
+                            <th class="text-center">ใบสั่งซื้อ</th>
+                            <th>เหตุผล</th>
+                            <th>หมายเหตุ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="locked in numberingInfo.skipped_locked_sets"
+                            :key="`${locked.request_no}-${locked.purchase_no}`">
+                            <td class="text-center">{{ locked.request_no }}</td>
+                            <td class="text-center">{{ locked.report_no }}</td>
+                            <td class="text-center">{{ locked.purchase_no }}</td>
+                            <td>{{ locked.reason }}</td>
+                            <td>{{ locked.note || "-" }}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <div class="save-actions">
-            <button class="btn btn-success" @click="saveToHistory">
-                <Save :size="15" /> บันทึกรอบนี้สู่ประวัติ
-            </button>
+        <!-- Editable preview -->
+        <div v-if="editableRows.length > 0" class="card">
+            <div class="card-head">
+                <div>
+                    <div class="card-title"><Pencil :size="16" /> ตัวอย่างข้อมูล (แก้ไขได้)</div>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table class="data-table edit-table">
+                    <thead>
+                        <tr>
+                            <th>วันที่ขออนุมัติ</th>
+                            <th>วันที่สั่งซื้อ</th>
+                            <th>วันที่รับของ</th>
+                            <th>รหัสบริษัท</th>
+                            <th class="text-right">จำนวนเงินรวม</th>
+                            <th class="text-center">รหัสลงรับยา</th>
+                            <th class="text-center">เลขทะเบียนคุม</th>
+                            <th class="text-center">ลำดับ</th>
+                            <th>เลขที่ลงรับ</th>
+                            <th class="text-center">ขอซื้อ</th>
+                            <th class="text-center">รายงาน</th>
+                            <th class="text-center">ใบสั่งซื้อ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(row, idx) in editableRows" :key="idx">
+                            <td><input v-model="row.approval_date" class="cell-input" :aria-label="`วันที่ขออนุมัติ ลำดับ ${idx + 1}`" /></td>
+                            <td><input v-model="row.po_date" class="cell-input" :aria-label="`วันที่สั่งซื้อ ลำดับ ${idx + 1}`" /></td>
+                            <td class="readonly-cell">{{ row.receive_date }}</td>
+                            <td><input v-model="row.company_code" class="cell-input" :aria-label="`รหัสบริษัท ลำดับ ${idx + 1}`" /></td>
+                            <td class="text-right">
+                                <input v-model.number="row.total_amount" type="number" step="0.01"
+                                    class="cell-input amount" :aria-label="`จำนวนเงิน ลำดับ ${idx + 1}`" />
+                            </td>
+                            <td class="text-center">
+                                <input v-model.number="row.receiving_code" type="number"
+                                    class="cell-input num-center" :aria-label="`รหัสลงรับยา ลำดับ ${idx + 1}`" />
+                            </td>
+                            <td class="text-center readonly-cell">{{ row.reg_no }}</td>
+                            <td class="text-center readonly-cell">{{ row.running_in_reg }}</td>
+                            <td class="readonly-cell">{{ row.invoice_no }}</td>
+                            <td class="text-center readonly-cell">{{ row.request_no }}</td>
+                            <td class="text-center readonly-cell">{{ row.report_no }}</td>
+                            <td class="text-center readonly-cell">{{ row.po_no }}</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" class="text-right">รวมทั้งสิ้น</td>
+                            <td class="text-right total-cell">{{ formatMoney(exportedTotal) }}</td>
+                            <td colspan="7"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div class="actions actions-row">
+                <button class="btn btn-primary btn-lg" :disabled="!canExport || pdfLoading" @click="exportPdf">
+                    <span v-if="pdfLoading" class="spinner"></span>
+                    <FileText v-else :size="16" />
+                    {{ pdfLoading ? "กำลังบันทึก PDF..." : "บันทึก PDF" }}
+                </button>
+                <button class="btn btn-success btn-lg" :disabled="!canExport || exportLoading" @click="exportExcel">
+                    <span v-if="exportLoading" class="spinner"></span>
+                    <FileSpreadsheet v-else :size="16" />
+                    {{ exportLoading ? "กำลังส่งออก Excel..." : "ส่งออก Excel" }}
+                </button>
+            </div>
+
+            <div v-if="exportError" class="status-msg status-error status-stack">
+                <XCircle :size="15" /> {{ exportError }}
+            </div>
         </div>
+
+        <!-- Export result -->
+        <div v-if="exportedFile || exportedPdfFile" class="card">
+            <div class="card-head">
+                <div>
+                    <div class="card-title"><CheckCircle :size="16" /> ส่งออกสำเร็จ</div>
+                </div>
+            </div>
+
+            <div class="result-card">
+                <div class="result-card-title"><FileSpreadsheet :size="15" /> ไฟล์ที่สร้าง</div>
+                <ul class="file-list">
+                    <li v-if="exportedFile">
+                        <FileSpreadsheet :size="14" /> <code>{{ fileName(exportedFile) }}</code>
+                        <span class="file-path">{{ exportedFile }}</span>
+                    </li>
+                    <li v-if="exportedPdfFile">
+                        <FileText :size="14" /> <code>{{ fileName(exportedPdfFile) }}</code>
+                        <span class="file-path">{{ exportedPdfFile }}</span>
+                    </li>
+                </ul>
+                <div class="result-stats">
+                    <span class="stat-chip"><Package :size="13" /> {{ editableRows.length }} รายการ</span>
+                    <span class="stat-chip money"><Banknote :size="13" /> {{ formatMoney(exportedTotal) }} บาท</span>
+                </div>
+            </div>
+
+            <div v-if="carryForward" class="carry-box section-spaced">
+                <div class="carry-box-title"><ArrowRight :size="15" /> ค่าสำหรับรอบถัดไป</div>
+                <div class="carry-grid">
+                    <div class="carry-item">
+                        <span class="carry-label">เลขทะเบียนคุมถัดไป</span>
+                        <span class="carry-val">{{ carryForward.next_reg_no }}</span>
+                    </div>
+                    <div class="carry-item">
+                        <span class="carry-label">ลำดับถัดไปในสมุด</span>
+                        <span class="carry-val">{{ carryForward.next_running }}</span>
+                    </div>
+                    <div class="carry-item">
+                        <span class="carry-label">เลขขอซื้อ/รายงาน ถัดไป</span>
+                        <span class="carry-val">{{ carryForward.next_po_no }}</span>
+                    </div>
+                    <div class="carry-item">
+                        <span class="carry-label">เลขใบสั่งซื้อ ถัดไป</span>
+                        <span class="carry-val">{{ carryForward.next_purchase_no }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="save-actions">
+                <button class="btn btn-secondary" @click="saveToHistory">
+                    <Save :size="15" /> บันทึกรอบนี้สู่ประวัติ
+                </button>
+            </div>
+        </div>
+    </template>
+
+    <div v-if="previewData && previewData.row_count === 0" class="callout callout-warn">
+        <AlertTriangle :size="15" />
+        <div class="callout-body">
+            <span class="callout-title">ช่วงวันที่นี้ยังไม่มีรายการบิล</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" @click="emit('navigate', 'query')">ดึงข้อมูลใหม่</button>
     </div>
 </div>
 </template>
 
 <style scoped>
-.date-picker-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.date-input-cal {
-    flex: 1;
-    padding: 11px 13px;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    background: var(--c-surface-raised);
-    box-shadow: var(--shadow-ring);
-    color: var(--c-text);
-    cursor: pointer;
-    transition: box-shadow 0.15s, background 0.15s;
-}
-
-.date-input-cal:focus {
-    outline: none;
-    box-shadow:
-        0 0 0 2px var(--c-primary),
-        rgba(200, 16, 46, 0.12) 0px 0px 0px 4px;
-}
-
-.date-clear-btn {
-    flex-shrink: 0;
-    width: 28px;
-    height: 28px;
-    border: none;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--c-text-muted);
-    cursor: pointer;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.15s;
-}
-
-.date-clear-btn:hover {
-    background: var(--c-error-bg);
-    color: var(--c-error);
-}
-
-.date-thai-preview {
+.approval-preview {
     color: var(--c-primary);
     font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
 }
-
-.no-data {
-    text-align: center;
-    padding: 24px;
-    color: var(--c-warn);
-    font-size: 15px;
-    background: var(--c-warn-bg);
-    box-shadow: var(--shadow-ring);
-    border-radius: var(--radius-lg);
-}
-
-.period {
-    color: var(--c-text) !important;
-}
-
-.locked-table-wrap {
-    margin-top: 14px;
-}
-
-/* Editable table */
 
 .edit-table {
-    min-width: 1100px;
-}
-
-.edit-table td {
-    padding: 6px 8px;
-    vertical-align: middle;
-}
-
-.cell-input {
-    border: none;
-    border-radius: 8px;
-    padding: 7px 8px;
-    font-size: 12px;
-    width: 100%;
-    min-width: 64px;
-    background: var(--c-surface-raised);
-    box-shadow: var(--shadow-ring);
-    color: var(--c-text);
-    font-family: inherit;
-}
-
-.cell-input:focus {
-    outline: none;
-    box-shadow:
-        0 0 0 2px var(--c-primary),
-        rgba(200, 16, 46, 0.12) 0px 0px 0px 4px;
-    background: var(--c-surface);
-}
-
-.cell-input.amount {
-    text-align: right;
-    min-width: 88px;
-}
-
-.cell-input.num-center {
-    text-align: center;
-    min-width: 52px;
-}
-
-.readonly-cell {
-    color: var(--c-text-muted);
-    font-size: 12px;
-    background: rgba(255, 248, 243, 0.72);
-    white-space: nowrap;
-}
-
-.readonly-col {
-    color: var(--c-text-muted);
-    font-size: 11px;
-}
-
-.total-cell {
-    font-weight: 700;
-    color: var(--c-primary);
+    min-width: 1080px;
 }
 </style>
