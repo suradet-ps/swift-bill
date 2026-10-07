@@ -109,8 +109,8 @@ write to INVS. The app generates the form; the clinician signs it.
 
 - **Stack**: Tauri 2 (tauri 2, `tauri-build` 2, `@tauri-apps/api` 2.10.1) +
   Vue 3.5 (Composition API, `<script setup>`) + TypeScript 6 + Vite 8 +
-  Bun 1.3.1, Rust 2024 edition backend. Version `0.3.6` in `package.json`
-  and `src-tauri/Cargo.toml`. Deployed as a native desktop app (Windows,
+  Bun 1.3.1, Rust 2024 edition backend. The version is single-sourced from
+  `package.json` and synced by `bun run version:sync`. Deployed as a native desktop app (Windows,
   Linux, macOS aarch64) via `tauri-apps/tauri-action`.
 - **Workspace layout** (5 members): `swift-bill-core` (pure domain +
   algorithms), `swift-bill-db` (tiberius TDS, read-only INVS),
