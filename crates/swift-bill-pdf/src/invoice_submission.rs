@@ -21,7 +21,7 @@ use crate::shared::{
 const ROWS_PER_PAGE: usize = 20;
 const TABLE_TOP: f64 = 29.0;
 const HDR_H: f64 = 14.0;
-const ROW_H: f64 = 7.2;
+const ROW_H: f64 = 6.2;
 /// Lowest y (mm from top) that content may reach, just above the footer rule.
 const CONTENT_BOTTOM: f64 = 198.5;
 /// Vertical space needed below the last row for the totals row and signature.
@@ -68,12 +68,12 @@ fn draw_summary(
     COLOR_TINT.2,
   );
   op_hline_colored(ops, ctx, xs[0], table_right, top_y, 0.8, COLOR_ACCENT);
-  let ty = top_y + 5.2;
+  let ty = top_y + 4.7;
   op_text_center_colored(
     ops,
     ctx,
     font_bold_id,
-    16.0,
+    14.0,
     xs[0],
     xs[8] - xs[0],
     ty,
@@ -84,7 +84,7 @@ fn draw_summary(
     ops,
     ctx,
     font_bold_id,
-    16.0,
+    14.0,
     xs[8],
     COL_W[8],
     ty,
@@ -298,12 +298,12 @@ pub fn generate_invoice_submission_pdf(
           COLOR_ZEBRA.2,
         );
       }
-      let ty = cur_y + 5.2;
+      let ty = cur_y + 4.7;
       op_text_center(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[0],
         COL_W[0],
         ty,
@@ -313,7 +313,7 @@ pub fn generate_invoice_submission_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[1],
         COL_W[1],
         ty,
@@ -323,7 +323,7 @@ pub fn generate_invoice_submission_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[2] + 2.0,
         ty,
         &row.invoice_no,
@@ -332,7 +332,7 @@ pub fn generate_invoice_submission_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[3],
         COL_W[3],
         ty,
@@ -342,7 +342,7 @@ pub fn generate_invoice_submission_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[4],
         COL_W[4],
         ty,
@@ -352,7 +352,7 @@ pub fn generate_invoice_submission_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[5],
         COL_W[5],
         ty,
@@ -362,7 +362,7 @@ pub fn generate_invoice_submission_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[6] + 2.0,
         ty,
         &row.company_name,
@@ -371,7 +371,7 @@ pub fn generate_invoice_submission_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        15.0,
+        14.0,
         xs[7],
         COL_W[7],
         ty,
@@ -381,7 +381,7 @@ pub fn generate_invoice_submission_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[8],
         COL_W[8],
         ty,

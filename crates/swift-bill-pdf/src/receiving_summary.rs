@@ -19,7 +19,7 @@ use crate::shared::{
 const ROWS_PER_PAGE: usize = 20;
 const TABLE_TOP: f64 = 29.0;
 const HDR_H: f64 = 15.0;
-const ROW_H: f64 = 7.2;
+const ROW_H: f64 = 6.5;
 
 /// Column widths (mm), summing to the printable width of 267 mm.
 const COL_W: [f64; 12] = [
@@ -309,12 +309,12 @@ pub fn generate_receiving_summary_pdf(
           COLOR_ZEBRA.2,
         );
       }
-      let ty = cur_y + 5.2;
+      let ty = cur_y + 4.9;
       op_text_center(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[0],
         COL_W[0],
         ty,
@@ -324,7 +324,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[1],
         COL_W[1],
         ty,
@@ -334,7 +334,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[2],
         COL_W[2],
         ty,
@@ -344,7 +344,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[3],
         COL_W[3],
         ty,
@@ -354,7 +354,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[4],
         COL_W[4],
         ty,
@@ -365,7 +365,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[5],
         COL_W[5],
         ty,
@@ -375,7 +375,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[6],
         COL_W[6],
         ty,
@@ -385,7 +385,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[7],
         COL_W[7],
         ty,
@@ -395,7 +395,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[8],
         COL_W[8],
         ty,
@@ -405,7 +405,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[9],
         COL_W[9],
         ty,
@@ -415,7 +415,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[10],
         COL_W[10],
         ty,
@@ -425,7 +425,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        16.0,
+        14.0,
         xs[11],
         COL_W[11],
         ty,
@@ -457,12 +457,12 @@ pub fn generate_receiving_summary_pdf(
         COLOR_TINT.2,
       );
       op_hline_colored(&mut ops, &ctx, xs[0], table_right, cur_y, 0.8, COLOR_ACCENT);
-      let ty = cur_y + 5.2;
+      let ty = cur_y + 4.9;
       op_text_center_colored(
         &mut ops,
         &ctx,
         &font_bold_id,
-        16.0,
+        14.0,
         xs[0],
         xs[4] - xs[0],
         ty,
@@ -473,7 +473,7 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_bold_id,
-        16.0,
+        14.0,
         xs[4],
         COL_W[4],
         ty,
