@@ -1,17 +1,27 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { Table2, Save, Plug, CheckCircle, XCircle, Loader2 } from 'lucide-vue-next'
+import {
+    CheckCircle,
+    Database,
+    Eye,
+    EyeOff,
+    Lock,
+    Plug,
+    Save,
+    Server,
+    ShieldCheck,
+    Table2,
+    User,
+    XCircle,
+} from "lucide-vue-next";
+import type { DbConfig } from "../lib/types";
 
-interface DbConfig {
-    host: string;
-    port: number;
-    database: string;
-    username: string;
-    password: string;
-}
+const props = defineProps<{
+    dbConfig: DbConfig;
+    dbConnected: boolean | null;
+}>();
 
-const props = defineProps<{ dbConfig: DbConfig }>();
 const emit = defineEmits<{
     (e: "update:dbConfig", val: DbConfig): void;
     (e: "save"): void;
@@ -21,6 +31,7 @@ const emit = defineEmits<{
 const status = ref<"idle" | "testing" | "success" | "error">("idle");
 const message = ref("");
 const saveStatus = ref<"idle" | "saved">("idle");
+const showPassword = ref(false);
 
 const isValid = computed(
     () =>
@@ -31,18 +42,6 @@ const isValid = computed(
         props.dbConfig.password.trim() !== ""
 );
 
-const statusClass = computed(() => ({
-    "status-success": status.value === "success",
-    "status-error": status.value === "error",
-    "status-info": status.value === "testing",
-}));
-
-const statusIcon = computed(() => {
-    if (status.value === "success") return CheckCircle
-    if (status.value === "error") return XCircle
-    return Loader2
-})
-
 function update(field: keyof DbConfig, value: string | number) {
     emit("update:dbConfig", { ...props.dbConfig, [field]: value });
 }
@@ -50,12 +49,14 @@ function update(field: keyof DbConfig, value: string | number) {
 function saveConfig() {
     emit("save");
     saveStatus.value = "saved";
-    setTimeout(() => { saveStatus.value = "idle"; }, 2500);
+    setTimeout(() => {
+        saveStatus.value = "idle";
+    }, 2500);
 }
 
 async function testConnection() {
     if (!isValid.value) {
-        message.value = "กรุณากรอกข้อมูลให้ครบถ้วน";
+        message.value = "กรุณากรอกข้อมูลให้ครบถ้วนก่อนทดสอบ";
         status.value = "error";
         return;
     }
@@ -79,71 +80,118 @@ async function testConnection() {
 <template>
 <div class="settings-wrap">
     <div class="page-header">
-        <h2 class="page-title">ฐานข้อมูล</h2>
-        <p class="page-desc">เชื่อมต่อ SQL Server (INVS) ผ่าน TDS Protocol - ไม่ต้องติดตั้ง ODBC Driver</p>
+        <div class="page-header-text">
+            <h2 class="page-title">ตั้งค่าฐานข้อมูล</h2>
+            <p class="page-desc">
+                เชื่อมต่อ SQL Server (INVS) ด้วย TDS โดยตรง ไม่ต้องติดตั้ง ODBC Driver
+                และไม่มีการเขียนข้อมูลกลับเข้าฐานข้อมูล
+            </p>
+        </div>
+        <div class="page-actions">
+            <span class="badge" :class="dbConnected === true ? 'badge-success' : dbConnected === false ? 'badge-danger' : 'badge-neutral'">
+                <span class="conn-dot" :class="dbConnected === true ? 'ok' : dbConnected === false ? 'fail' : 'unknown'"></span>
+                {{ dbConnected === true ? "เชื่อมต่อแล้ว" : dbConnected === false ? "เชื่อมต่อไม่สำเร็จ" : "ยังไม่ได้ทดสอบ" }}
+            </span>
+        </div>
     </div>
 
     <div class="card">
+        <div class="card-head">
+            <div>
+                <div class="card-title"><Server :size="16" /> การเชื่อมต่อ SQL Server</div>
+                <div class="card-desc">ข้อมูลนี้ถูกเข้ารหัสและเก็บไว้ในเครื่องของผู้ใช้เท่านั้น</div>
+            </div>
+        </div>
 
+        <div class="section-label"><Database :size="13" /> เซิร์ฟเวอร์</div>
         <div class="form-grid">
             <div class="form-group">
-                <label>Host / IP Address</label>
-                <input type="text" :value="dbConfig.host"
-                    @input="update('host', ($event.target as HTMLInputElement).value)" placeholder="192.168.1.100"
-                    autocapitalize="none" autocorrect="off" spellcheck="false" />
+                <label for="db-host">โฮสต์ / IP ของเซิร์ฟเวอร์</label>
+                <input id="db-host" type="text" :value="dbConfig.host"
+                    @input="update('host', ($event.target as HTMLInputElement).value)"
+                    placeholder="เช่น 192.168.1.100" autocapitalize="none" autocorrect="off"
+                    spellcheck="false" />
             </div>
             <div class="form-group">
-                <label>Port</label>
-                <input type="number" :value="dbConfig.port"
+                <label for="db-port">พอร์ต</label>
+                <input id="db-port" type="number" :value="dbConfig.port"
                     @input="update('port', parseInt(($event.target as HTMLInputElement).value) || 1433)"
                     placeholder="1433" />
+                <span class="field-hint">ค่าเริ่มต้นของ SQL Server คือ 1433</span>
             </div>
             <div class="form-group">
-                <label>Database Name</label>
-                <input type="text" :value="dbConfig.database"
-                    @input="update('database', ($event.target as HTMLInputElement).value)" placeholder="INVS"
-                    autocapitalize="none" autocorrect="off" spellcheck="false" />
+                <label for="db-name">ชื่อฐานข้อมูล</label>
+                <input id="db-name" type="text" :value="dbConfig.database"
+                    @input="update('database', ($event.target as HTMLInputElement).value)"
+                    placeholder="INVS" autocapitalize="none" autocorrect="off" spellcheck="false" />
+            </div>
+        </div>
+
+        <div class="section-label section-spaced"><User :size="13" /> ผู้ใช้งาน</div>
+        <div class="form-grid-2">
+            <div class="form-group">
+                <label for="db-user">ชื่อผู้ใช้</label>
+                <input id="db-user" type="text" :value="dbConfig.username"
+                    @input="update('username', ($event.target as HTMLInputElement).value)"
+                    placeholder="เช่น sa" autocapitalize="none" autocorrect="off" spellcheck="false" />
             </div>
             <div class="form-group">
-                <label>Username</label>
-                <input type="text" :value="dbConfig.username"
-                    @input="update('username', ($event.target as HTMLInputElement).value)" placeholder="sa"
-                    autocapitalize="none" autocorrect="off" spellcheck="false" />
+                <label for="db-pass">รหัสผ่าน</label>
+                <div class="input-group">
+                    <input id="db-pass" :type="showPassword ? 'text' : 'password'"
+                        :value="dbConfig.password"
+                        @input="update('password', ($event.target as HTMLInputElement).value)"
+                        placeholder="••••••••" />
+                    <button type="button" class="btn btn-secondary btn-icon"
+                        :aria-label="showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'"
+                        @click="showPassword = !showPassword">
+                        <EyeOff v-if="showPassword" :size="15" />
+                        <Eye v-else :size="15" />
+                    </button>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" :value="dbConfig.password"
-                    @input="update('password', ($event.target as HTMLInputElement).value)" placeholder="••••••••" />
-            </div>
+        </div>
+
+        <div class="info-box section-spaced">
+            <ShieldCheck :size="15" />
+            <span>
+                รหัสผ่านถูกเข้ารหัสด้วย AES-256-GCM โดยกุญแจหลักเก็บใน Keychain ของระบบปฏิบัติการ
+                ไม่มีการบันทึกรหัสผ่านแบบข้อความล้วนลงดิสก์
+            </span>
         </div>
 
         <div class="actions actions-row">
-            <button class="btn btn-success btn-lg" :disabled="!isValid" @click="saveConfig">
-                <CheckCircle v-if="saveStatus === 'saved'" :size="16" />
-                <Save v-else :size="16" />
-                {{ saveStatus === 'saved' ? 'บันทึกแล้ว!' : 'บันทึกการตั้งค่า' }}
-            </button>
-            <button class="btn btn-primary btn-lg" :disabled="status === 'testing' || !isValid" @click="testConnection">
+            <button class="btn btn-primary" :disabled="status === 'testing' || !isValid"
+                @click="testConnection">
                 <span v-if="status === 'testing'" class="spinner"></span>
-                <Plug v-else :size="16" />
+                <Plug v-else :size="15" />
                 {{ status === "testing" ? "กำลังทดสอบ..." : "ทดสอบการเชื่อมต่อ" }}
             </button>
+            <button class="btn btn-secondary" :disabled="!isValid" @click="saveConfig">
+                <CheckCircle v-if="saveStatus === 'saved'" :size="15" />
+                <Save v-else :size="15" />
+                {{ saveStatus === "saved" ? "บันทึกแล้ว" : "บันทึกการตั้งค่า" }}
+            </button>
         </div>
 
-        <div v-if="message" :class="['status-msg', statusClass, 'status-stack']">
-            <component :is="statusIcon" :size="15" />
+        <div v-if="message"
+            :class="['status-msg', 'status-stack',
+                status === 'success' ? 'status-success' : status === 'error' ? 'status-error' : 'status-info']">
+            <CheckCircle v-if="status === 'success'" :size="15" />
+            <XCircle v-else-if="status === 'error'" :size="15" />
+            <span v-else class="spinner"></span>
             {{ message }}
         </div>
-
-
     </div>
 
     <div class="card">
-        <div class="card-title">
-            <Table2 :size="17" /> ข้อมูลที่ระบบดึงจาก INVS
-        </div>
-        <div class="card-desc">
-            ตารางที่ใช้งานถูกจำกัดเฉพาะข้อมูลอ่านอย่างเดียว เพื่อให้การเชื่อมต่อปลอดภัยและคงรูปแบบรายงานเดิม
+        <div class="card-head">
+            <div>
+                <div class="card-title"><Table2 :size="16" /> ข้อมูลที่ระบบดึงจาก INVS</div>
+                <div class="card-desc">
+                    ใช้งานเฉพาะตารางที่จำเป็นและเปิดสิทธิ์อ่านอย่างเดียว เพื่อความปลอดภัยของระบบเดิม
+                </div>
+            </div>
         </div>
         <div class="table-wrap">
             <table class="data-table">
@@ -151,16 +199,19 @@ async function testConnection() {
                     <tr>
                         <th>ตาราง</th>
                         <th>คอลัมน์ที่ใช้</th>
+                        <th class="text-center">สิทธิ์</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td><code>MS_IVO</code></td>
                         <td><code>INVOICE_NO, VENDOR_CODE, TOTAL_COST, RECEIVE_DATE</code></td>
+                        <td class="text-center"><span class="badge badge-success"><Lock :size="11" /> อ่านเท่านั้น</span></td>
                     </tr>
                     <tr>
                         <td><code>COMPANY</code></td>
                         <td><code>COMPANY_CODE, COMPANY_NAME, KEY_WORD</code></td>
+                        <td class="text-center"><span class="badge badge-success"><Lock :size="11" /> อ่านเท่านั้น</span></td>
                     </tr>
                 </tbody>
             </table>
@@ -168,9 +219,3 @@ async function testConnection() {
     </div>
 </div>
 </template>
-
-<style scoped>
-.data-table td code {
-    white-space: nowrap;
-}
-</style>

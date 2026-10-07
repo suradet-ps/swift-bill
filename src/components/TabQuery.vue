@@ -3,33 +3,20 @@ import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useToast } from "../composables/useToast";
-import { Search, CalendarDays, AlertTriangle, XCircle, BarChart3, Pill, Package, FolderOpen } from 'lucide-vue-next'
+import { formatMoney, formatPeriodLabel } from "../lib/format";
+import type { DbConfig, PreviewData } from "../lib/types";
+import {
+    AlertTriangle,
+    CalendarDays,
+    Database,
+    FolderOpen,
+    Package,
+    Pill,
+    Search,
+    XCircle,
+} from "lucide-vue-next";
 
 const toast = useToast();
-
-interface DbConfig {
-    host: string;
-    port: number;
-    database: string;
-    username: string;
-    password: string;
-}
-
-interface InvoiceRow {
-    invoice_no: string;
-    vendor_code: string;
-    company_name: string;
-    company_keyword: string;
-    total_cost: number;
-    receive_date: string;
-    category: string;
-}
-
-interface PreviewData {
-    invoices: InvoiceRow[];
-    total_amount: number;
-    row_count: number;
-}
 
 const props = defineProps<{
     dbConfig: DbConfig;
@@ -46,50 +33,45 @@ const emit = defineEmits<{
     (e: "update:outputDir", v: string): void;
     (e: "update:previewData", v: PreviewData | null): void;
     (e: "update:round", v: number): void;
+    (e: "navigate", tab: "settings"): void;
 }>();
 
 const loading = ref(false);
 const error = ref("");
 
-const THAI_MONTHS = [
-    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
-    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
-];
-
-const THAI_MONTHS_SHORT = [
-    "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
-    "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
-];
-
 function toApiDate(html: string): string {
     return html.replace(/-/g, "");
 }
 
-function buddhistYear(html: string): number {
-    return parseInt(html.substring(0, 4)) + 543;
-}
+const periodLabel = computed(() =>
+    formatPeriodLabel(props.startDateHtml, props.endDateHtml)
+);
 
-function getMonth(html: string): number {
-    return parseInt(html.substring(5, 7));
-}
-
-function getDay(html: string): number {
-    return parseInt(html.substring(8, 10));
-}
-
-const periodLabel = computed(() => {
-    if (!props.startDateHtml || !props.endDateHtml) return "กรุณาเลือกช่วงวันที่";
-    const sy = buddhistYear(props.startDateHtml);
-    const sm = getMonth(props.startDateHtml);
-    const sd = getDay(props.startDateHtml);
-    const ey = buddhistYear(props.endDateHtml);
-    const em = getMonth(props.endDateHtml);
-    const ed = getDay(props.endDateHtml);
-    if (sm === em && sy === ey) {
-        return `${sd}–${ed} ${THAI_MONTHS[sm - 1]} ${sy}`;
-    }
-    return `${sd} ${THAI_MONTHS_SHORT[sm - 1]} – ${ed} ${THAI_MONTHS_SHORT[em - 1]} ${ey}`;
+const activePeriod = computed(() => {
+    if (!props.startDateHtml || !props.endDateHtml) return 0;
+    const sd = parseInt(props.startDateHtml.substring(8, 10), 10);
+    const ed = parseInt(props.endDateHtml.substring(8, 10), 10);
+    if (sd === 1 && ed === 10) return 1;
+    if (sd === 11 && ed === 20) return 2;
+    if (sd >= 21) return 3;
+    return 0;
 });
+
+function pad(n: number): string {
+    return String(n).padStart(2, "0");
+}
+
+/** Fill the 10-day disbursement period (งวด) for the selected month. */
+function applyPeriod(part: 1 | 2 | 3) {
+    const base = props.startDateHtml ? new Date(props.startDateHtml) : new Date();
+    const y = base.getFullYear();
+    const m = base.getMonth();
+    const last = new Date(y, m + 1, 0).getDate();
+    const from = part === 1 ? 1 : part === 2 ? 11 : 21;
+    const to = part === 1 ? 10 : part === 2 ? 20 : last;
+    emit("update:startDateHtml", `${y}-${pad(m + 1)}-${pad(from)}`);
+    emit("update:endDateHtml", `${y}-${pad(m + 1)}-${pad(to)}`);
+}
 
 const isDbReady = computed(
     () => props.dbConfig.host.trim() !== "" && props.dbConfig.username.trim() !== ""
@@ -98,11 +80,13 @@ const canFetch = computed(
     () => isDbReady.value && props.startDateHtml !== "" && props.endDateHtml !== ""
 );
 
-const drugCount = computed(() =>
-    props.previewData?.invoices.filter((i) => i.category === "ยา").length ?? 0
+const drugCount = computed(
+    () => props.previewData?.invoices.filter((i) => i.category === "ยา").length ?? 0
 );
-const supplyCount = computed(() =>
-    props.previewData?.invoices.filter((i) => i.category === "วัสดุเภสัชกรรม").length ?? 0
+const supplyCount = computed(
+    () =>
+        props.previewData?.invoices.filter((i) => i.category === "วัสดุเภสัชกรรม")
+            .length ?? 0
 );
 
 async function browseFolder() {
@@ -110,7 +94,7 @@ async function browseFolder() {
         const selected = await open({
             directory: true,
             multiple: false,
-            title: "เลือกโฟลเดอร์สำหรับบันทึก PDF",
+            title: "เลือกโฟลเดอร์สำหรับบันทึกไฟล์รายงาน",
         });
         if (selected && typeof selected === "string") {
             emit("update:outputDir", selected);
@@ -118,10 +102,6 @@ async function browseFolder() {
     } catch (e) {
         console.error("Browse folder error:", e);
     }
-}
-
-function formatMoney(n: number): string {
-    return n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 async function fetchData() {
@@ -141,7 +121,7 @@ async function fetchData() {
         } else {
             toast.success(
                 "ดึงข้อมูลสำเร็จ",
-                `พบ ${data.row_count} รายการ ยอดรวม ${data.total_amount.toLocaleString("th-TH", { minimumFractionDigits: 2 })} บาท`
+                `พบ ${data.row_count} รายการ ยอดรวม ${formatMoney(data.total_amount)} บาท`
             );
         }
     } catch (e) {
@@ -156,78 +136,113 @@ async function fetchData() {
 <template>
 <div class="query-wrap">
     <div class="page-header">
-        <h2 class="page-title">ดึงข้อมูล</h2>
-        <p class="page-desc">เลือกช่วงวันที่แล้วกด "ดึงข้อมูล" เพื่อโหลดรายการบิลจาก INVS</p>
+        <div class="page-header-text">
+            <h2 class="page-title">ดึงข้อมูล</h2>
+            <p class="page-desc">
+                เลือกช่วงวันที่ของบิลและรอบการทำงาน ระบบจะโหลดรายการจาก INVS
+                มาให้ตรวจสอบก่อนสร้างรายงาน
+            </p>
+        </div>
     </div>
 
-    <!-- Date range card -->
     <div class="card">
-        <div class="card-title">
-            <CalendarDays :size="17" /> ช่วงวันที่และตำแหน่งจัดเก็บไฟล์
-        </div>
-        <div class="card-desc">
-            เลือกช่วงวันที่ของบิล กำหนดรอบ และระบุโฟลเดอร์ปลายทางสำหรับไฟล์รายงาน
+        <div class="card-head">
+            <div>
+                <div class="card-title"><CalendarDays :size="16" /> ช่วงวันที่และรอบการทำงาน</div>
+                <div class="card-desc">ช่วงวันที่ควรตรงกับงวดของงานเบิกจ่ายในรอบนี้</div>
+            </div>
         </div>
 
-        <div class="form-grid-2 query-form-grid">
+        <div class="form-grid-2">
             <div class="form-group">
-                <label>วันที่เริ่มต้น</label>
-                <input type="date" :value="startDateHtml"
+                <label for="query-from">วันที่เริ่มต้น</label>
+                <input id="query-from" type="date" :value="startDateHtml"
                     @input="emit('update:startDateHtml', ($event.target as HTMLInputElement).value)" />
             </div>
             <div class="form-group">
-                <label>วันที่สิ้นสุด</label>
-                <input type="date" :value="endDateHtml"
+                <label for="query-to">วันที่สิ้นสุด</label>
+                <input id="query-to" type="date" :value="endDateHtml"
                     @input="emit('update:endDateHtml', ($event.target as HTMLInputElement).value)" />
             </div>
+        </div>
+
+        <div class="period-presets">
+            <span class="preset-label">เลือกงวดอัตโนมัติ</span>
+            <button type="button" class="btn btn-sm"
+                :class="activePeriod === 1 ? 'btn-primary' : 'btn-secondary'"
+                @click="applyPeriod(1)">งวด 1 (1-10)</button>
+            <button type="button" class="btn btn-sm"
+                :class="activePeriod === 2 ? 'btn-primary' : 'btn-secondary'"
+                @click="applyPeriod(2)">งวด 2 (11-20)</button>
+            <button type="button" class="btn btn-sm"
+                :class="activePeriod === 3 ? 'btn-primary' : 'btn-secondary'"
+                @click="applyPeriod(3)">งวด 3 (21-สิ้นเดือน)</button>
+        </div>
+
+        <div v-if="periodLabel" class="query-period">
+            <span class="badge badge-brand"><CalendarDays :size="12" /> {{ periodLabel }}</span>
+        </div>
+
+        <hr class="card-divider" />
+
+        <div class="form-grid-2">
             <div class="form-group">
-                <label>รอบที่ (สำหรับรายงานทั้ง 3 ระบบ)</label>
-                <input type="number" min="1" max="99" :value="round"
+                <label for="query-round">รอบที่</label>
+                <input id="query-round" type="number" min="1" max="99" :value="round"
                     @input="emit('update:round', parseInt(($event.target as HTMLInputElement).value) || 1)" />
-                <span class="field-hint">รอบภายในช่วงเวลาเดียวกัน เช่น รอบ 1, 2, 3…</span>
+                <span class="field-hint">รอบภายในงวดเดียวกัน เช่น รอบ 1, 2, 3</span>
             </div>
-            <div class="form-group full">
-                <label>โฟลเดอร์ที่ต้องการบันทึก</label>
-                <div class="input-with-browse">
-                    <input type="text" :value="outputDir"
+            <div class="form-group">
+                <label for="query-dir">โฟลเดอร์จัดเก็บไฟล์รายงาน</label>
+                <div class="input-group">
+                    <input id="query-dir" type="text" :value="outputDir"
                         @input="emit('update:outputDir', ($event.target as HTMLInputElement).value)"
-                        placeholder="เช่น C:\Reports หรือ /Users/me/Documents (ปล่อยว่าง = โฟลเดอร์ปัจจุบัน)" />
-                    <button class="btn btn-browse" @click="browseFolder" type="button" title="เลือกโฟลเดอร์">
+                        placeholder="ปล่อยว่าง = โฟลเดอร์ปัจจุบัน" />
+                    <button type="button" class="btn btn-secondary" @click="browseFolder">
                         <FolderOpen :size="15" /> เลือก
                     </button>
                 </div>
-                <span class="field-hint">ระบบจะสร้างโฟลเดอร์ย่อย output/ ภายในโฟลเดอร์ที่ระบุ</span>
+                <span class="field-hint">ระบบจะสร้างโฟลเดอร์ output/ ภายในโฟลเดอร์ที่ระบุ</span>
             </div>
         </div>
 
-        <div v-if="startDateHtml && endDateHtml" class="period-badge">
-            <CalendarDays :size="14" /> {{ periodLabel }}
-        </div>
-
-        <div v-if="!isDbReady" class="status-msg status-warn status-stack">
-            <AlertTriangle :size="14" /> กรุณาตั้งค่าการเชื่อมต่อฐานข้อมูลก่อน (แท็บ ฐานข้อมูล)
+        <div v-if="!isDbReady" class="callout callout-warn status-stack">
+            <AlertTriangle :size="15" />
+            <div class="callout-body">
+                <span class="callout-title">ยังไม่ได้ตั้งค่าฐานข้อมูล</span>
+                <span class="callout-desc">ตั้งค่าการเชื่อมต่อ INVS ก่อนจึงจะดึงข้อมูลได้</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" @click="emit('navigate', 'settings')">
+                ไปที่ตั้งค่า
+            </button>
         </div>
 
         <div class="actions actions-row">
             <button class="btn btn-primary btn-lg" :disabled="!canFetch || loading" @click="fetchData">
                 <span v-if="loading" class="spinner"></span>
+                <Database v-else :size="16" />
                 {{ loading ? "กำลังโหลดข้อมูล..." : "ดึงข้อมูล" }}
             </button>
         </div>
 
         <div v-if="error" class="status-msg status-error status-stack">
-            <XCircle :size="14" /> {{ error }}
+            <XCircle :size="15" /> {{ error }}
         </div>
     </div>
 
-    <!-- Preview results -->
+    <!-- Results -->
     <div v-if="previewData" class="card">
-        <div class="card-title">
-            <BarChart3 :size="17" /> ผลการดึงข้อมูล
+        <div class="card-head">
+            <div>
+                <div class="card-title"><Database :size="16" /> ผลการดึงข้อมูล</div>
+                <div class="card-desc">ตรวจสอบรายการให้ถูกต้องก่อนไปสร้างรายงาน</div>
+            </div>
+            <span v-if="previewData.row_count > 0" class="badge badge-success">
+                พร้อมสร้างรายงาน
+            </span>
         </div>
 
-        <!-- Summary stats -->
-        <div class="preview-summary">
+        <div class="stat-grid">
             <div class="summary-stat">
                 <span class="summary-stat-label">จำนวนรายการ</span>
                 <span class="summary-stat-value">{{ previewData.row_count }}</span>
@@ -237,24 +252,24 @@ async function fetchData() {
                 <span class="summary-stat-value money">{{ formatMoney(previewData.total_amount) }}</span>
             </div>
             <div class="summary-stat">
-                <span class="summary-stat-label">
-                    <Pill :size="13" /> ยา
-                </span>
+                <span class="summary-stat-label"><Pill :size="12" /> ยา</span>
                 <span class="summary-stat-value">{{ drugCount }} ใบ</span>
             </div>
             <div class="summary-stat">
-                <span class="summary-stat-label">
-                    <Package :size="13" /> วัสดุเภสัชกรรม
-                </span>
+                <span class="summary-stat-label"><Package :size="12" /> วัสดุเภสัชกรรม</span>
                 <span class="summary-stat-value">{{ supplyCount }} ใบ</span>
             </div>
         </div>
 
-        <div v-if="previewData.row_count === 0" class="empty-result">
-            <AlertTriangle :size="14" /> ไม่พบข้อมูลในช่วงวันที่นี้ กรุณาเลือกช่วงวันที่ใหม่
+        <div v-if="previewData.row_count === 0" class="callout callout-warn card-body">
+            <AlertTriangle :size="15" />
+            <div class="callout-body">
+                <span class="callout-title">ไม่พบข้อมูลในช่วงวันที่นี้</span>
+                <span class="callout-desc">ลองเลือกช่วงวันที่ใหม่หรือตรวจสอบงวดของงานอีกครั้ง</span>
+            </div>
         </div>
 
-        <div v-else class="table-wrap">
+        <div v-else class="table-wrap card-body">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -292,112 +307,36 @@ async function fetchData() {
         </div>
     </div>
 
-    <div v-else-if="!loading" class="card empty-card">
-        <div class="empty-icon">
-            <Search :size="44" stroke-width="1.5" />
+    <div v-else-if="!loading" class="card">
+        <div class="empty-state">
+            <div class="empty-icon"><Search :size="40" stroke-width="1.5" /></div>
+            <div class="empty-title">ยังไม่ได้ดึงข้อมูล</div>
+            <p class="empty-desc">
+                เลือกช่วงวันที่ด้านบนแล้วกด "ดึงข้อมูล" เพื่อดูรายการบิล
+                ข้อมูลชุดนี้จะถูกใช้กับรายงานทั้ง 3 ฉบับ
+            </p>
         </div>
-        <div class="empty-text">เลือกช่วงวันที่แล้วกด "ดึงข้อมูล" เพื่อดูรายการบิล</div>
-        <div class="empty-hint">ข้อมูลที่ดึงมาจะถูกใช้สำหรับสร้างรายงานทั้ง 3 ระบบ</div>
     </div>
 </div>
 </template>
 
 <style scoped>
-.query-form-grid {
-    margin-top: 2px;
-}
-
-.empty-result {
-    text-align: center;
-    padding: 24px;
-    color: var(--c-warn);
-    font-size: 15px;
-    background: var(--c-warn-bg);
-    box-shadow: var(--shadow-ring);
-    border-radius: var(--radius-lg);
-}
-
-.empty-card {
-    text-align: center;
-    padding: 64px 28px !important;
-}
-
-.empty-icon {
-    color: var(--c-text-light);
-    margin-bottom: 18px;
-    display: flex;
-    justify-content: center;
-}
-
-.empty-text {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--c-text);
-    margin-bottom: 8px;
-    letter-spacing: -0.3px;
-}
-
-.empty-hint {
-    font-size: 14px;
-    color: var(--c-text-light);
-    line-height: 1.65;
-}
-
-.num {
-    color: var(--c-text-light);
-    font-size: 13px;
-}
-
-.money-cell {
-    font-variant-numeric: tabular-nums;
-    font-size: 14px;
-}
-
-code {
-    font-family: "Consolas", "Fira Code", monospace;
-    font-size: 12px;
-    background: var(--c-primary-light);
-    color: var(--c-primary);
-    padding: 2px 6px;
-    border-radius: 4px;
-}
-
-.input-with-browse {
-    display: flex;
-    gap: 10px;
-    align-items: stretch;
-}
-
-.input-with-browse input {
-    flex: 1;
-    min-width: 0;
-}
-
-.btn-browse {
-    white-space: nowrap;
-    padding: 0 16px;
-    font-size: 14px;
-    font-weight: 500;
-    border: none;
-    border-radius: 10px;
-    background: var(--c-surface-raised);
-    box-shadow: var(--shadow-ring);
-    color: var(--c-text);
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s, box-shadow 0.15s, transform 0.15s;
+.period-presets {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--sp-2);
+    flex-wrap: wrap;
+    margin-top: var(--sp-4);
 }
 
-.btn-browse:hover {
-    background: rgba(255, 240, 236, 0.92);
-    color: var(--c-primary);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-card);
+.preset-label {
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    color: var(--c-text-light);
+    margin-right: var(--sp-1);
 }
 
-.btn-browse:active {
-    transform: translateY(0);
+.query-period {
+    margin-top: var(--sp-3);
 }
 </style>
