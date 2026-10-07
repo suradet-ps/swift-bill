@@ -25,7 +25,7 @@ const ROW_H: f64 = 6.2;
 /// Lowest y (mm from top) that content may reach, just above the footer rule.
 const CONTENT_BOTTOM: f64 = 198.5;
 /// Vertical space needed below the last row for the totals row and signature.
-const SUMMARY_H: f64 = ROW_H + 4.0 + 15.5;
+const SUMMARY_H: f64 = ROW_H + 7.5 + 15.5;
 
 /// Signature labels for the three signature columns on the last page.
 const SIGNATURES: [&str; 3] = ["ผู้รับ", "ผู้ส่ง", "ผู้ส่ง"];
@@ -101,7 +101,7 @@ fn draw_summary(
     0.8,
     COLOR_ACCENT,
   );
-  op_signature_row3(ops, ctx, font_id, top_y + ROW_H + 4.0, &SIGNATURES);
+  op_signature_row3(ops, ctx, font_id, top_y + ROW_H + 7.5, &SIGNATURES);
 }
 
 /// Generate the Invoice Submission PDF and write it to `output_dir`.
@@ -412,7 +412,7 @@ pub fn generate_invoice_submission_pdf(
         cur_y,
         grand_total,
       );
-      cur_y += SUMMARY_H;
+      cur_y += ROW_H;
     }
 
     for &cx in &xs[1..9usize] {
@@ -453,7 +453,7 @@ pub fn generate_invoice_submission_pdf(
         &ctx,
         cx,
         TABLE_TOP,
-        TABLE_TOP + 1.0 + SUMMARY_H,
+        TABLE_TOP + 1.0 + ROW_H,
         0.3,
         COLOR_BORDER,
       );
