@@ -595,7 +595,7 @@ pub fn op_doc_header(
   );
 }
 
-/// Page footer: hairline, product credit on the left, page number on the right.
+/// Page footer: hairline and the page number on the right.
 pub fn op_page_footer(ops: &mut Vec<Op>, ctx: &PageCtx, page_idx: usize, total_pages: usize) {
   let y = ctx.page_h - 7.5;
   op_hline_colored(
@@ -606,16 +606,6 @@ pub fn op_page_footer(ops: &mut Vec<Op>, ctx: &PageCtx, page_idx: usize, total_p
     y - 4.0,
     0.4,
     COLOR_BORDER,
-  );
-  op_text_colored(
-    ops,
-    ctx,
-    &ctx.font_id,
-    9.5,
-    MARGIN,
-    y,
-    "Swift Bill · โรงพยาบาลสระโบสถ์",
-    COLOR_MUTED,
   );
   op_text_right_colored(
     ops,
