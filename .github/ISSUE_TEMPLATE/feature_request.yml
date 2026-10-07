@@ -1,0 +1,45 @@
+name: Feature request
+description: Suggest an idea or improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. Please describe the problem before the solution.
+
+        Swift Bill is a focused reporter: it turns INVS invoices into the three
+        statutory disbursement reports. Features that fit that focus are
+        welcome; the out-of-scope list lives in `docs/ROADMAP.md`.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is hard, missing, or slow today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Project constraints
+      options:
+        - label: This keeps INVS read-only (no INSERT / UPDATE / DELETE / DDL).
+          required: true
+        - label: This keeps numbers deterministic (preview, Excel, and PDF agree for the same inputs).
+          required: true
+        - label: This works offline on the hospital LAN (no cloud dependency).
+          required: true
+        - label: This stays within generating the three disbursement reports, not general procurement or ERP scope.
+          required: true

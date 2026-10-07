@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Development guide
+    url: https://github.com/suradet-ps/swift-bill/blob/main/AGENTS.md
+    about: Architecture, INVS schema notes, round and numbering invariants, and dev rules
+  - name: Contributing guide
+    url: https://github.com/suradet-ps/swift-bill/blob/main/docs/CONTRIBUTING.md
+    about: Branching, commit conventions, and pull request workflow
+  - name: Roadmap and scope
+    url: https://github.com/suradet-ps/swift-bill/blob/main/docs/ROADMAP.md
+    about: What is planned, what is deliberately out of scope, and the accuracy goals
