@@ -27,6 +27,7 @@ const COL_W: [f64; 12] = [
   26.0, 24.0, 24.0, 18.0, 30.0, 18.0, 20.0, 12.0, 22.0, 24.0, 25.0, 24.0,
 ];
 
+/// Left edge (mm) of every column, including both outer table edges.
 fn col_x() -> Vec<f64> {
   let mut xs = vec![MARGIN];
   let mut x = MARGIN;

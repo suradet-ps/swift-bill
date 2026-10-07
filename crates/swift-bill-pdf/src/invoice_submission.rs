@@ -25,6 +25,7 @@ const ROW_H: f64 = 12.0;
 /// Column widths (mm), summing to the printable width of 267 mm.
 const COL_W: [f64; 9] = [12.0, 24.0, 30.0, 18.0, 12.0, 24.0, 70.0, 28.0, 49.0];
 
+/// Left edge (mm) of every column, including both outer table edges.
 fn col_x() -> Vec<f64> {
   let mut xs = vec![MARGIN];
   let mut x = MARGIN;

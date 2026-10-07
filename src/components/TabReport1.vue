@@ -153,6 +153,7 @@ async function previewReport() {
     previewError.value = "";
     editableRows.value = [];
     exportedFile.value = null;
+    exportedPdfFile.value = null;
     exportError.value = "";
     carryForward.value = null;
 

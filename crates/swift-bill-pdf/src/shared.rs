@@ -397,6 +397,7 @@ pub const COLOR_TINT: (f64, f64, f64) = (0.978, 0.930, 0.920);
 /// White text on the accent header band.
 pub const COLOR_WHITE: (f64, f64, f64) = (1.0, 1.0, 1.0);
 
+/// Build an RGB color from components in the 0.0-1.0 range.
 fn rgb(r: f64, g: f64, b: f64) -> Color {
   Color::Rgb(Rgb {
     r: r as f32,
