@@ -9,8 +9,8 @@ body:
         Thanks for helping make Swift Bill better. Please fill in the fields below.
 
         Numeric accuracy is the core promise of this app. A wrong baht, a wrong
-        register (เลขทะเบียนคุม) or PO number, or a dropped invoice row is an
-        audit event. If that is what you hit, say so up front.
+        register number or PO number, or a dropped invoice row is an audit
+        event. If that is what you hit, say so up front.
   - type: textarea
     id: summary
     attributes:
@@ -47,14 +47,14 @@ body:
     attributes:
       label: Where in the app?
       options:
-        - ตั้งค่าฐานข้อมูล (database settings)
-        - ดึงข้อมูล (fetch data)
-        - ส่งหนี้เบิกยา (invoice submission)
-        - สรุปรับยา (receiving summary)
-        - เบิกยาปะหน้า (cover letters)
-        - ล็อกเลข (number locks)
-        - ประวัติรอบ (round history)
-        - ภาพรวม (overview)
+        - Database settings
+        - Fetch data
+        - Invoice submission
+        - Receiving summary
+        - Cover letters
+        - Number locks
+        - Round history
+        - Overview
         - Not sure / something else
     validations:
       required: true
