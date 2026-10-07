@@ -10,6 +10,7 @@
 //! to disk only as ciphertext. The master key itself never touches disk; it
 //! lives in the OS keychain.
 
+#[cfg(test)]
 use encryptman::MasterKey;
 use encryptman_keyring::Vault;
 
@@ -21,11 +22,13 @@ const SERVICE: &str = "swift-bill";
 ///
 /// Used by tests so the crypto path can be exercised in headless/CI
 /// environments where no credential store is available.
+#[cfg(test)]
 pub fn encrypt_with_key(key: &MasterKey, plaintext: &str) -> Result<String, String> {
   encryptman::encrypt(key, plaintext).map_err(|e| e.to_string())
 }
 
 /// Decrypt `ciphertext` with an explicit master key (no OS keychain access).
+#[cfg(test)]
 pub fn decrypt_with_key(key: &MasterKey, ciphertext: &str) -> Result<String, String> {
   encryptman::decrypt(key, ciphertext).map_err(|e| e.to_string())
 }
