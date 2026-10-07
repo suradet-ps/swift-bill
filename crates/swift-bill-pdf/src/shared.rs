@@ -377,6 +377,279 @@ pub fn output_path(output_dir: &str, filename: String) -> String {
     .to_string()
 }
 
+// ---------------------------------------------------------------------------
+// Report chrome: brand palette and higher-level drawing helpers shared by the
+// two landscape reports (ส่งหนี้เบิกยา and สรุปรับยา).
+// ---------------------------------------------------------------------------
+
+/// Brand accent (`#C8102E`), used for the document rule, subtitle, and totals.
+pub const COLOR_ACCENT: (f64, f64, f64) = (0.784, 0.063, 0.180);
+/// Near-black ink for body text.
+pub const COLOR_INK: (f64, f64, f64) = (0.13, 0.12, 0.12);
+/// Muted gray for secondary labels and the footer.
+pub const COLOR_MUTED: (f64, f64, f64) = (0.45, 0.42, 0.40);
+/// Light warm border for table grid lines.
+pub const COLOR_BORDER: (f64, f64, f64) = (0.84, 0.81, 0.78);
+/// Warm zebra stripe for alternating data rows.
+pub const COLOR_ZEBRA: (f64, f64, f64) = (0.980, 0.968, 0.955);
+/// Accent-tinted fill for the totals row.
+pub const COLOR_TINT: (f64, f64, f64) = (0.978, 0.930, 0.920);
+/// White text on the accent header band.
+pub const COLOR_WHITE: (f64, f64, f64) = (1.0, 1.0, 1.0);
+
+fn rgb(r: f64, g: f64, b: f64) -> Color {
+  Color::Rgb(Rgb {
+    r: r as f32,
+    g: g as f32,
+    b: b as f32,
+    icc_profile: None,
+  })
+}
+
+/// Set the current fill color (applies to text and filled shapes).
+pub fn op_set_fill(ops: &mut Vec<Op>, color: (f64, f64, f64)) {
+  ops.push(Op::SetFillColor {
+    col: rgb(color.0, color.1, color.2),
+  });
+}
+
+/// Set the current stroke color (applies to lines and stroked shapes).
+pub fn op_set_stroke(ops: &mut Vec<Op>, color: (f64, f64, f64)) {
+  ops.push(Op::SetOutlineColor {
+    col: rgb(color.0, color.1, color.2),
+  });
+}
+
+/// Like [`op_text`], but with an explicit text color.
+#[allow(clippy::too_many_arguments)]
+pub fn op_text_colored(
+  ops: &mut Vec<Op>,
+  ctx: &PageCtx,
+  font_id: &FontId,
+  size: f64,
+  x_mm: f64,
+  top_y_mm: f64,
+  s: &str,
+  color: (f64, f64, f64),
+) {
+  op_set_fill(ops, color);
+  op_text(ops, ctx, font_id, size, x_mm, top_y_mm, s);
+  op_set_fill(ops, COLOR_INK);
+}
+
+/// Centered [`op_text_colored`].
+#[allow(clippy::too_many_arguments)]
+pub fn op_text_center_colored(
+  ops: &mut Vec<Op>,
+  ctx: &PageCtx,
+  font_id: &FontId,
+  size: f64,
+  col_x: f64,
+  col_w: f64,
+  top_y: f64,
+  s: &str,
+  color: (f64, f64, f64),
+) {
+  let tw = text_width_mm(s, size);
+  let x = col_x + (col_w - tw) / 2.0;
+  op_text_colored(ops, ctx, font_id, size, x.max(col_x + 0.5), top_y, s, color);
+}
+
+/// Right-aligned [`op_text_colored`].
+#[allow(clippy::too_many_arguments)]
+pub fn op_text_right_colored(
+  ops: &mut Vec<Op>,
+  ctx: &PageCtx,
+  font_id: &FontId,
+  size: f64,
+  col_x: f64,
+  col_w: f64,
+  top_y: f64,
+  padding_right: f64,
+  s: &str,
+  color: (f64, f64, f64),
+) {
+  let tw = text_width_mm(s, size);
+  let x = col_x + col_w - tw - padding_right;
+  op_text_colored(ops, ctx, font_id, size, x.max(col_x + 0.5), top_y, s, color);
+}
+
+/// Horizontal line with an explicit thickness and color.
+pub fn op_hline_colored(
+  ops: &mut Vec<Op>,
+  ctx: &PageCtx,
+  x1: f64,
+  x2: f64,
+  top_y: f64,
+  thickness: f64,
+  color: (f64, f64, f64),
+) {
+  ops.push(Op::SetOutlineThickness {
+    pt: pt_f(thickness),
+  });
+  op_set_stroke(ops, color);
+  op_hline(ops, ctx, x1, x2, top_y);
+}
+
+/// Vertical line with an explicit thickness and color.
+pub fn op_vline_colored(
+  ops: &mut Vec<Op>,
+  ctx: &PageCtx,
+  x: f64,
+  top_y1: f64,
+  top_y2: f64,
+  thickness: f64,
+  color: (f64, f64, f64),
+) {
+  ops.push(Op::SetOutlineThickness {
+    pt: pt_f(thickness),
+  });
+  op_set_stroke(ops, color);
+  op_vline(ops, ctx, x, top_y1, top_y2);
+}
+
+/// Document header used by both landscape reports: hospital name, accent rule,
+/// bold title, and an accent-colored subtitle.
+pub fn op_doc_header(
+  ops: &mut Vec<Op>,
+  ctx: &PageCtx,
+  font_id: &FontId,
+  title: &str,
+  subtitle: &str,
+) {
+  op_text_colored(
+    ops,
+    ctx,
+    font_id,
+    11.0,
+    MARGIN,
+    12.5,
+    "โรงพยาบาลสระโบสถ์",
+    COLOR_MUTED,
+  );
+  op_text_right_colored(
+    ops,
+    ctx,
+    font_id,
+    11.0,
+    0.0,
+    ctx.page_w - MARGIN,
+    12.5,
+    0.0,
+    "ระบบจัดทำเอกสารเบิกจ่ายยา",
+    COLOR_MUTED,
+  );
+  op_hline_colored(
+    ops,
+    ctx,
+    MARGIN,
+    ctx.page_w - MARGIN,
+    15.5,
+    1.4,
+    COLOR_ACCENT,
+  );
+  op_text_center_colored(
+    ops,
+    ctx,
+    &ctx.font_bold_id,
+    19.0,
+    0.0,
+    ctx.page_w,
+    27.0,
+    title,
+    COLOR_INK,
+  );
+  op_text_center_colored(
+    ops,
+    ctx,
+    &ctx.font_bold_id,
+    13.5,
+    0.0,
+    ctx.page_w,
+    34.5,
+    subtitle,
+    COLOR_ACCENT,
+  );
+}
+
+/// Page footer: hairline, product credit on the left, page number on the right.
+pub fn op_page_footer(ops: &mut Vec<Op>, ctx: &PageCtx, page_idx: usize, total_pages: usize) {
+  let y = ctx.page_h - 7.5;
+  op_hline_colored(
+    ops,
+    ctx,
+    MARGIN,
+    ctx.page_w - MARGIN,
+    y - 4.0,
+    0.4,
+    COLOR_BORDER,
+  );
+  op_text_colored(
+    ops,
+    ctx,
+    &ctx.font_id,
+    9.5,
+    MARGIN,
+    y,
+    "Swift Bill · โรงพยาบาลสระโบสถ์",
+    COLOR_MUTED,
+  );
+  op_text_right_colored(
+    ops,
+    ctx,
+    &ctx.font_id,
+    9.5,
+    0.0,
+    ctx.page_w - MARGIN,
+    y,
+    0.0,
+    &format!("หน้า {}/{}", page_idx + 1, total_pages),
+    COLOR_MUTED,
+  );
+}
+
+/// Two-column signature block for the last page of a report.
+pub fn op_signature_block(
+  ops: &mut Vec<Op>,
+  ctx: &PageCtx,
+  font_id: &FontId,
+  top_y: f64,
+  left_label: &str,
+  left_role: &str,
+  right_label: &str,
+  right_role: &str,
+) {
+  let col_w = 72.0;
+  let right_x = ctx.page_w - MARGIN - col_w;
+  for (col_x, label, role) in [
+    (MARGIN, left_label, left_role),
+    (right_x, right_label, right_role),
+  ] {
+    op_text_center(ops, ctx, font_id, 12.5, col_x, col_w, top_y, label);
+    op_text_center(
+      ops,
+      ctx,
+      font_id,
+      12.5,
+      col_x,
+      col_w,
+      top_y + 7.0,
+      "ลงชื่อ................................",
+    );
+    op_text_center(
+      ops,
+      ctx,
+      font_id,
+      12.5,
+      col_x,
+      col_w,
+      top_y + 13.0,
+      "(............................................)",
+    );
+    op_text_center(ops, ctx, font_id, 12.0, col_x, col_w, top_y + 19.5, role);
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;

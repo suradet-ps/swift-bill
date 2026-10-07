@@ -2,7 +2,7 @@
 import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useToast } from "../composables/useToast";
-import { BarChart3, AlertTriangle, Hash, CalendarDays, Eye, XCircle, Pencil, FileSpreadsheet, CheckCircle, ArrowRight, Save, Package, Banknote, X } from 'lucide-vue-next'
+import { BarChart3, AlertTriangle, Hash, CalendarDays, Eye, XCircle, Pencil, FileSpreadsheet, FileText, CheckCircle, ArrowRight, Save, Package, Banknote, X } from 'lucide-vue-next'
 
 interface DbConfig {
     host: string;
@@ -136,6 +136,8 @@ const editableRows = ref<ReceivingSummaryRow[]>([]);
 const carryForward = ref<CarryForward | null>(null);
 const numberingInfo = ref<ReceivingNumberingInfo | null>(null);
 const exportedFile = ref<string | null>(null);
+const pdfLoading = ref(false);
+const exportedPdfFile = ref<string | null>(null);
 
 // Thai date picker for Approval Date
 // Holds the native <input type="date"> value (YYYY-MM-DD).
@@ -194,6 +196,7 @@ async function previewReport() {
     previewError.value = "";
     editableRows.value = [];
     exportedFile.value = null;
+    exportedPdfFile.value = null;
     exportError.value = "";
     carryForward.value = null;
     numberingInfo.value = null;
@@ -265,8 +268,46 @@ async function exportExcel() {
     }
 }
 
+async function exportPdf() {
+    if (!canExport.value) return;
+    pdfLoading.value = true;
+    exportError.value = "";
+    exportedPdfFile.value = null;
+
+    try {
+        const res = await invoke<ReceivingSummaryGenerateResult>("export_receiving_summary_pdf", {
+            params: {
+                rows: editableRows.value,
+                year: props.year,
+                month: props.month,
+                round: props.round,
+                start_po_no: props.startPoNo,
+                start_purchase_no: props.startPurchaseNo,
+                start_reg_no: props.startRegNo,
+                start_running: props.startRunning,
+                output_dir: props.outputDir,
+            },
+        });
+        exportedPdfFile.value = res.files[0];
+        carryForward.value = res.carry_forward;
+        numberingInfo.value = res.numbering_info;
+        emit("carryResult", {
+            next_reg_no: res.carry_forward.next_reg_no,
+            next_running: res.carry_forward.next_running,
+            next_po_no: res.carry_forward.next_po_no,
+            next_purchase_no: res.carry_forward.next_purchase_no,
+        });
+        toast.success("บันทึก PDF สำเร็จ", `บันทึกไฟล์เรียบร้อยแล้ว`);
+    } catch (e) {
+        exportError.value = String(e);
+        toast.error("บันทึก PDF ล้มเหลว", String(e));
+    } finally {
+        pdfLoading.value = false;
+    }
+}
+
 function saveToHistory() {
-    if (!carryForward.value || !exportedFile.value) return;
+    if (!carryForward.value || (!exportedFile.value && !exportedPdfFile.value)) return;
     const now = new Date().toISOString();
     const monthShort = THAI_MONTHS_SHORT[props.month - 1] ?? "";
     const entry: RoundHistoryEntry = {
@@ -499,12 +540,17 @@ function saveToHistory() {
             </table>
         </div>
 
-        <!-- Export button -->
+        <!-- Export buttons -->
         <div class="actions">
             <button class="btn btn-success btn-lg" :disabled="!canExport || exportLoading" @click="exportExcel">
                 <span v-if="exportLoading" class="spinner"></span>
                 <FileSpreadsheet v-if="!exportLoading" :size="16" />
                 {{ exportLoading ? "กำลังส่งออก Excel..." : "ส่งออก Excel" }}
+            </button>
+            <button class="btn btn-primary btn-lg" :disabled="!canExport || pdfLoading" @click="exportPdf">
+                <span v-if="pdfLoading" class="spinner"></span>
+                <FileText v-if="!pdfLoading" :size="16" />
+                {{ pdfLoading ? "กำลังบันทึก PDF..." : "บันทึก PDF" }}
             </button>
         </div>
 
@@ -514,9 +560,9 @@ function saveToHistory() {
     </div>
 
     <!-- Export result -->
-    <div v-if="exportedFile" class="card">
+    <div v-if="exportedFile || exportedPdfFile" class="card">
         <div class="card-title">
-            <CheckCircle :size="17" /> ส่งออก Excel สำเร็จ
+            <CheckCircle :size="17" /> ส่งออกสำเร็จ
         </div>
 
         <div class="result-card">
@@ -524,9 +570,13 @@ function saveToHistory() {
                 <FileSpreadsheet :size="15" /> ไฟล์ที่สร้าง
             </div>
             <ul class="file-list">
-                <li>
+                <li v-if="exportedFile">
                     <FileSpreadsheet :size="14" /> <code>{{ fileName(exportedFile) }}</code>
                     <span class="file-path">{{ exportedFile }}</span>
+                </li>
+                <li v-if="exportedPdfFile">
+                    <FileText :size="14" /> <code>{{ fileName(exportedPdfFile) }}</code>
+                    <span class="file-path">{{ exportedPdfFile }}</span>
                 </li>
             </ul>
             <div class="result-stats">

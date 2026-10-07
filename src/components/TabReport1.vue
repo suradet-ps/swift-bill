@@ -2,7 +2,7 @@
 import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useToast } from "../composables/useToast";
-import { BarChart3, AlertTriangle, Hash, Info, Eye, XCircle, Pencil, FileSpreadsheet, CheckCircle, ArrowRight, Save, Package, Banknote } from 'lucide-vue-next'
+import { BarChart3, AlertTriangle, Hash, Info, Eye, XCircle, Pencil, FileSpreadsheet, FileText, CheckCircle, ArrowRight, Save, Package, Banknote } from 'lucide-vue-next'
 
 interface DbConfig {
     host: string;
@@ -109,6 +109,8 @@ const exportError = ref("");
 const editableRows = ref<InvoiceSubmissionRow[]>([]);
 const carryForward = ref<CarryForward | null>(null);
 const exportedFile = ref<string | null>(null);
+const pdfLoading = ref(false);
+const exportedPdfFile = ref<string | null>(null);
 
 // Computed properties
 
@@ -208,8 +210,37 @@ async function exportExcel() {
     }
 }
 
+async function exportPdf() {
+    if (!canExport.value) return;
+    pdfLoading.value = true;
+    exportError.value = "";
+    exportedPdfFile.value = null;
+
+    try {
+        const res = await invoke<GenerateResult>("export_invoice_submission_pdf", {
+            params: {
+                rows: editableRows.value,
+                year: props.year,
+                month: props.month,
+                round: props.round,
+                start_reg_no: props.startRegNo,
+                start_running: props.startRunning,
+                output_dir: props.outputDir,
+            },
+        });
+        exportedPdfFile.value = res.files[0];
+        carryForward.value = res.carry_forward;
+        toast.success("บันทึก PDF สำเร็จ", `บันทึกไฟล์เรียบร้อยแล้ว`);
+    } catch (e) {
+        exportError.value = String(e);
+        toast.error("บันทึก PDF ล้มเหลว", String(e));
+    } finally {
+        pdfLoading.value = false;
+    }
+}
+
 function saveToHistory() {
-    if (!carryForward.value || !exportedFile.value) return;
+    if (!carryForward.value || (!exportedFile.value && !exportedPdfFile.value)) return;
     const now = new Date().toISOString();
     const monthShort = THAI_MONTHS_SHORT[props.month - 1] ?? "";
     const entry: RoundHistoryEntry = {
@@ -376,12 +407,17 @@ function saveToHistory() {
             </table>
         </div>
 
-        <!-- Export button -->
+        <!-- Export buttons -->
         <div class="actions">
             <button class="btn btn-success btn-lg" :disabled="!canExport || exportLoading" @click="exportExcel">
                 <span v-if="exportLoading" class="spinner"></span>
                 <FileSpreadsheet v-if="!exportLoading" :size="16" />
                 {{ exportLoading ? "กำลังส่งออก Excel..." : "ส่งออก Excel" }}
+            </button>
+            <button class="btn btn-primary btn-lg" :disabled="!canExport || pdfLoading" @click="exportPdf">
+                <span v-if="pdfLoading" class="spinner"></span>
+                <FileText v-if="!pdfLoading" :size="16" />
+                {{ pdfLoading ? "กำลังบันทึก PDF..." : "บันทึก PDF" }}
             </button>
         </div>
 
@@ -391,9 +427,9 @@ function saveToHistory() {
     </div>
 
     <!-- Export result -->
-    <div v-if="exportedFile" class="card">
+    <div v-if="exportedFile || exportedPdfFile" class="card">
         <div class="card-title">
-            <CheckCircle :size="17" /> ส่งออก Excel สำเร็จ
+            <CheckCircle :size="17" /> ส่งออกสำเร็จ
         </div>
 
         <div class="result-card">
@@ -401,9 +437,13 @@ function saveToHistory() {
                 <FileSpreadsheet :size="15" /> ไฟล์ที่สร้าง
             </div>
             <ul class="file-list">
-                <li>
+                <li v-if="exportedFile">
                     <FileSpreadsheet :size="14" /> <code>{{ fileName(exportedFile) }}</code>
                     <span class="file-path">{{ exportedFile }}</span>
+                </li>
+                <li v-if="exportedPdfFile">
+                    <FileText :size="14" /> <code>{{ fileName(exportedPdfFile) }}</code>
+                    <span class="file-path">{{ exportedPdfFile }}</span>
                 </li>
             </ul>
             <div class="result-stats">

@@ -25,7 +25,10 @@ use swift_bill_core::{
 };
 use swift_bill_db::fetch_invoices;
 use swift_bill_excel::{generate_invoice_submission_excel, generate_receiving_summary_excel};
-use swift_bill_pdf::generate_cover_letters_pdf_template as generate_cover_letters_pdf;
+use swift_bill_pdf::{
+  generate_cover_letters_pdf_template as generate_cover_letters_pdf,
+  generate_invoice_submission_pdf, generate_receiving_summary_pdf,
+};
 
 // Helpers
 
@@ -158,7 +161,41 @@ async fn export_invoice_submission_excel(
   })
 }
 
-// Tauri commands: Receiving Summary (สรุปรับยา) Preview + Excel export
+#[tauri::command]
+async fn export_invoice_submission_pdf(
+  params: InvoiceSubmissionExcelParams,
+) -> Result<GenerateResult, String> {
+  let n = params.rows.len() as u32;
+  let (next_reg_no, next_running) =
+    swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
+
+  let total_amount: f64 = params.rows.iter().map(|r| r.total_amount).sum();
+  let total_rows = params.rows.len();
+
+  let output_dir = prepare_output_dir(&params.output_dir)?;
+  let file = generate_invoice_submission_pdf(
+    &params.rows,
+    params.year,
+    params.month,
+    params.round,
+    &output_dir,
+  )?;
+
+  Ok(GenerateResult {
+    files: vec![file],
+    total_rows,
+    total_amount,
+    carry_forward: CarryForward {
+      next_reg_no,
+      next_running,
+      next_po_no: 0,
+      next_purchase_no: 0,
+      remaining_balance: 0.0,
+    },
+  })
+}
+
+// Tauri commands: Receiving Summary (สรุปรับยา) Preview + Excel/PDF export
 
 #[tauri::command]
 async fn preview_receiving_summary(
@@ -228,6 +265,50 @@ async fn export_receiving_summary_excel(
 
   let output_dir = prepare_output_dir(&params.output_dir)?;
   let file = generate_receiving_summary_excel(
+    &params.rows,
+    params.year,
+    params.month,
+    params.round,
+    &output_dir,
+  )?;
+
+  Ok(ReceivingSummaryGenerateResult {
+    files: vec![file],
+    total_rows,
+    total_amount,
+    carry_forward: CarryForward {
+      next_reg_no,
+      next_running,
+      next_po_no: allocation.next_po_no,
+      next_purchase_no: allocation.next_purchase_no,
+      remaining_balance: 0.0,
+    },
+    numbering_info: allocation.numbering_info,
+  })
+}
+
+#[tauri::command]
+async fn export_receiving_summary_pdf(
+  app: tauri::AppHandle,
+  params: ReceivingSummaryExcelParams,
+) -> Result<ReceivingSummaryGenerateResult, String> {
+  let n = params.rows.len() as u32;
+  let (next_reg_no, next_running) =
+    swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
+  let locks = number_locks::load_number_locks(&app)?;
+  let allocation = swift_bill_core::numbering::allocate_receiving_numbers(
+    params.year,
+    params.start_po_no,
+    params.start_purchase_no,
+    n,
+    &locks,
+  );
+
+  let total_amount: f64 = params.rows.iter().map(|r| r.total_amount).sum();
+  let total_rows = params.rows.len();
+
+  let output_dir = prepare_output_dir(&params.output_dir)?;
+  let file = generate_receiving_summary_pdf(
     &params.rows,
     params.year,
     params.month,
@@ -421,8 +502,10 @@ pub fn run() {
       fetch_preview,
       preview_invoice_submission,
       export_invoice_submission_excel,
+      export_invoice_submission_pdf,
       preview_receiving_summary,
       export_receiving_summary_excel,
+      export_receiving_summary_pdf,
       generate_cover_letters,
       load_round_history,
       save_round_entry,
