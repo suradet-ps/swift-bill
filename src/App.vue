@@ -260,7 +260,7 @@ async function applyHistoryEntry(entry: RoundHistoryEntry) {
                 <span class="nav-text">ภาพรวม</span>
             </button>
 
-            <span class="nav-section-label">งานรายเดือน</span>
+            <span class="nav-section-label">ระบบงาน</span>
             <button class="nav-item" :class="{ active: activeTab === 'query' }"
                 :aria-current="activeTab === 'query' ? 'page' : undefined"
                 @click="activeTab = 'query'">
