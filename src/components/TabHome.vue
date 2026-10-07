@@ -83,7 +83,7 @@ const steps = computed<FlowStep[]>(() => [
         desc: "รายการส่งหนี้สินและเอกสารเบิกเงิน ส่งออก Excel หรือ PDF",
         state: props.generated.report1 ? "done" : dataReady.value ? "ready" : "blocked",
         target: "report1",
-        actionLabel: props.generated.report1 ? "ดูรายงาน" : "ทำรายงาน",
+        actionLabel: props.generated.report1 ? "ดูรายงาน" : dataReady.value ? "ทำรายงาน" : "ดูรายละเอียด",
     },
     {
         key: "report2",
@@ -91,7 +91,7 @@ const steps = computed<FlowStep[]>(() => [
         desc: "สรุปยอดรับยาประจำรอบ พร้อมเลขขอซื้อ รายงาน และใบสั่งซื้อ",
         state: props.generated.report2 ? "done" : dataReady.value ? "ready" : "blocked",
         target: "report2",
-        actionLabel: props.generated.report2 ? "ดูรายงาน" : "ทำรายงาน",
+        actionLabel: props.generated.report2 ? "ดูรายงาน" : dataReady.value ? "ทำรายงาน" : "ดูรายละเอียด",
     },
     {
         key: "report3",
@@ -99,7 +99,7 @@ const steps = computed<FlowStep[]>(() => [
         desc: "หนังสือเบิกยาปะหน้า พร้อมคำนวณงบประมาณคงเหลือต่อบิล",
         state: props.generated.report3 ? "done" : dataReady.value ? "ready" : "blocked",
         target: "report3",
-        actionLabel: props.generated.report3 ? "ดูรายงาน" : "ทำรายงาน",
+        actionLabel: props.generated.report3 ? "ดูรายงาน" : dataReady.value ? "ทำรายงาน" : "ดูรายละเอียด",
     },
 ]);
 

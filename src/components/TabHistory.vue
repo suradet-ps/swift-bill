@@ -62,7 +62,6 @@ function doDelete(id: string) {
             <div class="entry-header">
                 <div class="entry-title-row">
                     <span class="entry-label">{{ entry.label }}</span>
-                    <span class="badge badge-brand">รอบ {{ entry.round }}</span>
                     <span v-if="entry.source_tab" class="badge badge-neutral">{{ entry.source_tab }}</span>
                 </div>
                 <div class="entry-meta">
