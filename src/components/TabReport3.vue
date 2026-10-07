@@ -169,10 +169,6 @@ function saveToHistory() {
     <div class="page-header">
         <div class="page-header-text">
             <h2 class="page-title">เบิกยาปะหน้า</h2>
-            <p class="page-desc">
-                หนังสือเบิกยาปะหน้า A4 แนวนอน หนึ่งหน้าต่อหนึ่งบิล รวมในไฟล์เดียว
-                พร้อมตารางงบประมาณที่คำนวณต่อเนื่องทุกหน้า
-            </p>
         </div>
         <div class="page-actions">
             <span v-if="previewData" class="badge badge-brand">{{ periodText }}</span>
@@ -187,10 +183,7 @@ function saveToHistory() {
         <div class="empty-state">
             <div class="empty-icon"><Database :size="40" stroke-width="1.5" /></div>
             <div class="empty-title">ยังไม่มีข้อมูลสำหรับสร้างรายงาน</div>
-            <p class="empty-desc">
-                เริ่มจากขั้นตอนที่ 1 เลือกช่วงวันที่และดึงรายการบิลจาก INVS
-                จากนั้นกลับมาที่หน้านี้เพื่อสร้างหนังสือเบิกยาปะหน้า
-            </p>
+            <p class="empty-desc">ดึงข้อมูลก่อนสร้างรายงาน</p>
             <div class="empty-actions">
                 <button class="btn btn-primary" @click="emit('navigate', 'query')">
                     ไปที่ดึงข้อมูล
@@ -217,9 +210,6 @@ function saveToHistory() {
             <div class="card-head">
                 <div>
                     <div class="card-title"><Wallet :size="16" /> ตั้งค่างบประมาณ</div>
-                    <div class="card-desc">
-                        ยอดงบประมาณคำนวณต่อเนื่องกันทุกบิล โหลดค่าก่อนหน้าจากประวัติรอบได้
-                    </div>
                 </div>
             </div>
 
@@ -229,7 +219,6 @@ function saveToHistory() {
                     <label for="r3-year">ปีงบประมาณ</label>
                     <input id="r3-year" type="number" min="2500" max="2700"
                         :value="year > 0 ? year : ''" placeholder="เช่น 2569" @input="onYearInput" />
-                    <span class="field-hint">ค่าเริ่มต้นมาจากช่วงวันที่ เลือกแก้ไขได้</span>
                 </div>
                 <div class="form-group">
                     <label for="r3-month">เดือน</label>
@@ -238,7 +227,6 @@ function saveToHistory() {
                 <div class="form-group">
                     <label for="r3-round">รอบที่</label>
                     <input id="r3-round" type="text" :value="round" readonly />
-                    <span class="field-hint">กำหนดที่หน้าดึงข้อมูล</span>
                 </div>
             </div>
 
@@ -249,14 +237,12 @@ function saveToHistory() {
                     <input id="r3-budget" type="number" step="0.01" min="0" :value="budgetTotal"
                         @input="emit('update:budgetTotal', parseFloat(($event.target as HTMLInputElement).value) || 0)"
                         placeholder="5843812.60" />
-                    <span class="field-hint">งบประมาณที่ได้รับจัดสรรทั้งปีงบประมาณ</span>
                 </div>
                 <div class="form-group">
                     <label for="r3-balance">ยอดคงเหลือก่อนรอบนี้ (บาท)</label>
                     <input id="r3-balance" type="number" step="0.01" min="0" :value="previousBalance"
                         @input="emit('update:previousBalance', parseFloat(($event.target as HTMLInputElement).value) || 0)"
                         placeholder="ยอดที่เหลือจากรอบที่แล้ว" />
-                    <span class="field-hint">ยอดคงเหลือสุดท้ายจากรอบก่อนหน้า</span>
                 </div>
                 <div class="form-group">
                     <label for="r3-approval">วันที่ขออนุมัติ (แสดงบนเอกสาร)</label>
@@ -316,7 +302,6 @@ function saveToHistory() {
             <div class="card-head">
                 <div>
                     <div class="card-title"><CheckCircle :size="16" /> สร้าง PDF สำเร็จ</div>
-                    <div class="card-desc">เปิดไฟล์จากโฟลเดอร์ที่กำหนด แล้วบันทึกรอบนี้เพื่อใช้ต่อในรอบถัดไป</div>
                 </div>
             </div>
 
@@ -360,7 +345,6 @@ function saveToHistory() {
         <AlertTriangle :size="15" />
         <div class="callout-body">
             <span class="callout-title">ช่วงวันที่นี้ยังไม่มีรายการบิล</span>
-            <span class="callout-desc">ลองเลือกช่วงวันที่ใหม่ที่หน้าดึงข้อมูล</span>
         </div>
         <button class="btn btn-secondary btn-sm" @click="emit('navigate', 'query')">ดึงข้อมูลใหม่</button>
     </div>

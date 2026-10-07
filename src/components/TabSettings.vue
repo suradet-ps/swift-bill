@@ -82,10 +82,6 @@ async function testConnection() {
     <div class="page-header">
         <div class="page-header-text">
             <h2 class="page-title">ตั้งค่าฐานข้อมูล</h2>
-            <p class="page-desc">
-                เชื่อมต่อ SQL Server (INVS) ด้วย TDS โดยตรง ไม่ต้องติดตั้ง ODBC Driver
-                และไม่มีการเขียนข้อมูลกลับเข้าฐานข้อมูล
-            </p>
         </div>
         <div class="page-actions">
             <span class="badge" :class="dbConnected === true ? 'badge-success' : dbConnected === false ? 'badge-danger' : 'badge-neutral'">
@@ -99,7 +95,6 @@ async function testConnection() {
         <div class="card-head">
             <div>
                 <div class="card-title"><Server :size="16" /> การเชื่อมต่อ SQL Server</div>
-                <div class="card-desc">ข้อมูลนี้ถูกเข้ารหัสและเก็บไว้ในเครื่องของผู้ใช้เท่านั้น</div>
             </div>
         </div>
 
@@ -117,7 +112,6 @@ async function testConnection() {
                 <input id="db-port" type="number" :value="dbConfig.port"
                     @input="update('port', parseInt(($event.target as HTMLInputElement).value) || 1433)"
                     placeholder="1433" />
-                <span class="field-hint">ค่าเริ่มต้นของ SQL Server คือ 1433</span>
             </div>
             <div class="form-group">
                 <label for="db-name">ชื่อฐานข้อมูล</label>
@@ -154,10 +148,7 @@ async function testConnection() {
 
         <div class="info-box section-spaced">
             <ShieldCheck :size="15" />
-            <span>
-                รหัสผ่านถูกเข้ารหัสด้วย AES-256-GCM โดยกุญแจหลักเก็บใน Keychain ของระบบปฏิบัติการ
-                ไม่มีการบันทึกรหัสผ่านแบบข้อความล้วนลงดิสก์
-            </span>
+            <span>รหัสผ่านถูกเข้ารหัสและเก็บใน Keychain ของเครื่อง</span>
         </div>
 
         <div class="actions actions-row">
@@ -188,9 +179,6 @@ async function testConnection() {
         <div class="card-head">
             <div>
                 <div class="card-title"><Table2 :size="16" /> ข้อมูลที่ระบบดึงจาก INVS</div>
-                <div class="card-desc">
-                    ใช้งานเฉพาะตารางที่จำเป็นและเปิดสิทธิ์อ่านอย่างเดียว เพื่อความปลอดภัยของระบบเดิม
-                </div>
             </div>
         </div>
         <div class="table-wrap">

@@ -227,10 +227,6 @@ function saveToHistory() {
     <div class="page-header">
         <div class="page-header-text">
             <h2 class="page-title">ส่งหนี้เบิกยา</h2>
-            <p class="page-desc">
-                รายการส่งหนี้สินและเอกสารเบิกเงิน ส่งออกเป็น Excel สำหรับตรวจสอบ
-                และ PDF สำหรับจัดพิมพ์
-            </p>
         </div>
         <div class="page-actions">
             <span v-if="previewData" class="badge badge-brand">{{ periodText }}</span>
@@ -245,10 +241,7 @@ function saveToHistory() {
         <div class="empty-state">
             <div class="empty-icon"><Database :size="40" stroke-width="1.5" /></div>
             <div class="empty-title">ยังไม่มีข้อมูลสำหรับสร้างรายงาน</div>
-            <p class="empty-desc">
-                เริ่มจากขั้นตอนที่ 1 เลือกช่วงวันที่และดึงรายการบิลจาก INVS
-                จากนั้นกลับมาที่หน้านี้เพื่อสร้างรายงาน
-            </p>
+            <p class="empty-desc">ดึงข้อมูลก่อนสร้างรายงาน</p>
             <div class="empty-actions">
                 <button class="btn btn-primary" @click="emit('navigate', 'query')">
                     ไปที่ดึงข้อมูล
@@ -275,9 +268,6 @@ function saveToHistory() {
             <div class="card-head">
                 <div>
                     <div class="card-title"><Hash :size="16" /> ตั้งค่าเลขทะเบียนคุม</div>
-                    <div class="card-desc">
-                        ค่าต่อเนื่องจากรอบก่อน สามารถโหลดจากประวัติรอบได้ที่เมนูประวัติรอบ
-                    </div>
                 </div>
             </div>
 
@@ -286,7 +276,6 @@ function saveToHistory() {
                     <label for="r1-year">ปีงบประมาณ</label>
                     <input id="r1-year" type="number" min="2500" max="2700"
                         :value="year > 0 ? year : ''" placeholder="เช่น 2569" @input="onYearInput" />
-                    <span class="field-hint">ค่าเริ่มต้นมาจากช่วงวันที่ เลือกแก้ไขได้</span>
                 </div>
                 <div class="form-group">
                     <label for="r1-month">เดือน</label>
@@ -295,29 +284,24 @@ function saveToHistory() {
                 <div class="form-group">
                     <label for="r1-round">รอบที่</label>
                     <input id="r1-round" type="text" :value="round" readonly />
-                    <span class="field-hint">กำหนดที่หน้าดึงข้อมูล</span>
                 </div>
                 <div class="form-group">
                     <label for="r1-reg">เลขทะเบียนคุมเริ่มต้น</label>
                     <input id="r1-reg" type="text" :value="startRegNo"
                         @input="emit('update:startRegNo', ($event.target as HTMLInputElement).value)"
                         placeholder="เช่น 69ภ12" />
-                    <span class="field-hint">เลขทะเบียนเล่มแรกของรอบนี้</span>
                 </div>
                 <div class="form-group">
                     <label for="r1-running">ลำดับเริ่มต้นในสมุด (0-9)</label>
                     <input id="r1-running" type="number" min="0" max="9" :value="startRunning"
                         @input="emit('update:startRunning', parseInt(($event.target as HTMLInputElement).value) || 0)" />
-                    <span class="field-hint">เริ่มเล่มใหม่ให้ใส่ 0</span>
+                    <span class="field-hint">เล่มใหม่ใส่ 0</span>
                 </div>
             </div>
 
             <div class="info-box section-spaced">
                 <Info :size="15" />
-                <span>
-                    แต่ละสมุดทะเบียนมี 10 ลำดับ (0-9) เมื่อครบจะขึ้นเล่มใหม่โดยอัตโนมัติ
-                    เช่น 69ภ12 ลำดับ 8 จะต่อด้วย 69ภ12(8), 69ภ12(9), 69ภ13(0)
-                </span>
+                <span>สมุดทะเบียนละ 10 ลำดับ (0-9) เมื่อครบระบบจะขึ้นเล่มใหม่ให้อัตโนมัติ</span>
             </div>
 
             <div class="actions actions-row">
@@ -338,7 +322,6 @@ function saveToHistory() {
             <div class="card-head">
                 <div>
                     <div class="card-title"><Pencil :size="16" /> ตัวอย่างข้อมูล (แก้ไขได้)</div>
-                    <div class="card-desc">ตรวจสอบและแก้ไขข้อมูลก่อนส่งออก คอลัมน์สีเทาคำนวณอัตโนมัติ</div>
                 </div>
             </div>
 
@@ -410,7 +393,6 @@ function saveToHistory() {
             <div class="card-head">
                 <div>
                     <div class="card-title"><CheckCircle :size="16" /> ส่งออกสำเร็จ</div>
-                    <div class="card-desc">เปิดไฟล์จากโฟลเดอร์ที่กำหนด แล้วบันทึกรอบนี้เพื่อใช้ต่อในรอบถัดไป</div>
                 </div>
             </div>
 
@@ -458,7 +440,6 @@ function saveToHistory() {
         <AlertTriangle :size="15" />
         <div class="callout-body">
             <span class="callout-title">ช่วงวันที่นี้ยังไม่มีรายการบิล</span>
-            <span class="callout-desc">ลองเลือกช่วงวันที่ใหม่ที่หน้าดึงข้อมูล</span>
         </div>
         <button class="btn btn-secondary btn-sm" @click="emit('navigate', 'query')">ดึงข้อมูลใหม่</button>
     </div>

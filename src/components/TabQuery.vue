@@ -138,10 +138,6 @@ async function fetchData() {
     <div class="page-header">
         <div class="page-header-text">
             <h2 class="page-title">ดึงข้อมูล</h2>
-            <p class="page-desc">
-                เลือกช่วงวันที่ของบิลและรอบการทำงาน ระบบจะโหลดรายการจาก INVS
-                มาให้ตรวจสอบก่อนสร้างรายงาน
-            </p>
         </div>
     </div>
 
@@ -149,7 +145,6 @@ async function fetchData() {
         <div class="card-head">
             <div>
                 <div class="card-title"><CalendarDays :size="16" /> ช่วงวันที่และรอบการทำงาน</div>
-                <div class="card-desc">ช่วงวันที่ควรตรงกับงวดของงานเบิกจ่ายในรอบนี้</div>
             </div>
         </div>
 
@@ -190,7 +185,7 @@ async function fetchData() {
                 <label for="query-round">รอบที่</label>
                 <input id="query-round" type="number" min="1" max="99" :value="round"
                     @input="emit('update:round', parseInt(($event.target as HTMLInputElement).value) || 1)" />
-                <span class="field-hint">รอบภายในงวดเดียวกัน เช่น รอบ 1, 2, 3</span>
+                <span class="field-hint">เช่น 1, 2, 3</span>
             </div>
             <div class="form-group">
                 <label for="query-dir">โฟลเดอร์จัดเก็บไฟล์รายงาน</label>
@@ -202,7 +197,6 @@ async function fetchData() {
                         <FolderOpen :size="15" /> เลือก
                     </button>
                 </div>
-                <span class="field-hint">ระบบจะสร้างโฟลเดอร์ output/ ภายในโฟลเดอร์ที่ระบุ</span>
             </div>
         </div>
 
@@ -210,7 +204,6 @@ async function fetchData() {
             <AlertTriangle :size="15" />
             <div class="callout-body">
                 <span class="callout-title">ยังไม่ได้ตั้งค่าฐานข้อมูล</span>
-                <span class="callout-desc">ตั้งค่าการเชื่อมต่อ INVS ก่อนจึงจะดึงข้อมูลได้</span>
             </div>
             <button class="btn btn-secondary btn-sm" @click="emit('navigate', 'settings')">
                 ไปที่ตั้งค่า
@@ -235,7 +228,6 @@ async function fetchData() {
         <div class="card-head">
             <div>
                 <div class="card-title"><Database :size="16" /> ผลการดึงข้อมูล</div>
-                <div class="card-desc">ตรวจสอบรายการให้ถูกต้องก่อนไปสร้างรายงาน</div>
             </div>
             <span v-if="previewData.row_count > 0" class="badge badge-success">
                 พร้อมสร้างรายงาน
@@ -265,7 +257,6 @@ async function fetchData() {
             <AlertTriangle :size="15" />
             <div class="callout-body">
                 <span class="callout-title">ไม่พบข้อมูลในช่วงวันที่นี้</span>
-                <span class="callout-desc">ลองเลือกช่วงวันที่ใหม่หรือตรวจสอบงวดของงานอีกครั้ง</span>
             </div>
         </div>
 
@@ -311,10 +302,7 @@ async function fetchData() {
         <div class="empty-state">
             <div class="empty-icon"><Search :size="40" stroke-width="1.5" /></div>
             <div class="empty-title">ยังไม่ได้ดึงข้อมูล</div>
-            <p class="empty-desc">
-                เลือกช่วงวันที่ด้านบนแล้วกด "ดึงข้อมูล" เพื่อดูรายการบิล
-                ข้อมูลชุดนี้จะถูกใช้กับรายงานทั้ง 3 ฉบับ
-            </p>
+            <p class="empty-desc">เลือกช่วงวันที่ด้านบนแล้วกด "ดึงข้อมูล"</p>
         </div>
     </div>
 </div>

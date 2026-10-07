@@ -118,10 +118,7 @@ onMounted(loadEntries);
     <div class="page-header">
         <div class="page-header-text">
             <h2 class="page-title">ล็อกเลข</h2>
-            <p class="page-desc">
-                กันเลขชุดที่ไม่ต้องการใช้งานออกจากระบบ ระบบจะข้ามเลขเหล่านี้โดยอัตโนมัติ
-                ก่อนจัดสรรเลขขอซื้อ รายงาน และใบสั่งซื้อ
-            </p>
+            <p class="page-desc">กันเลขชุดที่ไม่ใช้งาน ระบบจะข้ามให้อัตโนมัติ</p>
         </div>
     </div>
 
@@ -129,9 +126,6 @@ onMounted(loadEntries);
         <div class="card-head">
             <div>
                 <div class="card-title"><Lock :size="16" /> สร้างเลขล็อกชุดใหม่</div>
-                <div class="card-desc">
-                    ล็อกเป็นชุด ชุดละ 1 บิล โดยเลขรายงานคำนวณจากเลขขอซื้อ + 1 ให้อัตโนมัติ
-                </div>
             </div>
         </div>
 
@@ -176,7 +170,6 @@ onMounted(loadEntries);
         <div class="card-head">
             <div>
                 <div class="card-title"><FileLock2 :size="16" /> ตัวอย่างชุดที่จะล็อก</div>
-                <div class="card-desc">ตรวจสอบตัวเลขก่อนกดบันทึก (แสดงสูงสุด 20 ชุดแรก)</div>
             </div>
         </div>
         <div class="table-wrap">
@@ -205,9 +198,6 @@ onMounted(loadEntries);
         <div class="card-head">
             <div>
                 <div class="card-title"><CalendarDays :size="16" /> รายการเลขที่ล็อกไว้</div>
-                <div class="card-desc">
-                    ระบบตรวจรายการนี้ทุกครั้งก่อนโหลดเลขจากประวัติ แสดงตัวอย่าง และส่งออกรายงานสรุปรับยา
-                </div>
             </div>
         </div>
 
@@ -226,7 +216,6 @@ onMounted(loadEntries);
         <div v-else-if="filteredEntries.length === 0" class="empty-state compact">
             <div class="empty-icon"><FileLock2 :size="30" stroke-width="1.5" /></div>
             <div class="empty-title">ยังไม่มีเลขล็อกสำหรับปีนี้</div>
-            <p class="empty-desc">สร้างชุดเลขล็อกจากแบบฟอร์มด้านบนได้เลย</p>
         </div>
 
         <div v-else class="table-wrap">

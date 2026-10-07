@@ -270,9 +270,6 @@ function saveToHistory() {
     <div class="page-header">
         <div class="page-header-text">
             <h2 class="page-title">สรุปรับยา</h2>
-            <p class="page-desc">
-                สรุปยอดรับยาประจำรอบ พร้อมจัดสรรเลขขอซื้อ รายงาน และใบสั่งซื้อต่อเนื่องจากรอบก่อน
-            </p>
         </div>
         <div class="page-actions">
             <span v-if="previewData" class="badge badge-brand">{{ periodText }}</span>
@@ -287,10 +284,7 @@ function saveToHistory() {
         <div class="empty-state">
             <div class="empty-icon"><Database :size="40" stroke-width="1.5" /></div>
             <div class="empty-title">ยังไม่มีข้อมูลสำหรับสร้างรายงาน</div>
-            <p class="empty-desc">
-                เริ่มจากขั้นตอนที่ 1 เลือกช่วงวันที่และดึงรายการบิลจาก INVS
-                จากนั้นกลับมาที่หน้านี้เพื่อสร้างรายงาน
-            </p>
+            <p class="empty-desc">ดึงข้อมูลก่อนสร้างรายงาน</p>
             <div class="empty-actions">
                 <button class="btn btn-primary" @click="emit('navigate', 'query')">
                     ไปที่ดึงข้อมูล
@@ -317,9 +311,6 @@ function saveToHistory() {
             <div class="card-head">
                 <div>
                     <div class="card-title"><Hash :size="16" /> ตั้งค่าเลขที่เอกสาร</div>
-                    <div class="card-desc">
-                        ค่าต่อเนื่องจากรอบก่อน สามารถโหลดจากประวัติรอบได้ที่เมนูประวัติรอบ
-                    </div>
                 </div>
             </div>
 
@@ -329,7 +320,6 @@ function saveToHistory() {
                     <label for="r2-year">ปีงบประมาณ</label>
                     <input id="r2-year" type="number" min="2500" max="2700"
                         :value="year > 0 ? year : ''" placeholder="เช่น 2569" @input="onYearInput" />
-                    <span class="field-hint">ค่าเริ่มต้นมาจากช่วงวันที่ เลือกแก้ไขได้</span>
                 </div>
                 <div class="form-group">
                     <label for="r2-month">เดือน</label>
@@ -338,7 +328,6 @@ function saveToHistory() {
                 <div class="form-group">
                     <label for="r2-round">รอบที่</label>
                     <input id="r2-round" type="text" :value="round" readonly />
-                    <span class="field-hint">กำหนดที่หน้าดึงข้อมูล</span>
                 </div>
             </div>
 
@@ -348,13 +337,12 @@ function saveToHistory() {
                     <label for="r2-po">เลขขอซื้อ / รายงาน เริ่มต้น</label>
                     <input id="r2-po" type="number" min="1" :value="startPoNo"
                         @input="emit('update:startPoNo', parseInt(($event.target as HTMLInputElement).value) || 1)" />
-                    <span class="field-hint">ขอซื้อใช้ค่านี้ รายงานจะบวก 1 ให้อัตโนมัติ</span>
+                    <span class="field-hint">รายงาน = ขอซื้อ + 1</span>
                 </div>
                 <div class="form-group">
                     <label for="r2-purchase">เลขใบสั่งซื้อ เริ่มต้น</label>
                     <input id="r2-purchase" type="number" min="1" :value="startPurchaseNo"
                         @input="emit('update:startPurchaseNo', parseInt(($event.target as HTMLInputElement).value) || 1)" />
-                    <span class="field-hint">นับอิสระจากเลขขอซื้อ</span>
                 </div>
                 <div class="form-group">
                     <label for="r2-reg">เลขทะเบียนคุมเริ่มต้น</label>
@@ -403,7 +391,6 @@ function saveToHistory() {
             <div class="card-head">
                 <div>
                     <div class="card-title"><AlertTriangle :size="16" /> เลขล็อกที่ระบบข้ามให้อัตโนมัติ</div>
-                    <div class="card-desc">ระบบตรวจเลขล็อกก่อนจัดสรรเลขจริงทุกครั้ง</div>
                 </div>
             </div>
             <div class="callout callout-warn">
@@ -411,9 +398,8 @@ function saveToHistory() {
                 <div class="callout-body">
                     <span class="callout-title">
                         เริ่มใช้เลขจริงที่ ขอซื้อ/รายงาน {{ numberingInfo.start_po_no }}
-                        และใบสั่งซื้อ {{ numberingInfo.start_purchase_no }}
+                        และใบสั่งซื้อ {{ numberingInfo.start_purchase_no }} (ข้าม {{ numberingInfo.skipped_locked_sets.length }} ชุด)
                     </span>
-                    <span class="callout-desc">ข้ามเลขล็อกไป {{ numberingInfo.skipped_locked_sets.length }} ชุด</span>
                 </div>
             </div>
             <div class="table-wrap section-spaced">
@@ -446,7 +432,6 @@ function saveToHistory() {
             <div class="card-head">
                 <div>
                     <div class="card-title"><Pencil :size="16" /> ตัวอย่างข้อมูล (แก้ไขได้)</div>
-                    <div class="card-desc">ตรวจสอบและแก้ไขข้อมูลก่อนส่งออก คอลัมน์สีเทาคำนวณอัตโนมัติ</div>
                 </div>
             </div>
 
@@ -523,7 +508,6 @@ function saveToHistory() {
             <div class="card-head">
                 <div>
                     <div class="card-title"><CheckCircle :size="16" /> ส่งออกสำเร็จ</div>
-                    <div class="card-desc">เปิดไฟล์จากโฟลเดอร์ที่กำหนด แล้วบันทึกรอบนี้เพื่อใช้ต่อในรอบถัดไป</div>
                 </div>
             </div>
 
@@ -579,7 +563,6 @@ function saveToHistory() {
         <AlertTriangle :size="15" />
         <div class="callout-body">
             <span class="callout-title">ช่วงวันที่นี้ยังไม่มีรายการบิล</span>
-            <span class="callout-desc">ลองเลือกช่วงวันที่ใหม่ที่หน้าดึงข้อมูล</span>
         </div>
         <button class="btn btn-secondary btn-sm" @click="emit('navigate', 'query')">ดึงข้อมูลใหม่</button>
     </div>

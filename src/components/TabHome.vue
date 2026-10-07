@@ -67,8 +67,8 @@ const steps = computed<FlowStep[]>(() => [
         key: "query",
         title: "ดึงข้อมูลบิลจาก INVS",
         desc: dataReady.value
-            ? `ดึงแล้ว ${props.previewData?.row_count ?? 0} รายการ รวม ${formatMoney(props.previewData?.total_amount ?? 0)} บาท`
-            : "เลือกช่วงวันที่และรอบการทำงาน แล้วดึงรายการบิลจากฐานข้อมูล",
+            ? `${props.previewData?.row_count ?? 0} รายการ · ${formatMoney(props.previewData?.total_amount ?? 0)} บาท`
+            : "เลือกช่วงวันที่และดึงรายการบิล",
         state: dataReady.value ? "done" : isConfigured.value ? "ready" : "blocked",
         target: isConfigured.value ? "query" : "settings",
         actionLabel: !isConfigured.value
@@ -80,7 +80,7 @@ const steps = computed<FlowStep[]>(() => [
     {
         key: "report1",
         title: "ส่งหนี้เบิกยา",
-        desc: "รายการส่งหนี้สินและเอกสารเบิกเงิน ส่งออก Excel หรือ PDF",
+        desc: "รายการส่งหนี้เบิกเงิน (Excel / PDF)",
         state: props.generated.report1 ? "done" : dataReady.value ? "ready" : "blocked",
         target: "report1",
         actionLabel: props.generated.report1 ? "ดูรายงาน" : dataReady.value ? "ทำรายงาน" : "ดูรายละเอียด",
@@ -88,7 +88,7 @@ const steps = computed<FlowStep[]>(() => [
     {
         key: "report2",
         title: "สรุปรับยา",
-        desc: "สรุปยอดรับยาประจำรอบ พร้อมเลขขอซื้อ รายงาน และใบสั่งซื้อ",
+        desc: "สรุปยอดรับยาประจำรอบ (Excel / PDF)",
         state: props.generated.report2 ? "done" : dataReady.value ? "ready" : "blocked",
         target: "report2",
         actionLabel: props.generated.report2 ? "ดูรายงาน" : dataReady.value ? "ทำรายงาน" : "ดูรายละเอียด",
@@ -96,7 +96,7 @@ const steps = computed<FlowStep[]>(() => [
     {
         key: "report3",
         title: "เบิกยาปะหน้า",
-        desc: "หนังสือเบิกยาปะหน้า พร้อมคำนวณงบประมาณคงเหลือต่อบิล",
+        desc: "หนังสือเบิกยาปะหน้า (PDF)",
         state: props.generated.report3 ? "done" : dataReady.value ? "ready" : "blocked",
         target: "report3",
         actionLabel: props.generated.report3 ? "ดูรายงาน" : dataReady.value ? "ทำรายงาน" : "ดูรายละเอียด",
@@ -130,9 +130,6 @@ async function testConnection() {
     <div class="page-header">
         <div class="page-header-text">
             <h2 class="page-title">ภาพรวม</h2>
-            <p class="page-desc">
-                ขั้นตอนการทำงานของรอบปัจจุบัน ตั้งแต่ดึงข้อมูลจนสร้างรายงานครบทั้ง 3 ฉบับ
-            </p>
         </div>
         <div class="page-actions">
             <button class="btn btn-primary" @click="emit('navigate', isConfigured ? 'query' : 'settings')">
@@ -146,10 +143,7 @@ async function testConnection() {
     <div v-if="!isConfigured" class="callout callout-warn">
         <AlertTriangle :size="16" />
         <div class="callout-body">
-            <span class="callout-title">ยังไม่ได้ตั้งค่าการเชื่อมต่อฐานข้อมูล</span>
-            <span class="callout-desc">
-                กรอกข้อมูล SQL Server (INVS) และทดสอบการเชื่อมต่อก่อนเริ่มดึงข้อมูลบิล
-            </span>
+            <span class="callout-title">ยังไม่ได้ตั้งค่าฐานข้อมูล</span>
         </div>
         <button class="btn btn-secondary btn-sm" @click="emit('navigate', 'settings')">
             ไปที่ตั้งค่า
@@ -160,8 +154,7 @@ async function testConnection() {
     <div v-else-if="dbConnected !== true" class="callout callout-info">
         <Database :size="16" />
         <div class="callout-body">
-            <span class="callout-title">ตั้งค่าฐานข้อมูลไว้แล้ว</span>
-            <span class="callout-desc">ทดสอบการเชื่อมต่ออีกครั้งเพื่อยืนยันว่าใช้งานได้ก่อนดึงข้อมูล</span>
+            <span class="callout-title">ยังไม่ได้ทดสอบการเชื่อมต่อ</span>
         </div>
         <button class="btn btn-secondary btn-sm" :disabled="testing" @click="testConnection">
             <span v-if="testing" class="spinner"></span>
@@ -175,7 +168,6 @@ async function testConnection() {
         <div class="card-head">
             <div>
                 <div class="card-title"><CalendarDays :size="16" /> รอบปัจจุบัน</div>
-                <div class="card-desc">ค่าที่ใช้กับรายงานทั้ง 3 ฉบับในรอบนี้</div>
             </div>
             <span v-if="dataReady" class="badge badge-success">
                 <Check :size="12" /> ข้อมูลพร้อมใช้งาน
@@ -200,18 +192,6 @@ async function testConnection() {
                 <span class="summary-stat-value money">{{ formatMoney(previewData?.total_amount ?? 0) }}</span>
             </div>
         </div>
-
-        <div v-if="!dataReady" class="card-body">
-            <div class="callout callout-info">
-                <AlertTriangle :size="16" />
-                <div class="callout-body">
-                    <span class="callout-title">ยังไม่มีข้อมูลของรอบนี้</span>
-                    <span class="callout-desc">
-                        ไปที่ขั้นตอนที่ 1 เพื่อเลือกช่วงวันที่และดึงรายการบิลก่อนสร้างรายงาน
-                    </span>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Workflow -->
@@ -219,7 +199,6 @@ async function testConnection() {
         <div class="card-head">
             <div>
                 <div class="card-title"><ClipboardList :size="16" /> ขั้นตอนการทำงาน</div>
-                <div class="card-desc">ทำตามลำดับ ระบบจะปลดล็อกขั้นถัดไปเมื่อข้อมูลพร้อม</div>
             </div>
         </div>
 
@@ -260,7 +239,6 @@ async function testConnection() {
         <div class="card-head">
             <div>
                 <div class="card-title"><History :size="16" /> รอบล่าสุด</div>
-                <div class="card-desc">โหลดค่า carry-forward จากรอบก่อนไปใช้กับรอบถัดไปได้ทันที</div>
             </div>
             <button class="btn btn-ghost btn-sm" @click="emit('navigate', 'history')">
                 ดูประวัติทั้งหมด <ArrowRight :size="13" />
@@ -268,12 +246,9 @@ async function testConnection() {
         </div>
 
         <div v-if="recentEntries.length === 0" class="empty-state compact">
-            <div class="empty-icon"><History :size="34" stroke-width="1.5" /></div>
+            <div class="empty-icon"><History :size="30" stroke-width="1.5" /></div>
             <div class="empty-title">ยังไม่มีประวัติรอบ</div>
-            <p class="empty-desc">
-                เมื่อสร้างรายงานเสร็จในแต่ละรอบ ให้บันทึกรอบไว้ที่หน้าผลรายงาน
-                แล้วรอบถัดไปจะเริ่มต่อจากค่าเดิมได้เลย
-            </p>
+            <p class="empty-desc">บันทึกรอบจากหน้าผลรายงานเพื่อใช้ต่อรอบถัดไป</p>
         </div>
 
         <ul v-else class="recent-list">
@@ -292,8 +267,6 @@ async function testConnection() {
             </li>
         </ul>
     </div>
-
-    <p class="home-credit">ไฟล์รายงานทั้งหมดถูกบันทึกไว้ในเครื่องนี้ ไม่มีการส่งข้อมูลออกภายนอก</p>
 </div>
 </template>
 
@@ -334,12 +307,5 @@ async function testConnection() {
 .recent-meta {
     font-size: var(--fs-xs);
     color: var(--c-text-light);
-}
-
-.home-credit {
-    text-align: center;
-    font-size: var(--fs-xs);
-    color: var(--c-text-light);
-    padding: var(--sp-2) 0 var(--sp-4);
 }
 </style>

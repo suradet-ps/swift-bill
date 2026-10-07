@@ -10,7 +10,6 @@ import {
     Clock,
     Download,
     FolderOpen,
-    Lightbulb,
     Package,
     Trash2,
     X,
@@ -38,9 +37,6 @@ function doDelete(id: string) {
     <div class="page-header">
         <div class="page-header-text">
             <h2 class="page-title">ประวัติรอบ</h2>
-            <p class="page-desc">
-                บันทึกค่า carry-forward ของแต่ละรอบ กด "โหลด" เพื่อเริ่มรอบถัดไปต่อจากค่าเดิม
-            </p>
         </div>
     </div>
 
@@ -49,10 +45,7 @@ function doDelete(id: string) {
         <div class="empty-state">
             <div class="empty-icon"><FolderOpen :size="44" stroke-width="1.5" /></div>
             <div class="empty-title">ยังไม่มีประวัติรอบ</div>
-            <p class="empty-desc">
-                หลังจากสร้างรายงานสำเร็จในแต่ละรอบ กด "บันทึกรอบนี้สู่ประวัติ" ที่หน้าผลรายงาน
-                เพื่อเก็บค่าเลขทะเบียนคุม เลขที่เอกสาร และงบประมาณคงเหลือไว้ใช้ต่อ
-            </p>
+            <p class="empty-desc">บันทึกรอบจากหน้าผลรายงานเพื่อใช้ต่อรอบถัดไป</p>
         </div>
     </div>
 
@@ -130,37 +123,8 @@ function doDelete(id: string) {
             </div>
         </div>
     </div>
-
-    <!-- How to use -->
-    <div class="card">
-        <div class="card-head">
-            <div>
-                <div class="card-title"><Lightbulb :size="16" /> วิธีใช้งานประวัติรอบ</div>
-            </div>
-        </div>
-        <ol class="tip-list">
-            <li>สร้างรายงานสำเร็จแล้ว กด <strong>บันทึกรอบนี้สู่ประวัติ</strong> ที่หน้าผลรายงาน</li>
-            <li>เริ่มรอบใหม่ กด <strong>โหลดค่านี้ไปใช้รอบถัดไป</strong></li>
-            <li>ระบบจะเติมค่า carry-forward ให้ทุกหน้าอัตโนมัติ และพาไปที่ขั้นตอนดึงข้อมูล</li>
-            <li>เลือกช่วงวันที่ใหม่ ดึงข้อมูล แล้วสร้างรายงานต่อได้เลย</li>
-        </ol>
-    </div>
 </div>
 </template>
 
 <style scoped>
-.tip-list {
-    padding-left: 20px;
-    line-height: 1.9;
-    font-size: var(--fs-sm);
-    color: var(--c-text-muted);
-}
-
-.tip-list li {
-    margin-bottom: 2px;
-}
-
-.tip-list strong {
-    color: var(--c-text);
-}
 </style>
