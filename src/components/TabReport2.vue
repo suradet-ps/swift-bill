@@ -594,4 +594,8 @@ function saveToHistory() {
     align-items: center;
     gap: 5px;
 }
+
+.edit-table {
+    min-width: 1080px;
+}
 </style>

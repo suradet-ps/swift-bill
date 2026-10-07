@@ -211,6 +211,9 @@ async function applyHistoryEntry(entry: RoundHistoryEntry) {
     r3Form.budgetTotal = entry.budget_total;
     r3Form.previousBalance = entry.remaining_balance;
 
+    // A new round needs a fresh date range, so drop the previous dataset.
+    previewData.value = null;
+
     // Switch to query tab so user can pick the new date range
     activeTab.value = "query";
 
