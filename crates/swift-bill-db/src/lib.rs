@@ -1,6 +1,6 @@
 //! Database access for the INVS SQL Server.
 //!
-//! Uses `tiberius` over plain TCP/TDS — no ODBC driver required. All
+//! Uses `tiberius` over plain TCP/TDS - no ODBC driver required. All
 //! public APIs are async and return `Result<_, DbError>` so callers can
 //! format their own user-facing error strings.
 

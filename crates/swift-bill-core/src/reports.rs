@@ -176,7 +176,7 @@ pub fn process_cover_letters(
 
 // Carry-forward
 
-/// Returns `(next_reg_no_string, next_running_slot)` — the register number
+/// Returns `(next_reg_no_string, next_running_slot)` - the register number
 /// and position that the *next* batch should start from.
 #[must_use]
 pub fn compute_next_reg(start_reg_no: &str, start_running: u32, count: u32) -> (String, u32) {
@@ -476,7 +476,7 @@ mod tests {
     );
 
     // Confirm the wrong value (n instead of n*2) would collide with existing numbers
-    let wrong_next_po_no = params.start_po_no + n; // 256 — already used as report_no
+    let wrong_next_po_no = params.start_po_no + n; // 256 - already used as report_no
     assert_eq!(rows[1].report_no, 256);
     assert_ne!(
       wrong_next_po_no, expected_next_po_no,
@@ -519,7 +519,7 @@ mod tests {
   // Approval date fallback tests
 
   /// When approval_date is None the field should fall back to the first
-  /// invoice's receive_date in Thai short format — same as cover letters.
+  /// invoice's receive_date in Thai short format - same as cover letters.
   #[test]
   fn approval_date_fallback_to_first_receive_date() {
     let invoices = sample_invoices();

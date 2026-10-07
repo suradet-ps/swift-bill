@@ -5,7 +5,7 @@
 //! 1. Load a pre-built A4-portrait blank form (`template_cover.pdf`) that
 //!    already contains all Thai static text, borders, and signature blocks.
 //! 2. Embed the full `THSarabun.ttf` TrueType font as a new Type0/Identity-H
-//!    composite font resource named `OVL_F` — distinct from the template's
+//!    composite font resource named `OVL_F` - distinct from the template's
 //!    subset fonts F1-F4.
 //! 3. For each invoice page, build a small overlay content stream that writes
 //!    only the seven dynamic fields at their exact template coordinates.
@@ -29,7 +29,7 @@ use ttf_parser::{Face, GlyphId};
 /// Pre-built blank A4 template (compiled into the binary).
 const TEMPLATE_BYTES: &[u8] = include_bytes!("../assets/template_cover.pdf");
 
-/// Full TH Sarabun PSK TrueType font — used for all overlay text.
+/// Full TH Sarabun PSK TrueType font - used for all overlay text.
 const FONT_BYTES: &[u8] = include_bytes!("../assets/THSarabun.ttf");
 
 // Layout constants (PDF pt, origin = bottom-left)
@@ -63,7 +63,7 @@ const TEXT_PT: f64 = 14.0;
 /// Font size for the five budget numbers (slightly smaller to fit narrow columns).
 const NUM_PT: f64 = 11.5;
 
-/// PDF resource name for our overlay font — must not clash with F1/F2/F3/F4.
+/// PDF resource name for our overlay font - must not clash with F1/F2/F3/F4.
 const FONT_RESOURCE: &str = "OVL_F";
 
 // Number formatting
@@ -178,7 +178,7 @@ fn build_overlay(page: &CoverLetterPage, face: &Face) -> Vec<u8> {
     );
   }
 
-  // 3-7. Budget values — right-aligned inside each column.
+  // 3-7. Budget values - right-aligned inside each column.
   let values: [f64; 5] = [
     page.budget_total,
     page.previous_spent,

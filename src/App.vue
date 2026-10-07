@@ -251,18 +251,18 @@ async function applyHistoryEntry(entry: RoundHistoryEntry) {
     if (numberingInfo.skipped_locked_sets.length > 0) {
         toast.info(
             "โหลดประวัติสำเร็จ",
-            `โหลดค่า carry-forward จากรอบ ${entry.round} แล้ว — ข้ามเลขล็อก ${numberingInfo.skipped_locked_sets.length} ชุดให้อัตโนมัติ`
+            `โหลดค่า carry-forward จากรอบ ${entry.round} แล้ว - ข้ามเลขล็อก ${numberingInfo.skipped_locked_sets.length} ชุดให้อัตโนมัติ`
         );
         return;
     }
 
     toast.info(
         "โหลดประวัติสำเร็จ",
-        `โหลดค่า carry-forward จากรอบ ${entry.round} แล้ว — พร้อมทำงานรอบ ${entry.round + 1}`
+        `โหลดค่า carry-forward จากรอบ ${entry.round} แล้ว - พร้อมทำงานรอบ ${entry.round + 1}`
     );
 }
 
-// Tabs metadata — icons used directly in sidebar template
+// Tabs metadata - icons used directly in sidebar template
 </script>
 
 <template>
@@ -399,7 +399,7 @@ async function applyHistoryEntry(entry: RoundHistoryEntry) {
 </template>
 
 <style>
-/* App shell only — design tokens and component styles in design-system.css */
+/* App shell only - design tokens and component styles in design-system.css */
 
 /* ── Root: horizontal split ─────────────────────────────────── */
 .app-root {

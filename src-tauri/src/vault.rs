@@ -5,8 +5,8 @@
 //! macOS Keychain, Linux Secret Service) and delegates the actual cryptography
 //! to [`encryptman`] (AES-256-GCM with HKDF-SHA256 key derivation).
 //!
-//! Every persisted user-entered value that leaves the process — the INVS
-//! connection settings (host, port, database, username, password) — is written
+//! Every persisted user-entered value that leaves the process - the INVS
+//! connection settings (host, port, database, username, password) - is written
 //! to disk only as ciphertext. The master key itself never touches disk; it
 //! lives in the OS keychain.
 

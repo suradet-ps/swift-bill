@@ -343,7 +343,7 @@ prefill are NOT implemented.
   (`DbConfig`: host, port, database, username, **password**) are persisted only
   as `encryptman` AES-256-GCM ciphertext whose master key lives in the OS
   keychain via `encryptman-keyring` (`Vault::new("swift-bill")`). Plaintext
-  never touches disk — the old `localStorage` cleartext persistence in `App.vue`
+  never touches disk - the old `localStorage` cleartext persistence in `App.vue`
   was removed. New Tauri commands `save_db_config` / `load_db_config` /
   `delete_db_config` back it; the connection test still works without any
   secret being written in cleartext. See `docs/security.md`.

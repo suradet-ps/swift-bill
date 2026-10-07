@@ -296,7 +296,7 @@ function saveToHistory() {
 <div class="report-wrap">
     <div class="page-header">
         <h2 class="page-title">สรุปรับยา</h2>
-        <p class="page-desc">Receiving Summary — สร้างสรุปยอดรับยาประจำเดือน</p>
+        <p class="page-desc">Receiving Summary - สร้างสรุปยอดรับยาประจำเดือน</p>
     </div>
 
     <!-- Data summary -->
@@ -305,7 +305,7 @@ function saveToHistory() {
             <BarChart3 :size="17" /> ข้อมูลที่จะใช้สร้างรายงาน
         </div>
         <div v-if="!previewData" class="no-data">
-            <AlertTriangle :size="14" /> ยังไม่มีข้อมูล — กรุณาไปที่แท็บ ดึงข้อมูล ก่อน
+            <AlertTriangle :size="14" /> ยังไม่มีข้อมูล - กรุณาไปที่แท็บ ดึงข้อมูล ก่อน
         </div>
         <div v-else>
             <div class="preview-summary">
@@ -330,7 +330,7 @@ function saveToHistory() {
         <div class="card-title">
             <Hash :size="17" /> ตั้งค่าเลขที่เอกสาร
         </div>
-        <div class="card-desc">ค่าเหล่านี้ต่อเนื่องจากรอบก่อน — สามารถโหลดจากประวัติรอบได้</div>
+        <div class="card-desc">ค่าเหล่านี้ต่อเนื่องจากรอบก่อน - สามารถโหลดจากประวัติรอบได้</div>
 
         <div class="section-label">
             <CalendarDays :size="14" /> ข้อมูลงวด
@@ -338,11 +338,11 @@ function saveToHistory() {
         <div class="form-grid">
             <div class="form-group">
                 <label>ปีงบประมาณ</label>
-                <input type="text" :value="year > 0 ? String(year) : '—'" readonly />
+                <input type="text" :value="year > 0 ? String(year) : '-'" readonly />
             </div>
             <div class="form-group">
                 <label>เดือน</label>
-                <input type="text" :value="month > 0 ? THAI_MONTHS[month - 1] : '—'" readonly />
+                <input type="text" :value="month > 0 ? THAI_MONTHS[month - 1] : '-'" readonly />
             </div>
             <div class="form-group">
                 <label>รอบที่</label>
@@ -364,7 +364,7 @@ function saveToHistory() {
                 <label>เลขใบสั่งซื้อ เริ่มต้น</label>
                 <input type="number" min="1" :value="startPurchaseNo"
                     @input="emit('update:startPurchaseNo', parseInt(($event.target as HTMLInputElement).value) || 1)" />
-                <span class="field-hint">ใบสั่งซื้อ…/{year} — นับอิสระจากเลขขอซื้อ</span>
+                <span class="field-hint">ใบสั่งซื้อ…/{year} - นับอิสระจากเลขขอซื้อ</span>
             </div>
             <div class="form-group">
                 <label>เลขทะเบียนคุมเริ่มต้น</label>
@@ -436,7 +436,7 @@ function saveToHistory() {
                         <td class="text-center">{{ locked.report_no }}</td>
                         <td class="text-center">{{ locked.purchase_no }}</td>
                         <td>{{ locked.reason }}</td>
-                        <td>{{ locked.note || "—" }}</td>
+                        <td>{{ locked.note || "-" }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -448,7 +448,7 @@ function saveToHistory() {
         <div class="card-title">
             <Pencil :size="17" /> ตัวอย่างข้อมูล (แก้ไขได้)
         </div>
-        <div class="card-desc">ตรวจสอบและแก้ไขข้อมูลก่อนส่งออก Excel — คอลัมน์สีเทาคำนวณอัตโนมัติ</div>
+        <div class="card-desc">ตรวจสอบและแก้ไขข้อมูลก่อนส่งออก Excel - คอลัมน์สีเทาคำนวณอัตโนมัติ</div>
 
         <div class="table-wrap">
             <table class="data-table edit-table">

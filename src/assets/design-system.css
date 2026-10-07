@@ -1,5 +1,5 @@
 /* =============================================================
-   Swift Bill — Design System  ·  Warm Hospital Theme
+   Swift Bill - Design System  ·  Warm Hospital Theme
    Extracted from App.vue for centralized management.
    Improvements per docs/DESIGN.md:
      - Shadow-as-border technique (no raw CSS border on cards/inputs)
@@ -45,7 +45,7 @@
   --c-text-muted:     #5C2C1E;
   --c-text-light:     #9C6A58;
 
-  /* Shadows — shadow-as-border technique */
+  /* Shadows - shadow-as-border technique */
   --shadow-ring:
     rgba(0, 0, 0, 0.08) 0px 0px 0px 1px;
   --shadow-soft:

@@ -74,7 +74,7 @@ function doDelete(id: string) {
 <div class="history-wrap">
     <div class="page-header">
         <h2 class="page-title">ประวัติรอบ</h2>
-        <p class="page-desc">ค่า carry-forward แต่ละรอบ — กด "โหลด" เพื่อนำค่าไปใช้ในรอบถัดไป</p>
+        <p class="page-desc">ค่า carry-forward แต่ละรอบ - กด "โหลด" เพื่อนำค่าไปใช้ในรอบถัดไป</p>
     </div>
 
     <!-- Empty state -->
@@ -123,7 +123,7 @@ function doDelete(id: string) {
                 <div class="carry-values">
                     <div class="cv-item">
                         <span class="cv-label">เลขทะเบียนคุม</span>
-                        <span class="cv-val reg">{{ entry.next_reg_no || "—" }}</span>
+                        <span class="cv-val reg">{{ entry.next_reg_no || "-" }}</span>
                     </div>
                     <div class="cv-item">
                         <span class="cv-label">ลำดับในสมุด</span>
@@ -131,12 +131,12 @@ function doDelete(id: string) {
                     </div>
                     <div class="cv-item">
                         <span class="cv-label">เลขขอซื้อ/PO</span>
-                        <span class="cv-val">{{ entry.next_po_no || "—" }}</span>
+                        <span class="cv-val">{{ entry.next_po_no || "-" }}</span>
                     </div>
                     <div class="cv-item">
                         <span class="cv-label">ยอดงบคงเหลือ</span>
                         <span class="cv-val money">{{ entry.remaining_balance > 0 ? formatMoney(entry.remaining_balance)
-                            : "—" }}</span>
+                            : "-" }}</span>
                     </div>
                     <div v-if="entry.budget_total > 0" class="cv-item">
                         <span class="cv-label">งบประมาณรวม</span>
@@ -376,7 +376,7 @@ function doDelete(id: string) {
     white-space: nowrap;
 }
 
-/* Tip card — warm cream tint */
+/* Tip card - warm cream tint */
 .tip-card {
     background: var(--c-primary-light);
 }

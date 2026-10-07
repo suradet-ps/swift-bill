@@ -36,7 +36,7 @@ pub fn generate_receiving_summary_excel(
   )
   .map_err(map_xlsx_err)?;
 
-  // Row 1: column headers — static (cols 0–10)
+  // Row 1: column headers - static (cols 0–10)
   let static_headers: &[&str] = &[
     "วันที่ขออนุมัติ",
     "วันที่สั่งซื้อ",

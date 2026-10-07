@@ -80,7 +80,7 @@ async function testConnection() {
 <div class="settings-wrap">
     <div class="page-header">
         <h2 class="page-title">ฐานข้อมูล</h2>
-        <p class="page-desc">เชื่อมต่อ SQL Server (INVS) ผ่าน TDS Protocol — ไม่ต้องติดตั้ง ODBC Driver</p>
+        <p class="page-desc">เชื่อมต่อ SQL Server (INVS) ผ่าน TDS Protocol - ไม่ต้องติดตั้ง ODBC Driver</p>
     </div>
 
     <div class="card">

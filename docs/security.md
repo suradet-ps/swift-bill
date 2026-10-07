@@ -1,4 +1,4 @@
-# Security Model — Swift Bill
+# Security Model - Swift Bill
 
 Swift Bill is a desktop app for สระโบสถ์ Hospital that reads the legacy **INVS**
 SQL Server (read-only) and prints three pharmaceutical disbursement reports.
@@ -12,7 +12,7 @@ ciphertext:
 
 1. The settings are serialized to JSON in memory.
 2. The JSON is encrypted with [`encryptman`](https://crates.io/crates/encryptman)
-   — **AES-256-GCM** with **HKDF-SHA256** key derivation. A fresh random 12-byte
+   - **AES-256-GCM** with **HKDF-SHA256** key derivation. A fresh random 12-byte
    nonce is used per encryption call, so identical plaintexts yield different
    ciphertexts.
 3. The resulting blob is written to
@@ -50,7 +50,7 @@ User types credentials ─► App.vue (in-memory)
 Plaintext exists only in process memory during a session; it is **never**
 serialized to storage. The connection commands receive `DbConfig` over the
 local Tauri IPC channel (same machine, no network), which is the intended
-trust boundary — the at-rest guarantee is what this design enforces.
+trust boundary - the at-rest guarantee is what this design enforces.
 
 ## Key lifecycle
 
@@ -61,7 +61,7 @@ trust boundary — the at-rest guarantee is what this design enforces.
   key from the keychain, use `encryptman_keyring::Vault::delete("swift-bill")`.
 
 There is no key escrow; losing OS-keychain access (e.g. different user account
-or OS reinstall) means the saved config cannot be recovered — re-enter the
+or OS reinstall) means the saved config cannot be recovered - re-enter the
 credentials. This is acceptable for a single-hospital desktop tool.
 
 ## What is NOT encrypted
@@ -78,5 +78,5 @@ credentials. This is acceptable for a single-hospital desktop tool.
 
 ## Dependencies
 
-- `encryptman` 0.3 — AES-256-GCM + HKDF-SHA256, string-oriented.
-- `encryptman-keyring` 0.1 — OS-keychain-backed `Vault` for the master key.
+- `encryptman` 0.3 - AES-256-GCM + HKDF-SHA256, string-oriented.
+- `encryptman-keyring` 0.1 - OS-keychain-backed `Vault` for the master key.

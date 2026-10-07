@@ -239,7 +239,7 @@ function saveToHistory() {
 
     <div class="page-header">
         <h2 class="page-title">ส่งหนี้เบิกยา</h2>
-        <p class="page-desc">Invoice Submission List — สร้างรายการส่งหนี้สินและเอกสารเบิกเงิน</p>
+        <p class="page-desc">Invoice Submission List - สร้างรายการส่งหนี้สินและเอกสารเบิกเงิน</p>
     </div>
 
     <!-- Data summary from query -->
@@ -248,7 +248,7 @@ function saveToHistory() {
             <BarChart3 :size="17" /> ข้อมูลที่จะใช้สร้างรายงาน
         </div>
         <div v-if="!previewData" class="no-data">
-            <AlertTriangle :size="14" /> ยังไม่มีข้อมูล — กรุณาไปที่แท็บ ดึงข้อมูล ก่อน
+            <AlertTriangle :size="14" /> ยังไม่มีข้อมูล - กรุณาไปที่แท็บ ดึงข้อมูล ก่อน
         </div>
         <div v-else>
             <div class="preview-summary">
@@ -273,16 +273,16 @@ function saveToHistory() {
         <div class="card-title">
             <Hash :size="17" /> ตั้งค่าเลขทะเบียนคุม
         </div>
-        <div class="card-desc">ค่าเหล่านี้ต่อเนื่องจากรอบก่อน — สามารถโหลดจากประวัติรอบได้</div>
+        <div class="card-desc">ค่าเหล่านี้ต่อเนื่องจากรอบก่อน - สามารถโหลดจากประวัติรอบได้</div>
 
         <div class="form-grid">
             <div class="form-group">
                 <label>ปีงบประมาณ</label>
-                <input type="text" :value="year > 0 ? String(year) : '—'" readonly />
+                <input type="text" :value="year > 0 ? String(year) : '-'" readonly />
             </div>
             <div class="form-group">
                 <label>เดือน</label>
-                <input type="text" :value="month > 0 ? THAI_MONTHS[month - 1] : '—'" readonly />
+                <input type="text" :value="month > 0 ? THAI_MONTHS[month - 1] : '-'" readonly />
             </div>
             <div class="form-group">
                 <label>รอบที่</label>
