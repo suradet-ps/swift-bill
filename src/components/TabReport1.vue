@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useToast } from "../composables/useToast";
-import { BarChart3, AlertTriangle, Hash, Info, Eye, XCircle, Pencil, FileSpreadsheet, CheckCircle, ArrowRight, Save, Package, Banknote } from 'lucide-vue-next'
+import { BarChart3, AlertTriangle, Hash, Info, Eye, XCircle, Pencil, FileSpreadsheet, FileText, CheckCircle, ArrowRight, Save, Package, Banknote } from 'lucide-vue-next'
 
 interface DbConfig {
     host: string;
@@ -85,10 +85,15 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+    (e: "update:year", v: number): void;
     (e: "update:startRegNo", v: string): void;
     (e: "update:startRunning", v: number): void;
     (e: "saveHistory", entry: RoundHistoryEntry): void;
 }>();
+
+function onYearInput(e: Event) {
+    emit("update:year", parseInt((e.target as HTMLInputElement).value, 10) || 0);
+}
 
 const toast = useToast();
 
@@ -109,6 +114,19 @@ const exportError = ref("");
 const editableRows = ref<InvoiceSubmissionRow[]>([]);
 const carryForward = ref<CarryForward | null>(null);
 const exportedFile = ref<string | null>(null);
+const pdfLoading = ref(false);
+const exportedPdfFile = ref<string | null>(null);
+
+watch(
+    () => [props.year, props.month, props.round, props.dateFrom, props.dateTo, props.startRegNo, props.startRunning],
+    () => {
+        editableRows.value = [];
+        carryForward.value = null;
+        exportedFile.value = null;
+        exportedPdfFile.value = null;
+        exportError.value = "";
+    }
+);
 
 // Computed properties
 
@@ -151,6 +169,7 @@ async function previewReport() {
     previewError.value = "";
     editableRows.value = [];
     exportedFile.value = null;
+    exportedPdfFile.value = null;
     exportError.value = "";
     carryForward.value = null;
 
@@ -208,8 +227,37 @@ async function exportExcel() {
     }
 }
 
+async function exportPdf() {
+    if (!canExport.value) return;
+    pdfLoading.value = true;
+    exportError.value = "";
+    exportedPdfFile.value = null;
+
+    try {
+        const res = await invoke<GenerateResult>("export_invoice_submission_pdf", {
+            params: {
+                rows: editableRows.value,
+                year: props.year,
+                month: props.month,
+                round: props.round,
+                start_reg_no: props.startRegNo,
+                start_running: props.startRunning,
+                output_dir: props.outputDir,
+            },
+        });
+        exportedPdfFile.value = res.files[0];
+        carryForward.value = res.carry_forward;
+        toast.success("บันทึก PDF สำเร็จ", `บันทึกไฟล์เรียบร้อยแล้ว`);
+    } catch (e) {
+        exportError.value = String(e);
+        toast.error("บันทึก PDF ล้มเหลว", String(e));
+    } finally {
+        pdfLoading.value = false;
+    }
+}
+
 function saveToHistory() {
-    if (!carryForward.value || !exportedFile.value) return;
+    if (!carryForward.value || (!exportedFile.value && !exportedPdfFile.value)) return;
     const now = new Date().toISOString();
     const monthShort = THAI_MONTHS_SHORT[props.month - 1] ?? "";
     const entry: RoundHistoryEntry = {
@@ -278,7 +326,9 @@ function saveToHistory() {
         <div class="form-grid">
             <div class="form-group">
                 <label>ปีงบประมาณ</label>
-                <input type="text" :value="year > 0 ? String(year) : '-'" readonly />
+                <input type="number" min="2500" max="2700" :value="year > 0 ? year : ''" placeholder="เช่น 2569"
+                    @input="onYearInput" />
+                <span class="field-hint">แก้ไขได้ (ค่าเริ่มต้นจากช่วงวันที่)</span>
             </div>
             <div class="form-group">
                 <label>เดือน</label>
@@ -376,12 +426,17 @@ function saveToHistory() {
             </table>
         </div>
 
-        <!-- Export button -->
+        <!-- Export buttons -->
         <div class="actions">
             <button class="btn btn-success btn-lg" :disabled="!canExport || exportLoading" @click="exportExcel">
                 <span v-if="exportLoading" class="spinner"></span>
                 <FileSpreadsheet v-if="!exportLoading" :size="16" />
                 {{ exportLoading ? "กำลังส่งออก Excel..." : "ส่งออก Excel" }}
+            </button>
+            <button class="btn btn-primary btn-lg" :disabled="!canExport || pdfLoading" @click="exportPdf">
+                <span v-if="pdfLoading" class="spinner"></span>
+                <FileText v-if="!pdfLoading" :size="16" />
+                {{ pdfLoading ? "กำลังบันทึก PDF..." : "บันทึก PDF" }}
             </button>
         </div>
 
@@ -391,9 +446,9 @@ function saveToHistory() {
     </div>
 
     <!-- Export result -->
-    <div v-if="exportedFile" class="card">
+    <div v-if="exportedFile || exportedPdfFile" class="card">
         <div class="card-title">
-            <CheckCircle :size="17" /> ส่งออก Excel สำเร็จ
+            <CheckCircle :size="17" /> ส่งออกสำเร็จ
         </div>
 
         <div class="result-card">
@@ -401,9 +456,13 @@ function saveToHistory() {
                 <FileSpreadsheet :size="15" /> ไฟล์ที่สร้าง
             </div>
             <ul class="file-list">
-                <li>
+                <li v-if="exportedFile">
                     <FileSpreadsheet :size="14" /> <code>{{ fileName(exportedFile) }}</code>
                     <span class="file-path">{{ exportedFile }}</span>
+                </li>
+                <li v-if="exportedPdfFile">
+                    <FileText :size="14" /> <code>{{ fileName(exportedPdfFile) }}</code>
+                    <span class="file-path">{{ exportedPdfFile }}</span>
                 </li>
             </ul>
             <div class="result-stats">

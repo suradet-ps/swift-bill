@@ -135,17 +135,41 @@ pub fn op_text(
   ops.push(Op::EndTextSection);
 }
 
-/// Rough character-width estimator (mm) for centering/right-align.
+/// Rough character-width estimator (mm) used as a fallback when the embedded
+/// font cannot be parsed.
 #[must_use]
 pub fn char_width_mm(size: f64) -> f64 {
   // 1 pt ≈ 0.353 mm; Thai glyphs in Cordia/Sarabun are roughly 0.55× em wide.
   size * 0.353 * 0.55
 }
 
+fn fallback_width_mm(s: &str, size: f64) -> f64 {
+  s.chars().count() as f64 * char_width_mm(size)
+}
+
 /// Total width (mm) of a string at a given font size.
+///
+/// Measures the real advance widths of the embedded font, so Thai combining
+/// marks (which carry no advance) do not inflate the width and text stays
+/// correctly centred.
 #[must_use]
 pub fn text_width_mm(s: &str, size: f64) -> f64 {
-  s.chars().count() as f64 * char_width_mm(size)
+  let Ok(face) = ttf_parser::Face::parse(FONT_REGULAR, 0) else {
+    return fallback_width_mm(s, size);
+  };
+  let units_per_em = f64::from(face.units_per_em());
+  if units_per_em <= 0.0 {
+    return fallback_width_mm(s, size);
+  }
+  let mut units = 0.0;
+  for ch in s.chars() {
+    if let Some(glyph) = face.glyph_index(ch) {
+      if let Some(advance) = face.glyph_hor_advance(glyph) {
+        units += f64::from(advance);
+      }
+    }
+  }
+  units / units_per_em * size * (25.4 / 72.0)
 }
 
 /// Place text centred within `[col_x .. col_x+col_w]`.
@@ -375,6 +399,235 @@ pub fn output_path(output_dir: &str, filename: String) -> String {
     .join(&filename)
     .to_string_lossy()
     .to_string()
+}
+
+// ---------------------------------------------------------------------------
+// Report chrome: brand palette and higher-level drawing helpers shared by the
+// two landscape reports (ส่งหนี้เบิกยา and สรุปรับยา).
+// ---------------------------------------------------------------------------
+
+/// Brand accent (`#C8102E`), used for the document rule, subtitle, and totals.
+pub const COLOR_ACCENT: (f64, f64, f64) = (0.784, 0.063, 0.180);
+/// Near-black ink for body text.
+pub const COLOR_INK: (f64, f64, f64) = (0.13, 0.12, 0.12);
+/// Muted gray for secondary labels and the footer.
+pub const COLOR_MUTED: (f64, f64, f64) = (0.45, 0.42, 0.40);
+/// Light warm border for table grid lines.
+pub const COLOR_BORDER: (f64, f64, f64) = (0.84, 0.81, 0.78);
+/// Warm zebra stripe for alternating data rows.
+pub const COLOR_ZEBRA: (f64, f64, f64) = (0.980, 0.968, 0.955);
+/// Accent-tinted fill for the totals row.
+pub const COLOR_TINT: (f64, f64, f64) = (0.978, 0.930, 0.920);
+
+/// Build an RGB color from components in the 0.0-1.0 range.
+fn rgb(r: f64, g: f64, b: f64) -> Color {
+  Color::Rgb(Rgb {
+    r: r as f32,
+    g: g as f32,
+    b: b as f32,
+    icc_profile: None,
+  })
+}
+
+/// Set the current fill color (applies to text and filled shapes).
+pub fn op_set_fill(ops: &mut Vec<Op>, color: (f64, f64, f64)) {
+  ops.push(Op::SetFillColor {
+    col: rgb(color.0, color.1, color.2),
+  });
+}
+
+/// Set the current stroke color (applies to lines and stroked shapes).
+pub fn op_set_stroke(ops: &mut Vec<Op>, color: (f64, f64, f64)) {
+  ops.push(Op::SetOutlineColor {
+    col: rgb(color.0, color.1, color.2),
+  });
+}
+
+/// Like [`op_text`], but with an explicit text color.
+#[allow(clippy::too_many_arguments)]
+pub fn op_text_colored(
+  ops: &mut Vec<Op>,
+  ctx: &PageCtx,
+  font_id: &FontId,
+  size: f64,
+  x_mm: f64,
+  top_y_mm: f64,
+  s: &str,
+  color: (f64, f64, f64),
+) {
+  op_set_fill(ops, color);
+  op_text(ops, ctx, font_id, size, x_mm, top_y_mm, s);
+  op_set_fill(ops, COLOR_INK);
+}
+
+/// Centered [`op_text_colored`].
+#[allow(clippy::too_many_arguments)]
+pub fn op_text_center_colored(
+  ops: &mut Vec<Op>,
+  ctx: &PageCtx,
+  font_id: &FontId,
+  size: f64,
+  col_x: f64,
+  col_w: f64,
+  top_y: f64,
+  s: &str,
+  color: (f64, f64, f64),
+) {
+  let tw = text_width_mm(s, size);
+  let x = col_x + (col_w - tw) / 2.0;
+  op_text_colored(ops, ctx, font_id, size, x.max(col_x + 0.5), top_y, s, color);
+}
+
+/// Right-aligned [`op_text_colored`].
+#[allow(clippy::too_many_arguments)]
+pub fn op_text_right_colored(
+  ops: &mut Vec<Op>,
+  ctx: &PageCtx,
+  font_id: &FontId,
+  size: f64,
+  col_x: f64,
+  col_w: f64,
+  top_y: f64,
+  padding_right: f64,
+  s: &str,
+  color: (f64, f64, f64),
+) {
+  let tw = text_width_mm(s, size);
+  let x = col_x + col_w - tw - padding_right;
+  op_text_colored(ops, ctx, font_id, size, x.max(col_x + 0.5), top_y, s, color);
+}
+
+/// Horizontal line with an explicit thickness and color.
+pub fn op_hline_colored(
+  ops: &mut Vec<Op>,
+  ctx: &PageCtx,
+  x1: f64,
+  x2: f64,
+  top_y: f64,
+  thickness: f64,
+  color: (f64, f64, f64),
+) {
+  ops.push(Op::SetOutlineThickness {
+    pt: pt_f(thickness),
+  });
+  op_set_stroke(ops, color);
+  op_hline(ops, ctx, x1, x2, top_y);
+}
+
+/// Vertical line with an explicit thickness and color.
+pub fn op_vline_colored(
+  ops: &mut Vec<Op>,
+  ctx: &PageCtx,
+  x: f64,
+  top_y1: f64,
+  top_y2: f64,
+  thickness: f64,
+  color: (f64, f64, f64),
+) {
+  ops.push(Op::SetOutlineThickness {
+    pt: pt_f(thickness),
+  });
+  op_set_stroke(ops, color);
+  op_vline(ops, ctx, x, top_y1, top_y2);
+}
+
+/// Document header used by both landscape reports: bold title and an
+/// accent-colored subtitle, centered on the page.
+pub fn op_doc_header(ops: &mut Vec<Op>, ctx: &PageCtx, title: &str, subtitle: &str) {
+  op_text_center_colored(
+    ops,
+    ctx,
+    &ctx.font_bold_id,
+    19.0,
+    0.0,
+    ctx.page_w,
+    16.0,
+    title,
+    COLOR_INK,
+  );
+  op_text_center_colored(
+    ops,
+    ctx,
+    &ctx.font_bold_id,
+    13.5,
+    0.0,
+    ctx.page_w,
+    23.5,
+    subtitle,
+    COLOR_ACCENT,
+  );
+}
+
+/// Page footer: hairline and the page number on the right.
+pub fn op_page_footer(ops: &mut Vec<Op>, ctx: &PageCtx, page_idx: usize, total_pages: usize) {
+  let y = ctx.page_h - 7.5;
+  op_hline_colored(
+    ops,
+    ctx,
+    MARGIN,
+    ctx.page_w - MARGIN,
+    y - 4.0,
+    0.4,
+    COLOR_BORDER,
+  );
+  op_text_right_colored(
+    ops,
+    ctx,
+    &ctx.font_id,
+    9.5,
+    0.0,
+    ctx.page_w - MARGIN,
+    y,
+    0.0,
+    &format!("หน้า {}/{}", page_idx + 1, total_pages),
+    COLOR_MUTED,
+  );
+}
+
+/// Three-column signature row: label, signature line, name in parentheses,
+/// and a date line per column (no roles).
+pub fn op_signature_row3(
+  ops: &mut Vec<Op>,
+  ctx: &PageCtx,
+  font_id: &FontId,
+  top_y: f64,
+  labels: &[&str; 3],
+) {
+  let col_w = (ctx.page_w - 2.0 * MARGIN) / 3.0;
+  for (i, label) in labels.iter().enumerate() {
+    let x = MARGIN + col_w * i as f64;
+    op_text_center(ops, ctx, font_id, 12.0, x, col_w, top_y, label);
+    op_text_center(
+      ops,
+      ctx,
+      font_id,
+      12.0,
+      x,
+      col_w,
+      top_y + 5.5,
+      "ลงชื่อ................................",
+    );
+    op_text_center(
+      ops,
+      ctx,
+      font_id,
+      12.0,
+      x,
+      col_w,
+      top_y + 10.5,
+      "(............................................)",
+    );
+    op_text_center(
+      ops,
+      ctx,
+      font_id,
+      12.0,
+      x,
+      col_w,
+      top_y + 15.5,
+      "วันที่................................",
+    );
+  }
 }
 
 #[cfg(test)]

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from "vue";
+import { ref, reactive, computed, onMounted, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import TabSettings from "./components/TabSettings.vue";
 import TabQuery from "./components/TabQuery.vue";
@@ -109,8 +109,14 @@ const previewData = ref<PreviewData | null>(null);
 
 const dateFrom = computed(() => startDateHtml.value.replace(/-/g, ""));
 const dateTo = computed(() => endDateHtml.value.replace(/-/g, ""));
-const year = computed(() =>
-    startDateHtml.value ? parseInt(startDateHtml.value.substring(0, 4)) + 543 : 0
+// Fiscal year: derived from the start date by default, editable in the report tabs.
+const year = ref(0);
+watch(
+    startDateHtml,
+    (value) => {
+        year.value = value ? parseInt(value.substring(0, 4)) + 543 : 0;
+    },
+    { immediate: true }
 );
 const month = computed(() =>
     startDateHtml.value ? parseInt(startDateHtml.value.substring(5, 7)) : 0
@@ -365,14 +371,14 @@ async function applyHistoryEntry(entry: RoundHistoryEntry) {
         <TabNumberLocks v-show="activeTab === 'numberLocks'" />
         <TabReport1 v-show="activeTab === 'report1'" :db-config="dbConfig"
             :date-from="dateFrom" :date-to="dateTo"
-            :year="year" :month="month" :round="round"
+            v-model:year="year" :month="month" :round="round"
             :output-dir="outputDir" :preview-data="previewData"
             v-model:start-reg-no="r1Form.startRegNo"
             v-model:start-running="r1Form.startRunning"
             @save-history="saveEntry" />
         <TabReport2 v-show="activeTab === 'report2'" :db-config="dbConfig"
             :date-from="dateFrom" :date-to="dateTo"
-            :year="year" :month="month" :round="round"
+            v-model:year="year" :month="month" :round="round"
             :output-dir="outputDir" :preview-data="previewData"
             v-model:start-po-no="r2Form.startPoNo"
             v-model:start-purchase-no="r2Form.startPurchaseNo"
@@ -382,7 +388,7 @@ async function applyHistoryEntry(entry: RoundHistoryEntry) {
             @save-history="saveEntry" @carry-result="handleR2Carry" />
         <TabReport3 v-show="activeTab === 'report3'" :db-config="dbConfig"
             :date-from="dateFrom" :date-to="dateTo"
-            :year="year" :month="month" :round="round"
+            v-model:year="year" :month="month" :round="round"
             :output-dir="outputDir" :preview-data="previewData"
             v-model:budget-total="r3Form.budgetTotal"
             v-model:previous-balance="r3Form.previousBalance"

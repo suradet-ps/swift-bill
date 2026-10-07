@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useToast } from "../composables/useToast";
 import { FileOutput, BarChart3, AlertTriangle, Wallet, CalendarDays, Calculator, XCircle, CheckCircle, ArrowRight, Save, Package, Banknote, X } from 'lucide-vue-next'
@@ -79,17 +79,30 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+    (e: "update:year", v: number): void;
     (e: "update:budgetTotal", v: number): void;
     (e: "update:previousBalance", v: number): void;
     (e: "update:approvalDate", v: string): void;
     (e: "saveHistory", entry: RoundHistoryEntry): void;
 }>();
 
+function onYearInput(e: Event) {
+    emit("update:year", parseInt((e.target as HTMLInputElement).value, 10) || 0);
+}
+
 const toast = useToast();
 
 const loading = ref(false);
 const error = ref("");
 const result = ref<GenerateResult | null>(null);
+
+watch(
+    () => [props.year, props.month, props.round, props.dateFrom, props.dateTo, props.budgetTotal, props.previousBalance, props.approvalDate],
+    () => {
+        result.value = null;
+        error.value = "";
+    }
+);
 
 const THAI_MONTHS = [
     "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
@@ -265,7 +278,9 @@ function saveToHistory() {
         <div class="form-grid">
             <div class="form-group">
                 <label>ปีงบประมาณ</label>
-                <input type="text" :value="year > 0 ? String(year) : '-'" readonly />
+                <input type="number" min="2500" max="2700" :value="year > 0 ? year : ''" placeholder="เช่น 2569"
+                    @input="onYearInput" />
+                <span class="field-hint">แก้ไขได้ (ค่าเริ่มต้นจากช่วงวันที่)</span>
             </div>
             <div class="form-group">
                 <label>เดือน</label>

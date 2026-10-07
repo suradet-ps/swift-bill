@@ -1,237 +1,322 @@
-//! FILE 2 – สรุปรับยา (Receiving Summary) – A4 Landscape
+//! FILE 2 - สรุปรับยา (Receiving Summary) - A4 Landscape
 //!
-//! Renders a multi-page table with 12 columns. Multi-page documents get
-//! a page footer (e.g. "หน้า 1/2") and the grand total appears on the
-//! last page only.
+//! Renders a multi-page table with 12 columns, sized so 20 rows fit on a page.
+//! Every page repeats the document header and the plain column band; the grand
+//! total appears on the last page only. There is no signature section.
 
 #![allow(clippy::too_many_arguments)]
 
 use printpdf::{Op, PdfDocument};
-use swift_bill_core::{ReceivingSummaryParams, ReceivingSummaryRow};
+use swift_bill_core::ReceivingSummaryRow;
 
 use crate::shared::{
-  A4_LAND_H, A4_LAND_W, MARGIN, PageCtx, fmt_money, load_fonts, make_landscape_page, op_box_rect,
-  op_filled_rect, op_hline, op_text, op_text_center, op_text_right, op_vline, output_path, pt_f,
+  A4_LAND_W, COLOR_ACCENT, COLOR_BORDER, COLOR_INK, COLOR_TINT, COLOR_ZEBRA, MARGIN, PageCtx,
+  fmt_money, load_fonts, make_landscape_page, op_box_rect, op_doc_header, op_filled_rect,
+  op_hline_colored, op_page_footer, op_set_stroke, op_text_center, op_text_center_colored,
+  op_text_right, op_text_right_colored, op_vline_colored, output_path, pt_f, thai_month,
 };
 
-const ROWS_PER_PAGE: usize = 10;
+const ROWS_PER_PAGE: usize = 20;
+const TABLE_TOP: f64 = 29.0;
+const HDR_H: f64 = 15.0;
+const ROW_H: f64 = 6.5;
+
+/// Column widths (mm), summing to the printable width of 267 mm.
+const COL_W: [f64; 12] = [
+  24.0, 24.0, 24.0, 18.0, 28.0, 18.0, 20.0, 12.0, 28.0, 25.0, 25.0, 21.0,
+];
+
+/// Left edge (mm) of every column, including both outer table edges.
+fn col_x() -> Vec<f64> {
+  let mut xs = vec![MARGIN];
+  let mut x = MARGIN;
+  for w in COL_W {
+    x += w;
+    xs.push(x);
+  }
+  xs
+}
 
 /// Generate the Receiving Summary PDF and write it to `output_dir`.
 ///
 /// Returns the absolute path of the saved file.
 pub fn generate_receiving_summary_pdf(
   rows: &[ReceivingSummaryRow],
-  params: &ReceivingSummaryParams,
+  year: i32,
+  month: u32,
+  round: u32,
+  output_dir: &str,
 ) -> Result<String, String> {
-  let year = params.year;
-  let month = params.month;
-  let month_name = crate::shared::thai_month(month);
-  let title = format!(
-    "สรุปยอดยาเดือน{} รอบ {} ปีงบประมาณ {}",
-    month_name, params.round, year
-  );
+  let month_name = thai_month(month);
+  let title = "สรุปรับยา";
+  let subtitle = format!("เดือน{} รอบ {} ปีงบประมาณ {}", month_name, round, year);
 
-  let mut doc = PdfDocument::new(&title);
+  let mut doc = PdfDocument::new(title);
   let (font_id, font_bold_id) = load_fonts(&mut doc)?;
 
   let ctx = PageCtx {
     font_id: font_id.clone(),
     font_bold_id: font_bold_id.clone(),
     page_w: A4_LAND_W,
-    page_h: A4_LAND_H,
+    page_h: crate::shared::A4_LAND_H,
   };
 
-  // Column definitions (12 data columns)
-  let col_x: &[f64] = &[
-    MARGIN,
-    MARGIN + 24.0,
-    MARGIN + 48.0,
-    MARGIN + 72.0,
-    MARGIN + 88.0,
-    MARGIN + 114.0,
-    MARGIN + 130.0,
-    MARGIN + 148.0,
-    MARGIN + 160.0,
-    MARGIN + 186.0,
-    MARGIN + 206.0,
-    MARGIN + 228.0,
-    A4_LAND_W - MARGIN,
-  ];
-  let cw: Vec<f64> = col_x.windows(2).map(|w| w[1] - w[0]).collect();
+  let xs = col_x();
+  let table_right = xs[12];
+  let table_w = table_right - xs[0];
 
-  let table_top = MARGIN + 15.0;
-  let hdr_h = 18.0;
-  let row_h = 12.5;
-
-  // Pre-compute grand total across ALL rows for the last-page totals row
   let grand_total: f64 = rows.iter().map(|r| r.total_amount).sum();
-
   let chunks: Vec<&[ReceivingSummaryRow]> = rows.chunks(ROWS_PER_PAGE).collect();
   let total_pages = chunks.len().max(1);
 
   let mut pdf_pages = Vec::new();
+
+  if rows.is_empty() {
+    let mut ops: Vec<Op> = Vec::new();
+    ops.push(Op::SetOutlineThickness { pt: pt_f(0.3) });
+    op_doc_header(&mut ops, &ctx, title, &subtitle);
+    op_page_footer(&mut ops, &ctx, 0, 1);
+    op_set_stroke(&mut ops, COLOR_BORDER);
+    op_box_rect(&mut ops, &ctx, MARGIN, 55.0, table_w, 24.0);
+    op_text_center(
+      &mut ops,
+      &ctx,
+      &font_id,
+      14.0,
+      MARGIN,
+      table_w,
+      69.0,
+      "ไม่มีข้อมูลสำหรับช่วงเวลานี้",
+    );
+    pdf_pages.push(make_landscape_page(ops));
+  }
 
   for (page_idx, chunk) in chunks.iter().enumerate() {
     let is_last = page_idx + 1 == total_pages;
     let mut ops: Vec<Op> = Vec::new();
 
     ops.push(Op::SetOutlineThickness { pt: pt_f(0.3) });
+    op_doc_header(&mut ops, &ctx, title, &subtitle);
+    op_page_footer(&mut ops, &ctx, page_idx, total_pages);
 
-    // Title
-    op_text_center(
+    // Plain column band: ink text between two rule lines, no fill.
+    op_hline_colored(
       &mut ops,
       &ctx,
-      &font_bold_id,
-      19.0,
-      0.0,
-      A4_LAND_W,
-      MARGIN + 6.0,
-      &title,
+      xs[0],
+      table_right,
+      TABLE_TOP,
+      1.0,
+      COLOR_INK,
+    );
+    op_hline_colored(
+      &mut ops,
+      &ctx,
+      xs[0],
+      table_right,
+      TABLE_TOP + HDR_H,
+      1.0,
+      COLOR_INK,
     );
 
-    // Page number footer for multi-page documents
-    if total_pages > 1 {
-      op_text_right(
+    let y1 = TABLE_TOP + 5.0;
+    let y2 = TABLE_TOP + 10.0;
+    let y3 = TABLE_TOP + 14.0;
+    let y_single = TABLE_TOP + 9.5;
+
+    let two_line: &[(&str, &str, usize)] = &[
+      ("วันที่", "ขออนุมัติ", 0),
+      ("วันที่", "สั่งซื้อ", 1),
+      ("วันที่", "รับของ", 2),
+    ];
+    for &(top_lbl, bot_lbl, ci) in two_line {
+      op_text_center_colored(
         &mut ops,
         &ctx,
-        &font_id,
-        12.0,
-        0.0,
-        A4_LAND_W - MARGIN,
-        MARGIN + 4.0,
-        3.0,
-        &format!("หน้า {}/{}", page_idx + 1, total_pages),
+        &font_bold_id,
+        11.5,
+        xs[ci],
+        COL_W[ci],
+        y1,
+        top_lbl,
+        COLOR_INK,
+      );
+      op_text_center_colored(
+        &mut ops,
+        &ctx,
+        &font_bold_id,
+        11.5,
+        xs[ci],
+        COL_W[ci],
+        y2,
+        bot_lbl,
+        COLOR_INK,
       );
     }
 
-    // Header background
-    op_filled_rect(
-      &mut ops,
-      &ctx,
-      col_x[0],
-      table_top,
-      col_x[12] - col_x[0],
-      hdr_h,
-      0.82,
-      0.88,
-      0.96,
-    );
-
-    // Single-row headers: vertically centred
-    let hdr_y_single = table_top + hdr_h * 0.58;
-    // Two-row headers
-    let hdr_y1 = table_top + hdr_h * 0.32;
-    let hdr_y2 = table_top + hdr_h * 0.72;
-
-    // Single-row column headers
-    let single_hdrs2: &[(&str, usize)] = &[
-      ("วันที่ขออนุมัติ", 0),
-      ("วันที่สั่งซื้อ", 1),
-      ("วันที่รับของ", 2),
+    let single_hdrs: &[(&str, usize)] = &[
       ("รหัสบริษัท", 3),
       ("จำนวนเงินรวม", 4),
       ("รหัสลงรับยา", 5),
       ("เลขที่ลงรับ", 8),
     ];
-    for &(lbl, ci) in single_hdrs2 {
-      op_text_center(
+    for &(lbl, ci) in single_hdrs {
+      op_text_center_colored(
         &mut ops,
         &ctx,
         &font_bold_id,
-        12.5,
-        col_x[ci],
-        cw[ci],
-        hdr_y_single,
+        12.0,
+        xs[ci],
+        COL_W[ci],
+        y_single,
         lbl,
+        COLOR_INK,
       );
     }
 
-    // Two-row span: เลขทะเบียนคุม (cols 6–7)
-    let span_w67 = col_x[8] - col_x[6];
-    op_text_center(
+    // เลขทะเบียนคุม spans columns 6-7
+    op_text_center_colored(
       &mut ops,
       &ctx,
       &font_bold_id,
-      12.5,
-      col_x[6],
-      span_w67,
-      hdr_y1,
+      12.0,
+      xs[6],
+      COL_W[6] + COL_W[7],
+      y1,
       "เลขทะเบียนคุม",
+      COLOR_INK,
     );
-    op_text_center(
+    op_text_center_colored(
       &mut ops,
       &ctx,
       &font_bold_id,
-      12.0,
-      col_x[6],
-      cw[6],
-      hdr_y2,
+      11.0,
+      xs[6],
+      COL_W[6],
+      y2,
       "เลขทะเบียน",
+      COLOR_INK,
     );
-    op_text_center(
+    op_text_center_colored(
       &mut ops,
       &ctx,
       &font_bold_id,
       12.0,
-      col_x[7],
-      cw[7],
-      hdr_y2,
+      xs[7],
+      COL_W[7],
+      y2,
       "ลำดับ",
+      COLOR_INK,
     );
 
-    // Two-row: ขอซื้อ / รายงาน / ใบสั่งซื้อ with sub-labels
-    let two_row_cols: &[(&str, &str, usize)] = &[
-      ("ขอซื้อ", "ลบ0033.302/", 9),
-      ("รายงาน/อนุมัติ", "ลบ0033.302/", 10),
-    ];
-    for &(top_lbl, bot_lbl, ci) in two_row_cols {
-      op_text_center(
-        &mut ops,
-        &ctx,
-        &font_bold_id,
-        12.5,
-        col_x[ci],
-        cw[ci],
-        hdr_y1,
-        top_lbl,
-      );
-      op_text_center(
-        &mut ops, &ctx, &font_id, 11.5, col_x[ci], cw[ci], hdr_y2, bot_lbl,
-      );
-    }
-    op_text_center(
+    // ขอซื้อ (ลบ0033.302/)
+    op_text_center_colored(
       &mut ops,
       &ctx,
       &font_bold_id,
-      12.5,
-      col_x[11],
-      cw[11],
-      hdr_y1,
-      "ใบสั่งซื้อ",
+      11.5,
+      xs[9],
+      COL_W[9],
+      y1,
+      "ขอซื้อ",
+      COLOR_INK,
     );
-    op_text_center(
+    op_text_center_colored(
       &mut ops,
       &ctx,
-      &font_id,
-      11.5,
-      col_x[11],
-      cw[11],
-      hdr_y2,
-      &format!("…/{}", year),
+      &font_bold_id,
+      10.5,
+      xs[9],
+      COL_W[9],
+      y3,
+      "(ลบ0033.302/)",
+      COLOR_INK,
     );
 
-    // Data rows
-    let mut cur_y = table_top + hdr_h;
+    // รายงาน/อนุมัติ (ลบ0033.302/)
+    op_text_center_colored(
+      &mut ops,
+      &ctx,
+      &font_bold_id,
+      11.5,
+      xs[10],
+      COL_W[10],
+      y1,
+      "รายงาน/",
+      COLOR_INK,
+    );
+    op_text_center_colored(
+      &mut ops,
+      &ctx,
+      &font_bold_id,
+      11.5,
+      xs[10],
+      COL_W[10],
+      y2,
+      "อนุมัติ",
+      COLOR_INK,
+    );
+    op_text_center_colored(
+      &mut ops,
+      &ctx,
+      &font_bold_id,
+      10.5,
+      xs[10],
+      COL_W[10],
+      y3,
+      "(ลบ0033.302/)",
+      COLOR_INK,
+    );
 
-    for row in *chunk {
-      let ty = cur_y + row_h - 1.8;
+    // ใบสั่งซื้อ …/{year}
+    op_text_center_colored(
+      &mut ops,
+      &ctx,
+      &font_bold_id,
+      11.5,
+      xs[11],
+      COL_W[11],
+      y1,
+      "ใบสั่งซื้อ",
+      COLOR_INK,
+    );
+    op_text_center_colored(
+      &mut ops,
+      &ctx,
+      &font_bold_id,
+      11.0,
+      xs[11],
+      COL_W[11],
+      y2,
+      &format!("…/{year}"),
+      COLOR_INK,
+    );
+
+    // Data rows with warm zebra striping
+    let mut cur_y = TABLE_TOP + HDR_H;
+
+    for (i, row) in chunk.iter().enumerate() {
+      if i % 2 == 1 {
+        op_filled_rect(
+          &mut ops,
+          &ctx,
+          xs[0],
+          cur_y,
+          table_w,
+          ROW_H,
+          COLOR_ZEBRA.0,
+          COLOR_ZEBRA.1,
+          COLOR_ZEBRA.2,
+        );
+      }
+      let ty = cur_y + 4.9;
       op_text_center(
         &mut ops,
         &ctx,
         &font_id,
-        13.5,
-        col_x[0],
-        cw[0],
+        14.0,
+        xs[0],
+        COL_W[0],
         ty,
         &row.approval_date,
       );
@@ -239,9 +324,9 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        13.5,
-        col_x[1],
-        cw[1],
+        14.0,
+        xs[1],
+        COL_W[1],
         ty,
         &row.po_date,
       );
@@ -249,9 +334,9 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        13.5,
-        col_x[2],
-        cw[2],
+        14.0,
+        xs[2],
+        COL_W[2],
         ty,
         &row.receive_date,
       );
@@ -259,9 +344,9 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        13.5,
-        col_x[3],
-        cw[3],
+        14.0,
+        xs[3],
+        COL_W[3],
         ty,
         &row.company_code,
       );
@@ -269,9 +354,9 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        13.5,
-        col_x[4],
-        cw[4],
+        14.0,
+        xs[4],
+        COL_W[4],
         ty,
         1.5,
         &fmt_money(row.total_amount),
@@ -280,9 +365,9 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        13.5,
-        col_x[5],
-        cw[5],
+        14.0,
+        xs[5],
+        COL_W[5],
         ty,
         &row.receiving_code.to_string(),
       );
@@ -290,9 +375,9 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        13.5,
-        col_x[6],
-        cw[6],
+        14.0,
+        xs[6],
+        COL_W[6],
         ty,
         &row.reg_no,
       );
@@ -300,18 +385,19 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        13.5,
-        col_x[7],
-        cw[7],
+        14.0,
+        xs[7],
+        COL_W[7],
         ty,
         &row.running_in_reg.to_string(),
       );
-      op_text(
+      op_text_center(
         &mut ops,
         &ctx,
         &font_id,
-        13.0,
-        col_x[8] + 1.0,
+        14.0,
+        xs[8],
+        COL_W[8],
         ty,
         &row.invoice_no,
       );
@@ -319,9 +405,9 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        13.5,
-        col_x[9],
-        cw[9],
+        14.0,
+        xs[9],
+        COL_W[9],
         ty,
         &row.request_no.to_string(),
       );
@@ -329,9 +415,9 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        13.5,
-        col_x[10],
-        cw[10],
+        14.0,
+        xs[10],
+        COL_W[10],
         ty,
         &row.report_no.to_string(),
       );
@@ -339,93 +425,140 @@ pub fn generate_receiving_summary_pdf(
         &mut ops,
         &ctx,
         &font_id,
-        13.5,
-        col_x[11],
-        cw[11],
+        14.0,
+        xs[11],
+        COL_W[11],
         ty,
         &row.po_no.to_string(),
       );
-      op_hline(&mut ops, &ctx, col_x[0], col_x[12], cur_y + row_h);
-      cur_y += row_h;
+      op_hline_colored(
+        &mut ops,
+        &ctx,
+        xs[0],
+        table_right,
+        cur_y + ROW_H,
+        0.3,
+        COLOR_BORDER,
+      );
+      cur_y += ROW_H;
     }
 
-    // Last page: totals row
     if is_last {
+      // Totals row
       op_filled_rect(
         &mut ops,
         &ctx,
-        col_x[0],
+        xs[0],
         cur_y,
-        col_x[12] - col_x[0],
-        row_h,
-        0.93,
-        0.93,
-        0.93,
+        table_w,
+        ROW_H,
+        COLOR_TINT.0,
+        COLOR_TINT.1,
+        COLOR_TINT.2,
       );
-      let ty = cur_y + row_h - 1.8;
-      op_text_center(
+      op_hline_colored(&mut ops, &ctx, xs[0], table_right, cur_y, 0.8, COLOR_ACCENT);
+      let ty = cur_y + 4.9;
+      op_text_center_colored(
         &mut ops,
         &ctx,
         &font_bold_id,
-        15.0,
-        col_x[0],
-        col_x[4] - col_x[0],
+        14.0,
+        xs[0],
+        xs[4] - xs[0],
         ty,
         "รวมทั้งสิ้น",
+        COLOR_INK,
       );
-      op_text_right(
+      op_text_right_colored(
         &mut ops,
         &ctx,
         &font_bold_id,
-        15.0,
-        col_x[4],
-        cw[4],
+        14.0,
+        xs[4],
+        COL_W[4],
         ty,
         1.5,
         &fmt_money(grand_total),
+        COLOR_ACCENT,
       );
-      op_hline(&mut ops, &ctx, col_x[0], col_x[12], cur_y + row_h);
-      cur_y += row_h;
+      op_hline_colored(
+        &mut ops,
+        &ctx,
+        xs[0],
+        table_right,
+        cur_y + ROW_H,
+        0.8,
+        COLOR_ACCENT,
+      );
+      cur_y += ROW_H;
     }
 
-    // Table borders + verticals
-    op_box_rect(
-      &mut ops,
-      &ctx,
-      col_x[0],
-      table_top,
-      col_x[12] - col_x[0],
-      cur_y - table_top,
-    );
-    for &cx in &col_x[1..12usize] {
-      op_vline(&mut ops, &ctx, cx, table_top, cur_y);
+    for &cx in &xs[1..12usize] {
+      op_vline_colored(&mut ops, &ctx, cx, TABLE_TOP, cur_y, 0.3, COLOR_BORDER);
     }
-    op_hline(&mut ops, &ctx, col_x[0], col_x[12], table_top + hdr_h);
 
-    pdf_pages.push(make_landscape_page(ops));
-  }
-
-  // Handle empty rows case
-  if pdf_pages.is_empty() {
-    let mut ops = Vec::new();
-    ops.push(Op::SetOutlineThickness { pt: pt_f(0.3) });
-    op_text_center(
-      &mut ops,
-      &ctx,
-      &font_bold_id,
-      19.0,
-      0.0,
-      A4_LAND_W,
-      MARGIN + 6.0,
-      &title,
-    );
     pdf_pages.push(make_landscape_page(ops));
   }
 
   doc.with_pages(pdf_pages);
 
-  let filename = format!("สรุปรับยา_{year}_เดือน{month}_รอบ{}.pdf", params.round);
-  let path_str = output_path(&params.output_dir, filename);
+  let filename = format!("สรุปรับยา_{year}_เดือน{month}_รอบ{round}.pdf");
+  let path_str = output_path(output_dir, filename);
   crate::shared::save_pdf(&doc, &path_str)?;
   Ok(path_str)
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn sample_rows(count: usize) -> Vec<ReceivingSummaryRow> {
+    (0..count)
+      .map(|i| ReceivingSummaryRow {
+        approval_date: format!("{} ก.ค. 69", (i % 28) + 1),
+        po_date: format!("{} ก.ค. 69", (i % 28) + 2),
+        receive_date: format!("{} ก.ค. 69", (i % 28) + 3),
+        company_code: format!("C{:03}", (i % 5) + 1),
+        total_amount: 500.0 + i as f64 * 321.21,
+        receiving_code: (i + 1) as u32,
+        reg_no: "69ภ12".into(),
+        running_in_reg: (i % 10) as u32,
+        invoice_no: format!("INV-{:04}", i + 1),
+        request_no: 100 + (i as u32) * 2,
+        report_no: 101 + (i as u32) * 2,
+        po_no: 100 + i as u32,
+      })
+      .collect()
+  }
+
+  fn test_dir(name: &str) -> String {
+    let dir = std::env::temp_dir().join(name);
+    std::fs::create_dir_all(&dir).unwrap();
+    dir.to_string_lossy().to_string()
+  }
+
+  #[test]
+  fn generates_pdf_file_with_rows() {
+    let path =
+      generate_receiving_summary_pdf(&sample_rows(25), 2569, 10, 1, &test_dir("sb-pdf-rec"))
+        .unwrap();
+    assert!(path.ends_with(".pdf"));
+    let size = std::fs::metadata(&path).unwrap().len();
+    assert!(size > 1000, "pdf should not be empty, got {size} bytes");
+  }
+
+  #[test]
+  fn generates_pdf_file_without_rows() {
+    let path =
+      generate_receiving_summary_pdf(&[], 2569, 10, 1, &test_dir("sb-pdf-rec-empty")).unwrap();
+    assert!(std::fs::metadata(&path).unwrap().len() > 1000);
+  }
+
+  #[test]
+  fn generates_pdf_with_a_full_first_page() {
+    let path =
+      generate_receiving_summary_pdf(&sample_rows(20), 2569, 10, 1, &test_dir("sb-pdf-rec-full"))
+        .unwrap();
+    assert!(std::fs::metadata(&path).unwrap().len() > 1000);
+  }
 }
