@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
+import TabHome from "./components/TabHome.vue";
 import TabSettings from "./components/TabSettings.vue";
 import TabQuery from "./components/TabQuery.vue";
 import TabNumberLocks from "./components/TabNumberLocks.vue";
@@ -10,88 +12,26 @@ import TabReport3 from "./components/TabReport3.vue";
 import TabHistory from "./components/TabHistory.vue";
 import ToastContainer from "./components/ToastContainer.vue";
 import { useToast } from "./composables/useToast";
-import { Settings2, Database, Lock, FileText, ClipboardList, FileOutput, History } from 'lucide-vue-next'
+import type {
+    DbConfig,
+    PreviewData,
+    ReceivingNumberingInfo,
+    RoundHistoryEntry,
+    TabId,
+} from "./lib/types";
+import {
+    Check,
+    History,
+    LayoutDashboard,
+    Lock,
+    Settings2,
+} from "lucide-vue-next";
 
 const toast = useToast();
 
-// Types
+// Shared state
 
-export interface DbConfig {
-    host: string;
-    port: number;
-    database: string;
-    username: string;
-    password: string;
-}
-
-export interface InvoiceRow {
-    invoice_no: string;
-    vendor_code: string;
-    company_name: string;
-    company_keyword: string;
-    total_cost: number;
-    receive_date: string;
-    category: string;
-}
-
-export interface PreviewData {
-    invoices: InvoiceRow[];
-    total_amount: number;
-    row_count: number;
-}
-
-export interface CarryForward {
-    next_reg_no: string;
-    next_running: number;
-    next_po_no: number;
-    next_purchase_no: number;
-    remaining_balance: number;
-}
-
-export interface GenerateResult {
-    files: string[];
-    total_rows: number;
-    total_amount: number;
-    carry_forward: CarryForward;
-}
-
-export interface SkippedLockedNumberSet {
-    request_no: number;
-    report_no: number;
-    purchase_no: number;
-    reason: string;
-    note: string;
-}
-
-export interface ReceivingNumberingInfo {
-    start_po_no: number;
-    start_purchase_no: number;
-    skipped_locked_sets: SkippedLockedNumberSet[];
-}
-
-export interface RoundHistoryEntry {
-    id: string;
-    label: string;
-    fiscal_year: number;
-    month: number;
-    round: number;
-    date_from: string;
-    date_to: string;
-    next_reg_no: string;
-    next_running: number;
-    next_po_no: number;
-    next_purchase_no?: number;
-    remaining_balance: number;
-    budget_total: number;
-    total_amount: number;
-    invoice_count: number;
-    created_at: string;
-}
-
-// Shared State
-
-type TabId = "settings" | "query" | "numberLocks" | "report1" | "report2" | "report3" | "history";
-const activeTab = ref<TabId>("settings");
+const activeTab = ref<TabId>("home");
 
 const dbConfig = reactive<DbConfig>({
     host: "localhost",
@@ -125,7 +65,7 @@ const month = computed(() =>
 // Shared round number (applies to all 3 reports)
 const round = ref(1);
 
-// DB connection status (set by TabSettings via connectionStatus event)
+// DB connection status (set by TabSettings / TabHome via connectionStatus event)
 const dbConnected = ref<boolean | null>(null);
 
 // Per-report unique fields
@@ -143,6 +83,18 @@ const r3Form = reactive({
     approvalDate: "",
 });
 
+// Per-report completion flags for the overview stepper, reset when the
+// underlying data changes so the checklist always reflects reality.
+const generated = reactive({ report1: false, report2: false, report3: false });
+
+watch(previewData, () => {
+    generated.report1 = false;
+    generated.report2 = false;
+    generated.report3 = false;
+});
+
+const dataLoaded = computed(() => (previewData.value?.row_count ?? 0) > 0);
+
 // History
 const historyEntries = ref<RoundHistoryEntry[]>([]);
 
@@ -153,6 +105,9 @@ const r2Carry = ref<{
     next_po_no: number;
     next_purchase_no: number;
 } | null>(null);
+
+// App version (single-sourced from the Tauri bundle)
+const appVersion = ref("");
 
 // Lifecycle
 
@@ -166,6 +121,11 @@ onMounted(async () => {
         historyEntries.value = await invoke<RoundHistoryEntry[]>("load_round_history");
     } catch (_) {
         /* ignore on fresh install */
+    }
+    try {
+        appVersion.value = await getVersion();
+    } catch (_) {
+        /* version is cosmetic */
     }
 });
 
@@ -267,12 +227,12 @@ async function applyHistoryEntry(entry: RoundHistoryEntry) {
         `โหลดค่า carry-forward จากรอบ ${entry.round} แล้ว - พร้อมทำงานรอบ ${entry.round + 1}`
     );
 }
-
-// Tabs metadata - icons used directly in sidebar template
 </script>
 
 <template>
 <div class="app-root">
+
+    <a class="skip-link" href="#main-content">ข้ามไปยังเนื้อหาหลัก</a>
 
     <!-- ── Sidebar ─────────────────────────────────────────── -->
     <aside class="sidebar">
@@ -292,74 +252,107 @@ async function applyHistoryEntry(entry: RoundHistoryEntry) {
         <div class="sidebar-context" v-if="previewData">
             <div class="context-chip">
                 <span class="context-dot"></span>
-                ข้อมูล {{ previewData.row_count }} รายการพร้อม
+                ข้อมูล {{ previewData.row_count }} รายการ
+                <span class="context-round">รอบ {{ round }}</span>
             </div>
         </div>
 
         <!-- Navigation -->
-        <nav class="sidebar-nav">
-            <span class="nav-section-label">ตั้งค่า</span>
-            <button class="nav-item" :class="{ active: activeTab === 'settings' }"
-                @click="activeTab = 'settings'">
-                <Settings2 :size="15" :stroke-width="2" />
-                <span class="nav-label">ฐานข้อมูล</span>
-            </button>
-            <button class="nav-item" :class="{ active: activeTab === 'query' }"
-                @click="activeTab = 'query'">
-                <Database :size="15" :stroke-width="2" />
-                <span class="nav-label">ดึงข้อมูล</span>
-            </button>
-            <button class="nav-item" :class="{ active: activeTab === 'numberLocks' }"
-                @click="activeTab = 'numberLocks'">
-                <Lock :size="15" :stroke-width="2" />
-                <span class="nav-label">ล็อกเลข</span>
+        <nav class="sidebar-nav" aria-label="เมนูหลัก">
+            <button class="nav-item" :class="{ active: activeTab === 'home' }"
+                :aria-current="activeTab === 'home' ? 'page' : undefined"
+                @click="activeTab = 'home'">
+                <LayoutDashboard :size="15" :stroke-width="2" />
+                <span class="nav-text">ภาพรวม</span>
             </button>
 
-            <span class="nav-section-label">รายงาน</span>
+            <span class="nav-section-label">งานรายเดือน</span>
+            <button class="nav-item" :class="{ active: activeTab === 'query' }"
+                :aria-current="activeTab === 'query' ? 'page' : undefined"
+                @click="activeTab = 'query'">
+                <span class="nav-step" :class="{ done: dataLoaded }">
+                    <Check v-if="dataLoaded" :size="12" :stroke-width="3" />
+                    <template v-else>1</template>
+                </span>
+                <span class="nav-text">ดึงข้อมูล</span>
+            </button>
             <button class="nav-item" :class="{ active: activeTab === 'report1' }"
+                :aria-current="activeTab === 'report1' ? 'page' : undefined"
                 @click="activeTab = 'report1'">
-                <FileText :size="15" :stroke-width="2" />
-                <span class="nav-label">ส่งหนี้เบิกยา</span>
+                <span class="nav-step" :class="{ done: generated.report1 }">
+                    <Check v-if="generated.report1" :size="12" :stroke-width="3" />
+                    <template v-else>2</template>
+                </span>
+                <span class="nav-text">ส่งหนี้เบิกยา</span>
             </button>
             <button class="nav-item" :class="{ active: activeTab === 'report2' }"
+                :aria-current="activeTab === 'report2' ? 'page' : undefined"
                 @click="activeTab = 'report2'">
-                <ClipboardList :size="15" :stroke-width="2" />
-                <span class="nav-label">สรุปรับยา</span>
+                <span class="nav-step" :class="{ done: generated.report2 }">
+                    <Check v-if="generated.report2" :size="12" :stroke-width="3" />
+                    <template v-else>3</template>
+                </span>
+                <span class="nav-text">สรุปรับยา</span>
             </button>
             <button class="nav-item" :class="{ active: activeTab === 'report3' }"
+                :aria-current="activeTab === 'report3' ? 'page' : undefined"
                 @click="activeTab = 'report3'">
-                <FileOutput :size="15" :stroke-width="2" />
-                <span class="nav-label">เบิกยาปะหน้า</span>
+                <span class="nav-step" :class="{ done: generated.report3 }">
+                    <Check v-if="generated.report3" :size="12" :stroke-width="3" />
+                    <template v-else>4</template>
+                </span>
+                <span class="nav-text">เบิกยาปะหน้า</span>
             </button>
 
-            <div class="nav-divider"></div>
+            <span class="nav-section-label">เครื่องมือ</span>
+            <button class="nav-item" :class="{ active: activeTab === 'numberLocks' }"
+                :aria-current="activeTab === 'numberLocks' ? 'page' : undefined"
+                @click="activeTab = 'numberLocks'">
+                <Lock :size="15" :stroke-width="2" />
+                <span class="nav-text">ล็อกเลข</span>
+            </button>
             <button class="nav-item" :class="{ active: activeTab === 'history' }"
+                :aria-current="activeTab === 'history' ? 'page' : undefined"
                 @click="activeTab = 'history'">
                 <History :size="15" :stroke-width="2" />
-                <span class="nav-label">ประวัติรอบ</span>
+                <span class="nav-text">ประวัติรอบ</span>
             </button>
         </nav>
 
         <!-- Sidebar footer -->
         <div class="sidebar-footer">
-            <div class="conn-indicator">
+            <button class="nav-item" :class="{ active: activeTab === 'settings' }"
+                :aria-current="activeTab === 'settings' ? 'page' : undefined"
+                @click="activeTab = 'settings'">
+                <Settings2 :size="15" :stroke-width="2" />
+                <span class="nav-text">ตั้งค่าฐานข้อมูล</span>
+            </button>
+            <div class="conn-badge">
                 <span class="conn-dot"
                     :class="dbConnected === true ? 'ok' : dbConnected === false ? 'fail' : 'unknown'">
                 </span>
                 <span class="conn-text">
                     {{ dbConnected === true ? 'INVS เชื่อมต่อแล้ว'
-                     : dbConnected === false ? 'ยังไม่ได้เชื่อมต่อ'
+                     : dbConnected === false ? 'เชื่อมต่อไม่สำเร็จ'
                      : 'ยังไม่ได้ทดสอบ' }}
                 </span>
             </div>
-            <span class="sidebar-version">ภก.สุรเดช · v0.3.5</span>
+            <span class="app-version" v-if="appVersion">ภก.สุรเดช · v{{ appVersion }}</span>
         </div>
 
     </aside>
 
     <!-- ── Main content area ────────────────────────────────── -->
-    <main class="main-area">
-        <TabSettings v-show="activeTab === 'settings'" :db-config="dbConfig"
+    <main id="main-content" class="main-area">
+        <TabHome v-show="activeTab === 'home'"
+            :db-config="dbConfig" :db-connected="dbConnected"
+            :preview-data="previewData"
+            :start-date-html="startDateHtml" :end-date-html="endDateHtml"
+            :round="round" :history-entries="historyEntries" :generated="generated"
+            @navigate="activeTab = $event"
+            @load-entry="applyHistoryEntry"
+            @connection-status="handleConnectionStatus" />
+        <TabSettings v-show="activeTab === 'settings'" :db-config="dbConfig" :db-connected="dbConnected"
             @update:db-config="Object.assign(dbConfig, $event)" @save="saveDbConfig"
             @connection-status="handleConnectionStatus" />
         <TabQuery v-show="activeTab === 'query'" :db-config="dbConfig"
@@ -367,7 +360,8 @@ async function applyHistoryEntry(entry: RoundHistoryEntry) {
             v-model:end-date-html="endDateHtml"
             v-model:output-dir="outputDir"
             v-model:preview-data="previewData"
-            v-model:round="round" />
+            v-model:round="round"
+            @navigate="activeTab = $event" />
         <TabNumberLocks v-show="activeTab === 'numberLocks'" />
         <TabReport1 v-show="activeTab === 'report1'" :db-config="dbConfig"
             :date-from="dateFrom" :date-to="dateTo"
@@ -375,7 +369,9 @@ async function applyHistoryEntry(entry: RoundHistoryEntry) {
             :output-dir="outputDir" :preview-data="previewData"
             v-model:start-reg-no="r1Form.startRegNo"
             v-model:start-running="r1Form.startRunning"
-            @save-history="saveEntry" />
+            @save-history="saveEntry"
+            @navigate="activeTab = $event"
+            @generated="generated.report1 = true" />
         <TabReport2 v-show="activeTab === 'report2'" :db-config="dbConfig"
             :date-from="dateFrom" :date-to="dateTo"
             v-model:year="year" :month="month" :round="round"
@@ -385,7 +381,9 @@ async function applyHistoryEntry(entry: RoundHistoryEntry) {
             v-model:start-reg-no="r2Form.startRegNo"
             v-model:start-running="r2Form.startRunning"
             v-model:approval-date="r2Form.approvalDate"
-            @save-history="saveEntry" @carry-result="handleR2Carry" />
+            @save-history="saveEntry" @carry-result="handleR2Carry"
+            @navigate="activeTab = $event"
+            @generated="generated.report2 = true" />
         <TabReport3 v-show="activeTab === 'report3'" :db-config="dbConfig"
             :date-from="dateFrom" :date-to="dateTo"
             v-model:year="year" :month="month" :round="round"
@@ -393,7 +391,9 @@ async function applyHistoryEntry(entry: RoundHistoryEntry) {
             v-model:budget-total="r3Form.budgetTotal"
             v-model:previous-balance="r3Form.previousBalance"
             v-model:approval-date="r3Form.approvalDate"
-            :r2-carry="r2Carry" @save-history="saveEntry" />
+            :r2-carry="r2Carry" @save-history="saveEntry"
+            @navigate="activeTab = $event"
+            @generated="generated.report3 = true" />
         <TabHistory v-show="activeTab === 'history'"
             :entries="historyEntries"
             @load-entry="applyHistoryEntry"
@@ -405,254 +405,5 @@ async function applyHistoryEntry(entry: RoundHistoryEntry) {
 </template>
 
 <style>
-/* App shell only - design tokens and component styles in design-system.css */
-
-/* ── Root: horizontal split ─────────────────────────────────── */
-.app-root {
-    display: flex;
-    height: 100vh;
-    overflow: hidden;
-    background: var(--c-bg);
-}
-
-/* ══ SIDEBAR ══════════════════════════════════════════════════ */
-.sidebar {
-    width: 244px;
-    flex-shrink: 0;
-    background: var(--c-surface);
-    color: var(--c-text);
-    box-shadow: rgba(0, 0, 0, 0.08) 1px 0 0 0;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
-}
-
-/* ── Brand ─────────────────────────────────────────────────── */
-.sidebar-brand {
-    padding: 22px 18px 18px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-shrink: 0;
-    border-bottom: 1px solid var(--c-border);
-}
-
-.brand-icon {
-    width: 46px;
-    height: 46px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.brand-icon-img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
-}
-
-.brand-text {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    min-width: 0;
-}
-
-.brand-name {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--c-text);
-    letter-spacing: -0.2px;
-    line-height: 1.25;
-}
-
-.brand-sub {
-    font-size: 11px;
-    color: var(--c-text-muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 1.45;
-}
-
-/* ── Context chip ───────────────────────────────────────────── */
-.sidebar-context {
-    padding: 14px 14px 6px;
-    flex-shrink: 0;
-}
-
-.context-chip {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 9px 12px;
-    background: var(--c-primary-light);
-    box-shadow: rgba(200, 16, 46, 0.12) 0px 0px 0px 1px;
-    border-radius: 9999px;
-    font-size: 11.5px;
-    font-weight: 500;
-    color: var(--c-primary);
-    line-height: 1.4;
-}
-
-.context-dot {
-    width: 6px;
-    height: 6px;
-    background: var(--c-primary);
-    border-radius: 50%;
-    flex-shrink: 0;
-    animation: pulse-dot 2.4s ease-in-out infinite;
-}
-
-@keyframes pulse-dot {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-}
-
-/* ── Navigation ─────────────────────────────────────────────── */
-.sidebar-nav {
-    flex: 1;
-    overflow-y: auto;
-    padding: 10px 12px;
-    display: flex;
-    flex-direction: column;
-    scrollbar-width: none;
-}
-.sidebar-nav::-webkit-scrollbar { display: none; }
-
-.nav-section-label {
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--c-text-light);
-    padding: 14px 10px 6px;
-    display: block;
-    line-height: 1.4;
-}
-
-.nav-divider {
-    height: 1px;
-    background: var(--c-border);
-    margin: 10px 2px;
-}
-
-.nav-item {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 11px 12px 11px 14px;
-    border-radius: 100px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--c-text-muted);
-    text-align: left;
-    width: 100%;
-    transition: background 0.12s, color 0.12s, box-shadow 0.12s;
-    font-family: inherit;
-    line-height: 1.45;
-    flex-shrink: 0;
-}
-
-.nav-item svg {
-    stroke: currentColor;
-    flex-shrink: 0;
-}
-
-.nav-item:hover {
-    background: var(--c-primary-light);
-    color: var(--c-text);
-}
-
-.nav-item.active {
-    background: #fff;
-    color: var(--c-text);
-    box-shadow: var(--shadow-ring);
-    font-weight: 600;
-}
-
-.nav-label {
-    flex: 1;
-    letter-spacing: 0;
-}
-
-/* ── Sidebar footer ──────────────────────────────────────────── */
-.sidebar-footer {
-    padding: 16px 18px 18px;
-    border-top: 1px solid var(--c-border);
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.conn-indicator {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-}
-
-.conn-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-.conn-dot.ok {
-    background: #16A34A;
-    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.14);
-}
-
-.conn-dot.fail {
-    background: var(--c-error);
-    box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.14);
-}
-
-.conn-dot.unknown {
-    background: var(--c-border);
-}
-
-.conn-text {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--c-text-muted);
-    line-height: 1.4;
-}
-
-.sidebar-version {
-    font-size: 10.5px;
-    color: var(--c-text-light);
-    letter-spacing: 0;
-    line-height: 1.35;
-}
-
-/* ══ MAIN CONTENT AREA ════════════════════════════════════════ */
-.main-area {
-    flex: 1;
-    overflow-y: auto;
-    padding: 32px 40px 40px;
-    background: var(--c-bg);
-    min-width: 0;
-}
-
-.main-area > * {
-    max-width: 1240px;
-    margin: 0 auto;
-}
-
-/* ── Dark mode ───────────────────────────────────────────────── */
-@media (prefers-color-scheme: dark) {
-    .conn-dot.ok {
-        background: #4ADE80;
-        box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.14);
-    }
-}
+/* App shell only - design tokens and components live in design-system.css. */
 </style>
