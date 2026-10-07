@@ -79,11 +79,16 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+    (e: "update:year", v: number): void;
     (e: "update:budgetTotal", v: number): void;
     (e: "update:previousBalance", v: number): void;
     (e: "update:approvalDate", v: string): void;
     (e: "saveHistory", entry: RoundHistoryEntry): void;
 }>();
+
+function onYearInput(e: Event) {
+    emit("update:year", parseInt((e.target as HTMLInputElement).value, 10) || 0);
+}
 
 const toast = useToast();
 
@@ -265,7 +270,9 @@ function saveToHistory() {
         <div class="form-grid">
             <div class="form-group">
                 <label>ปีงบประมาณ</label>
-                <input type="text" :value="year > 0 ? String(year) : '-'" readonly />
+                <input type="number" min="2500" max="2700" :value="year > 0 ? year : ''" placeholder="เช่น 2569"
+                    @input="onYearInput" />
+                <span class="field-hint">แก้ไขได้ (ค่าเริ่มต้นจากช่วงวันที่)</span>
             </div>
             <div class="form-group">
                 <label>เดือน</label>
