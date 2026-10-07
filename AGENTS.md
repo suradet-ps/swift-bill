@@ -1,4 +1,4 @@
-# System Architecture & Agent Instructions — Swift Bill v0.3.5
+# System Architecture & Agent Instructions - Swift Bill v0.3.5
 
 ## 1. Project Overview
 
@@ -14,7 +14,7 @@ The app connects directly to the hospital's legacy **INVS** SQL Server database 
 | --------------- | ------------------------------------------------- |
 | Frontend        | Vue 3 (Composition API) + TypeScript + Vite       |
 | Desktop shell   | Tauri 2 (Rust)                                    |
-| Database driver | `tiberius` v0.12 — direct TDS, **no ODBC needed** |
+| Database driver | `tiberius` v0.12 - direct TDS, **no ODBC needed** |
 | PDF generation  | `printpdf` v0.9 (Op-stream API)                   |
 | Thai font       | CordiaNew TrueType, embedded via `include_bytes!` |
 
@@ -38,19 +38,19 @@ Key invariants across rounds:
 
 ## 4. Output Files
 
-### File 1 — ส่งหนี้เบิกยา (Invoice Submission List)
+### File 1 - ส่งหนี้เบิกยา (Invoice Submission List)
 
 - **Layout:** A4 Landscape, single PDF, all rows on one sheet
 - **Filename:** `ส่งหนี้เบิกยา_{year}_เดือน{month}_รอบ{round}.pdf`
 - **Columns:** ลำดับ | วันที่รับของ | เลขที่เอกสาร | เลขทะเบียนคุม | ลำดับ | วัน/เดือน/ปีใบส่งของ | รหัสบริษัท | ค่าใช้จ่ายเรื่อง | จำนวนเงินรวม
 
-### File 2 — สรุปรับยา (Receiving Summary)
+### File 2 - สรุปรับยา (Receiving Summary)
 
 - **Layout:** A4 Landscape, single PDF
 - **Filename:** `สรุปรับยา_{year}_เดือน{month}_รอบ{round}.pdf`
 - **Columns:** วันที่ขออนุมัติ | วันที่สั่งซื้อ | วันที่รับของ | รหัสบริษัท | จำนวนเงินรวม | รหัสลงรับยา | เลขทะเบียนคุม | ลำดับ | เลขที่ลงรับ | ขอซื้อ (ลบ0033.302/) | รายงาน/อนุมัติ (ลบ0033.302/) | ใบสั่งซื้อ…/{year}
 
-### File 3 — เบิกยาปะหน้า (Disbursement Cover Letters)
+### File 3 - เบิกยาปะหน้า (Disbursement Cover Letters)
 
 - **Layout:** A4 Portrait, **one separate PDF per invoice**
 - **Filename:** `เบิกยาปะหน้า_{year}_เดือน{month}_รอบ{round}_หน้า{NNN}.pdf`
@@ -68,7 +68,7 @@ previous_balance[i+1] = remaining_balance[i]
 cumulative_spent[i+1] = cumulative_spent[i] + current_amount[i]
 ```
 
-All values are static numbers in the PDF — no formulas.
+All values are static numbers in the PDF - no formulas.
 
 ---
 
@@ -76,22 +76,22 @@ All values are static numbers in the PDF — no formulas.
 
 ```
 app/src-tauri/src/
-├── lib.rs        — Tauri commands: test_connection, preview_data, generate_reports
-├── db.rs         — tiberius TCP connection helper
-├── queries.rs    — fetch_invoices() SQL query against MS_IVO JOIN COMPANY
-├── models.rs     — all Rust structs (GenerateParams has `round: u32`)
-├── reports.rs    — business logic: process_invoice_submission, process_receiving_summary, process_cover_letters
-├── pdf.rs        — PDF generation via printpdf 0.9 Op-stream API
-├── THSarabun.ttf      — embedded Thai regular font (CordiaNew)
-└── THSarabunBold.ttf  — embedded Thai bold font (CordiaNew Bold)
+├── lib.rs        - Tauri commands: test_connection, preview_data, generate_reports
+├── db.rs         - tiberius TCP connection helper
+├── queries.rs    - fetch_invoices() SQL query against MS_IVO JOIN COMPANY
+├── models.rs     - all Rust structs (GenerateParams has `round: u32`)
+├── reports.rs    - business logic: process_invoice_submission, process_receiving_summary, process_cover_letters
+├── pdf.rs        - PDF generation via printpdf 0.9 Op-stream API
+├── THSarabun.ttf      - embedded Thai regular font (CordiaNew)
+└── THSarabunBold.ttf  - embedded Thai bold font (CordiaNew Bold)
 
 app/src/
-└── App.vue       — Vue 3 UI: Settings tab | Generate tab | Preview tab
+└── App.vue       - Vue 3 UI: Settings tab | Generate tab | Preview tab
 ```
 
 ---
 
-## 6. Database Schema (INVS — Read Only)
+## 6. Database Schema (INVS - Read Only)
 
 ### MS_IVO (Invoices / Receiving)
 
@@ -214,9 +214,9 @@ pub struct GenerateResult {
 
 ## 10. Development Rules
 
-1. **Rust for all logic** — Vue only handles UI state and user input.
-2. **Type safety** — TypeScript interfaces must exactly match Rust structs.
-3. **Error handling** — All Tauri commands return `Result<T, String>`. Errors are shown in the UI.
-4. **Read-only DB** — Never write to or modify the INVS database.
-5. **Embedded fonts** — Both Thai TTF files are compiled into the binary via `include_bytes!`. No system font dependency.
-6. **Round continuity** — The user is responsible for entering the correct `start_po_no`, `start_reg_no`, `start_running`, and `previous_balance` for each new round. The app does not persist state between sessions.
+1. **Rust for all logic** - Vue only handles UI state and user input.
+2. **Type safety** - TypeScript interfaces must exactly match Rust structs.
+3. **Error handling** - All Tauri commands return `Result<T, String>`. Errors are shown in the UI.
+4. **Read-only DB** - Never write to or modify the INVS database.
+5. **Embedded fonts** - Both Thai TTF files are compiled into the binary via `include_bytes!`. No system font dependency.
+6. **Round continuity** - The user is responsible for entering the correct `start_po_no`, `start_reg_no`, `start_running`, and `previous_balance` for each new round. The app does not persist state between sessions.

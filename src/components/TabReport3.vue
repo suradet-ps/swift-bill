@@ -220,7 +220,7 @@ function saveToHistory() {
 <div class="report-wrap">
     <div class="page-header">
         <h2 class="page-title">เบิกยาปะหน้า</h2>
-        <p class="page-desc">Disbursement Cover Letters — A4 Portrait PDF · 1 หน้า/บิล รวมในไฟล์เดียว</p>
+        <p class="page-desc">Disbursement Cover Letters - A4 Portrait PDF · 1 หน้า/บิล รวมในไฟล์เดียว</p>
     </div>
 
     <!-- Data summary -->
@@ -230,7 +230,7 @@ function saveToHistory() {
         </div>
 
         <div v-if="!previewData" class="no-data">
-            <AlertTriangle :size="14" /> ยังไม่มีข้อมูล — กรุณาไปที่แท็บ ดึงข้อมูล ก่อน
+            <AlertTriangle :size="14" /> ยังไม่มีข้อมูล - กรุณาไปที่แท็บ ดึงข้อมูล ก่อน
         </div>
         <div v-else>
             <div class="preview-summary">
@@ -256,7 +256,7 @@ function saveToHistory() {
             <Wallet :size="17" /> ตั้งค่างบประมาณ
         </div>
         <div class="card-desc">
-            ยอดงบประมาณจะคำนวณแบบ running ต่อกันทุกบิล — โหลดค่าก่อนหน้าจากประวัติรอบได้
+            ยอดงบประมาณจะคำนวณแบบ running ต่อกันทุกบิล - โหลดค่าก่อนหน้าจากประวัติรอบได้
         </div>
 
         <div class="section-label">
@@ -265,11 +265,11 @@ function saveToHistory() {
         <div class="form-grid">
             <div class="form-group">
                 <label>ปีงบประมาณ</label>
-                <input type="text" :value="year > 0 ? String(year) : '—'" readonly />
+                <input type="text" :value="year > 0 ? String(year) : '-'" readonly />
             </div>
             <div class="form-group">
                 <label>เดือน</label>
-                <input type="text" :value="month > 0 ? THAI_MONTHS[month - 1] : '—'" readonly />
+                <input type="text" :value="month > 0 ? THAI_MONTHS[month - 1] : '-'" readonly />
             </div>
             <div class="form-group">
                 <label>รอบที่</label>

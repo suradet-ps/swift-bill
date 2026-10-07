@@ -244,7 +244,7 @@ onMounted(loadEntries);
                         <td class="text-center">{{ entry.report_no }}</td>
                         <td class="text-center">{{ entry.purchase_no }}</td>
                         <td>{{ entry.reason }}</td>
-                        <td>{{ entry.note || "—" }}</td>
+                        <td>{{ entry.note || "-" }}</td>
                         <td>{{ formatDateTime(entry.created_at) }}</td>
                         <td class="text-center">
                             <button class="btn btn-danger btn-sm" :disabled="deletingId === entry.id"

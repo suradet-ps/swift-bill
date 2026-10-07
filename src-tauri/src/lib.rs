@@ -7,7 +7,7 @@
 //!   access to the [`tauri::AppHandle`] for resolving the per-user data dir.
 //! * Tauri plugin setup and command registration in [`run`].
 //!
-//! No business logic, no report algorithms, no PDF rendering, no SQL —
+//! No business logic, no report algorithms, no PDF rendering, no SQL -
 //! those live in the workspace crates where they are independently
 //! testable and free of any Tauri / GUI dependency.
 

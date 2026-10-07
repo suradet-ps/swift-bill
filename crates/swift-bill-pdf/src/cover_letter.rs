@@ -16,7 +16,7 @@ use crate::shared::{
   op_filled_rect, op_hline, op_text, op_text_center, op_text_right, op_vline, output_path, pt_f,
 };
 
-/// Public entry point — builds a multi-page A4 portrait PDF where each
+/// Public entry point - builds a multi-page A4 portrait PDF where each
 /// [`CoverLetterPage`] becomes one page.
 pub fn generate_cover_letters_pdf(
   pages: &[CoverLetterPage],

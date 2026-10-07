@@ -1,5 +1,5 @@
 //! Excel (.xlsx) export for the Invoice Submission and Receiving Summary
-//! reports. Pure Rust via `rust_xlsxwriter` — no external Office process
+//! reports. Pure Rust via `rust_xlsxwriter` - no external Office process
 //! required.
 
 #![warn(clippy::pedantic)]
