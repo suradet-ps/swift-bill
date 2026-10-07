@@ -107,7 +107,7 @@ OS Thai font, so the app has no runtime font dependency. Numbers use
 - Fixed 248px sidebar, fluid content capped at 1200px.
 - Sidebar order: brand, live data context chip, `ภาพรวม`, `งานรายเดือน`
   (numbered steps 1 to 4), `เครื่องมือ` (`ล็อกเลข`, `ประวัติรอบ`), then the
-  footer with `ตั้งค่าฐานข้อมูล`, connection status, and the real app version.
+  footer with `ตั้งค่าฐานข้อมูล` and the connection status.
 - Step badges show a check when the step is complete. Completion resets
   whenever the fetched dataset changes.
 - Report screens show the next action when blocked: an empty state with a

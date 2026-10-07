@@ -452,20 +452,6 @@ h4 {
   text-overflow: ellipsis;
 }
 
-.sidebar-settings {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.app-version {
-  font-size: var(--fs-label);
-  color: var(--c-text-light);
-  letter-spacing: 0;
-  line-height: 1.35;
-}
-
 /* ══ MAIN CONTENT ════════════════════════════════════════════ */
 .main-area {
   flex: 1;

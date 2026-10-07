@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { getVersion } from "@tauri-apps/api/app";
 import TabHome from "./components/TabHome.vue";
 import TabSettings from "./components/TabSettings.vue";
 import TabQuery from "./components/TabQuery.vue";
@@ -106,9 +105,6 @@ const r2Carry = ref<{
     next_purchase_no: number;
 } | null>(null);
 
-// App version (single-sourced from the Tauri bundle)
-const appVersion = ref("");
-
 // Lifecycle
 
 onMounted(async () => {
@@ -121,11 +117,6 @@ onMounted(async () => {
         historyEntries.value = await invoke<RoundHistoryEntry[]>("load_round_history");
     } catch (_) {
         /* ignore on fresh install */
-    }
-    try {
-        appVersion.value = await getVersion();
-    } catch (_) {
-        /* version is cosmetic */
     }
 });
 
@@ -340,7 +331,6 @@ async function applyHistoryEntry(entry: RoundHistoryEntry) {
                      : 'ยังไม่ได้ทดสอบ' }}
                 </span>
             </div>
-            <span class="app-version" v-if="appVersion">ภก.สุรเดช · v{{ appVersion }}</span>
         </div>
 
     </aside>
