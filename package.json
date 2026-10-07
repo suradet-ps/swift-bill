@@ -16,7 +16,10 @@
     "tauri": "tauri",
     "fmt": "cargo fmt --all",
     "fmt:check": "cargo fmt --all -- --check",
-    "gen-icons": "bun scripts/gen-icons.cjs"
+    "gen-icons": "bun scripts/gen-icons.cjs",
+    "version:check": "node scripts/version.mjs check",
+    "version:sync": "node scripts/version.mjs sync",
+    "version:bump": "node scripts/version.mjs bump"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",
