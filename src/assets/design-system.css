@@ -636,12 +636,6 @@ h4 {
   gap: var(--sp-4);
 }
 
-.form-grid-4 {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--sp-4);
-}
-
 .form-group,
 .field {
   display: flex;
@@ -834,10 +828,6 @@ textarea.input {
   padding: 9px 18px;
   font-size: var(--fs-body);
   border-radius: var(--radius-md);
-}
-
-.btn-block {
-  width: 100%;
 }
 
 .btn-icon {
@@ -1219,13 +1209,6 @@ textarea.input {
   justify-content: center;
 }
 
-.history-empty {
-  text-align: center;
-  padding: var(--sp-7);
-  color: var(--c-text-light);
-  font-size: var(--fs-body);
-}
-
 /* ── Stat cards ────────────────────────────────────────────── */
 .preview-summary,
 .stat-grid {
@@ -1498,20 +1481,6 @@ textarea.input {
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Period badge (legacy helper) ──────────────────────────── */
-.period-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--c-primary-light);
-  color: var(--c-primary);
-  box-shadow: inset 0 0 0 1px var(--c-primary-border);
-  border-radius: var(--radius-full);
-  padding: 4px 14px;
-  font-size: var(--fs-sm);
-  font-weight: 500;
-}
-
 /* ── Code ──────────────────────────────────────────────────── */
 code {
   font-family: var(--font-mono);
@@ -1547,13 +1516,6 @@ code {
   gap: var(--sp-4);
   flex-wrap: wrap;
   margin-bottom: var(--sp-4);
-}
-
-.toolbar-end {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  margin-left: auto;
 }
 
 /* ── History entries ───────────────────────────────────────── */
@@ -1695,27 +1657,6 @@ code {
   white-space: nowrap;
 }
 
-/* ── Inline confirm strip ──────────────────────────────────── */
-.confirm-strip {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  background: var(--c-error-bg);
-  box-shadow: inset 0 0 0 1px var(--c-error-border);
-  color: var(--c-error);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  flex-wrap: wrap;
-}
-
-.confirm-strip .confirm-actions {
-  display: flex;
-  gap: var(--sp-2);
-  margin-left: auto;
-}
-
 /* ── Budget preview ────────────────────────────────────────── */
 .budget-preview {
   background: var(--c-surface-soft);
@@ -1794,28 +1735,8 @@ code {
   color: var(--c-text-light);
 }
 
-.mono {
-  font-family: var(--font-mono);
-}
-
 .period {
   color: var(--c-text) !important;
-}
-
-.no-data {
-  text-align: center;
-  padding: var(--sp-5);
-  color: var(--c-warn);
-  font-size: var(--fs-sm);
-  background: var(--c-warn-bg);
-  box-shadow: inset 0 0 0 1px var(--c-warn-border);
-  border-radius: var(--radius-md);
-}
-
-.divider-top {
-  border-top: 1px solid var(--c-border-soft);
-  padding-top: var(--sp-5);
-  margin-top: var(--sp-5);
 }
 
 /* ── Reduced motion ────────────────────────────────────────── */

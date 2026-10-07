@@ -63,14 +63,15 @@ function pad(n: number): string {
 
 /** Fill the 10-day disbursement period (งวด) for the selected month. */
 function applyPeriod(part: 1 | 2 | 3) {
-    const base = props.startDateHtml ? new Date(props.startDateHtml) : new Date();
-    const y = base.getFullYear();
-    const m = base.getMonth();
-    const last = new Date(y, m + 1, 0).getDate();
+    const now = new Date();
+    const base = props.startDateHtml || `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
+    const y = parseInt(base.substring(0, 4), 10);
+    const m = parseInt(base.substring(5, 7), 10);
+    const last = new Date(y, m, 0).getDate();
     const from = part === 1 ? 1 : part === 2 ? 11 : 21;
     const to = part === 1 ? 10 : part === 2 ? 20 : last;
-    emit("update:startDateHtml", `${y}-${pad(m + 1)}-${pad(from)}`);
-    emit("update:endDateHtml", `${y}-${pad(m + 1)}-${pad(to)}`);
+    emit("update:startDateHtml", `${y}-${pad(m)}-${pad(from)}`);
+    emit("update:endDateHtml", `${y}-${pad(m)}-${pad(to)}`);
 }
 
 const isDbReady = computed(

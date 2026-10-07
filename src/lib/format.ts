@@ -15,10 +15,6 @@ export function formatMoney(n: number): string {
     });
 }
 
-export function formatInt(n: number): string {
-    return n.toLocaleString("th-TH");
-}
-
 export function fileName(path: string): string {
     return path.split(/[\\/]/).pop() ?? path;
 }

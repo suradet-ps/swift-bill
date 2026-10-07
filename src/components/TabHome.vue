@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { useToast } from "../composables/useToast";
 import { formatDateTime, formatMoney, formatPeriodLabel } from "../lib/format";
 import type { DbConfig, PreviewData, RoundHistoryEntry, TabId } from "../lib/types";
 import {
@@ -34,9 +33,7 @@ const emit = defineEmits<{
     (e: "connectionStatus", ok: boolean): void;
 }>();
 
-const toast = useToast();
 const testing = ref(false);
-
 const isConfigured = computed(
     () => props.dbConfig.host.trim() !== "" && props.dbConfig.username.trim() !== ""
 );
@@ -115,10 +112,8 @@ async function testConnection() {
     try {
         await invoke<string>("test_connection", { config: { ...props.dbConfig } });
         emit("connectionStatus", true);
-        toast.success("เชื่อมต่อสำเร็จ", "เชื่อมต่อฐานข้อมูล INVS ได้เรียบร้อย");
-    } catch (e) {
+    } catch {
         emit("connectionStatus", false);
-        toast.error("เชื่อมต่อล้มเหลว", String(e));
     } finally {
         testing.value = false;
     }
@@ -154,7 +149,9 @@ async function testConnection() {
     <div v-else-if="dbConnected !== true" class="callout callout-info">
         <Database :size="16" />
         <div class="callout-body">
-            <span class="callout-title">ยังไม่ได้ทดสอบการเชื่อมต่อ</span>
+            <span class="callout-title">
+                {{ dbConnected === false ? "เชื่อมต่อไม่สำเร็จ" : "ยังไม่ได้ทดสอบการเชื่อมต่อ" }}
+            </span>
         </div>
         <button class="btn btn-secondary btn-sm" :disabled="testing" @click="testConnection">
             <span v-if="testing" class="spinner"></span>
