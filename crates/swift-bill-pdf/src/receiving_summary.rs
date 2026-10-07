@@ -17,7 +17,7 @@ use crate::shared::{
 };
 
 const ROWS_PER_PAGE: usize = 20;
-const TABLE_TOP: f64 = 40.0;
+const TABLE_TOP: f64 = 29.0;
 const HDR_H: f64 = 15.0;
 const ROW_H: f64 = 6.5;
 
@@ -74,10 +74,10 @@ pub fn generate_receiving_summary_pdf(
   if rows.is_empty() {
     let mut ops: Vec<Op> = Vec::new();
     ops.push(Op::SetOutlineThickness { pt: pt_f(0.3) });
-    op_doc_header(&mut ops, &ctx, &font_id, title, &subtitle);
+    op_doc_header(&mut ops, &ctx, title, &subtitle);
     op_page_footer(&mut ops, &ctx, 0, 1);
     op_set_stroke(&mut ops, COLOR_BORDER);
-    op_box_rect(&mut ops, &ctx, MARGIN, 70.0, table_w, 24.0);
+    op_box_rect(&mut ops, &ctx, MARGIN, 55.0, table_w, 24.0);
     op_text_center(
       &mut ops,
       &ctx,
@@ -85,7 +85,7 @@ pub fn generate_receiving_summary_pdf(
       14.0,
       MARGIN,
       table_w,
-      84.0,
+      69.0,
       "ไม่มีข้อมูลสำหรับช่วงเวลานี้",
     );
     pdf_pages.push(make_landscape_page(ops));
@@ -96,7 +96,7 @@ pub fn generate_receiving_summary_pdf(
     let mut ops: Vec<Op> = Vec::new();
 
     ops.push(Op::SetOutlineThickness { pt: pt_f(0.3) });
-    op_doc_header(&mut ops, &ctx, &font_id, title, &subtitle);
+    op_doc_header(&mut ops, &ctx, title, &subtitle);
     op_page_footer(&mut ops, &ctx, page_idx, total_pages);
 
     // Plain column band: ink text between two rule lines, no fill.

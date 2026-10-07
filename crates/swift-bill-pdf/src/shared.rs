@@ -531,46 +531,9 @@ pub fn op_vline_colored(
   op_vline(ops, ctx, x, top_y1, top_y2);
 }
 
-/// Document header used by both landscape reports: hospital name, accent rule,
-/// bold title, and an accent-colored subtitle.
-pub fn op_doc_header(
-  ops: &mut Vec<Op>,
-  ctx: &PageCtx,
-  font_id: &FontId,
-  title: &str,
-  subtitle: &str,
-) {
-  op_text_colored(
-    ops,
-    ctx,
-    font_id,
-    11.0,
-    MARGIN,
-    12.5,
-    "โรงพยาบาลสระโบสถ์",
-    COLOR_MUTED,
-  );
-  op_text_right_colored(
-    ops,
-    ctx,
-    font_id,
-    11.0,
-    0.0,
-    ctx.page_w - MARGIN,
-    12.5,
-    0.0,
-    "ระบบจัดทำเอกสารเบิกจ่ายยา",
-    COLOR_MUTED,
-  );
-  op_hline_colored(
-    ops,
-    ctx,
-    MARGIN,
-    ctx.page_w - MARGIN,
-    15.5,
-    1.4,
-    COLOR_ACCENT,
-  );
+/// Document header used by both landscape reports: bold title and an
+/// accent-colored subtitle, centered on the page.
+pub fn op_doc_header(ops: &mut Vec<Op>, ctx: &PageCtx, title: &str, subtitle: &str) {
   op_text_center_colored(
     ops,
     ctx,
@@ -578,7 +541,7 @@ pub fn op_doc_header(
     19.0,
     0.0,
     ctx.page_w,
-    27.0,
+    16.0,
     title,
     COLOR_INK,
   );
@@ -589,7 +552,7 @@ pub fn op_doc_header(
     13.5,
     0.0,
     ctx.page_w,
-    34.5,
+    23.5,
     subtitle,
     COLOR_ACCENT,
   );
