@@ -135,17 +135,41 @@ pub fn op_text(
   ops.push(Op::EndTextSection);
 }
 
-/// Rough character-width estimator (mm) for centering/right-align.
+/// Rough character-width estimator (mm) used as a fallback when the embedded
+/// font cannot be parsed.
 #[must_use]
 pub fn char_width_mm(size: f64) -> f64 {
   // 1 pt ≈ 0.353 mm; Thai glyphs in Cordia/Sarabun are roughly 0.55× em wide.
   size * 0.353 * 0.55
 }
 
+fn fallback_width_mm(s: &str, size: f64) -> f64 {
+  s.chars().count() as f64 * char_width_mm(size)
+}
+
 /// Total width (mm) of a string at a given font size.
+///
+/// Measures the real advance widths of the embedded font, so Thai combining
+/// marks (which carry no advance) do not inflate the width and text stays
+/// correctly centred.
 #[must_use]
 pub fn text_width_mm(s: &str, size: f64) -> f64 {
-  s.chars().count() as f64 * char_width_mm(size)
+  let Ok(face) = ttf_parser::Face::parse(FONT_REGULAR, 0) else {
+    return fallback_width_mm(s, size);
+  };
+  let units_per_em = f64::from(face.units_per_em());
+  if units_per_em <= 0.0 {
+    return fallback_width_mm(s, size);
+  }
+  let mut units = 0.0;
+  for ch in s.chars() {
+    if let Some(glyph) = face.glyph_index(ch) {
+      if let Some(advance) = face.glyph_hor_advance(glyph) {
+        units += f64::from(advance);
+      }
+    }
+  }
+  units / units_per_em * size * (25.4 / 72.0)
 }
 
 /// Place text centred within `[col_x .. col_x+col_w]`.
@@ -394,8 +418,6 @@ pub const COLOR_BORDER: (f64, f64, f64) = (0.84, 0.81, 0.78);
 pub const COLOR_ZEBRA: (f64, f64, f64) = (0.980, 0.968, 0.955);
 /// Accent-tinted fill for the totals row.
 pub const COLOR_TINT: (f64, f64, f64) = (0.978, 0.930, 0.920);
-/// White text on the accent header band.
-pub const COLOR_WHITE: (f64, f64, f64) = (1.0, 1.0, 1.0);
 
 /// Build an RGB color from components in the 0.0-1.0 range.
 fn rgb(r: f64, g: f64, b: f64) -> Color {
@@ -609,45 +631,49 @@ pub fn op_page_footer(ops: &mut Vec<Op>, ctx: &PageCtx, page_idx: usize, total_p
   );
 }
 
-/// Two-column signature block for the last page of a report.
-pub fn op_signature_block(
+/// Three-column signature row: label, signature line, name in parentheses,
+/// and a date line per column (no roles).
+pub fn op_signature_row3(
   ops: &mut Vec<Op>,
   ctx: &PageCtx,
   font_id: &FontId,
   top_y: f64,
-  left_label: &str,
-  left_role: &str,
-  right_label: &str,
-  right_role: &str,
+  labels: &[&str; 3],
 ) {
-  let col_w = 72.0;
-  let right_x = ctx.page_w - MARGIN - col_w;
-  for (col_x, label, role) in [
-    (MARGIN, left_label, left_role),
-    (right_x, right_label, right_role),
-  ] {
-    op_text_center(ops, ctx, font_id, 12.5, col_x, col_w, top_y, label);
+  let col_w = (ctx.page_w - 2.0 * MARGIN) / 3.0;
+  for (i, label) in labels.iter().enumerate() {
+    let x = MARGIN + col_w * i as f64;
+    op_text_center(ops, ctx, font_id, 12.0, x, col_w, top_y, label);
     op_text_center(
       ops,
       ctx,
       font_id,
-      12.5,
-      col_x,
+      12.0,
+      x,
       col_w,
-      top_y + 7.0,
+      top_y + 5.5,
       "ลงชื่อ................................",
     );
     op_text_center(
       ops,
       ctx,
       font_id,
-      12.5,
-      col_x,
+      12.0,
+      x,
       col_w,
-      top_y + 13.0,
+      top_y + 10.5,
       "(............................................)",
     );
-    op_text_center(ops, ctx, font_id, 12.0, col_x, col_w, top_y + 19.5, role);
+    op_text_center(
+      ops,
+      ctx,
+      font_id,
+      12.0,
+      x,
+      col_w,
+      top_y + 15.5,
+      "วันที่................................",
+    );
   }
 }
 
