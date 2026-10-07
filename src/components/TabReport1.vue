@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useToast } from "../composables/useToast";
 import { BarChart3, AlertTriangle, Hash, Info, Eye, XCircle, Pencil, FileSpreadsheet, FileText, CheckCircle, ArrowRight, Save, Package, Banknote } from 'lucide-vue-next'
@@ -116,6 +116,17 @@ const carryForward = ref<CarryForward | null>(null);
 const exportedFile = ref<string | null>(null);
 const pdfLoading = ref(false);
 const exportedPdfFile = ref<string | null>(null);
+
+watch(
+    () => [props.year, props.month, props.round, props.dateFrom, props.dateTo, props.startRegNo, props.startRunning],
+    () => {
+        editableRows.value = [];
+        carryForward.value = null;
+        exportedFile.value = null;
+        exportedPdfFile.value = null;
+        exportError.value = "";
+    }
+);
 
 // Computed properties
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useToast } from "../composables/useToast";
 import { BarChart3, AlertTriangle, Hash, CalendarDays, Eye, XCircle, Pencil, FileSpreadsheet, FileText, CheckCircle, ArrowRight, Save, Package, Banknote, X } from 'lucide-vue-next'
@@ -143,6 +143,18 @@ const numberingInfo = ref<ReceivingNumberingInfo | null>(null);
 const exportedFile = ref<string | null>(null);
 const pdfLoading = ref(false);
 const exportedPdfFile = ref<string | null>(null);
+
+watch(
+    () => [props.year, props.month, props.round, props.dateFrom, props.dateTo, props.startPoNo, props.startPurchaseNo, props.startRegNo, props.startRunning, props.approvalDate],
+    () => {
+        editableRows.value = [];
+        carryForward.value = null;
+        numberingInfo.value = null;
+        exportedFile.value = null;
+        exportedPdfFile.value = null;
+        exportError.value = "";
+    }
+);
 
 // Thai date picker for Approval Date
 // Holds the native <input type="date"> value (YYYY-MM-DD).

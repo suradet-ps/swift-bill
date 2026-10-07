@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useToast } from "../composables/useToast";
 import { FileOutput, BarChart3, AlertTriangle, Wallet, CalendarDays, Calculator, XCircle, CheckCircle, ArrowRight, Save, Package, Banknote, X } from 'lucide-vue-next'
@@ -95,6 +95,14 @@ const toast = useToast();
 const loading = ref(false);
 const error = ref("");
 const result = ref<GenerateResult | null>(null);
+
+watch(
+    () => [props.year, props.month, props.round, props.dateFrom, props.dateTo, props.budgetTotal, props.previousBalance, props.approvalDate],
+    () => {
+        result.value = null;
+        error.value = "";
+    }
+);
 
 const THAI_MONTHS = [
     "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
