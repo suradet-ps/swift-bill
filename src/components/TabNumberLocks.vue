@@ -2,18 +2,17 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useToast } from "../composables/useToast";
-import { Lock, PlusCircle, Trash2, CalendarDays, FileLock2 } from "lucide-vue-next";
-
-interface NumberLockEntry {
-    id: string;
-    fiscal_year: number;
-    request_no: number;
-    report_no: number;
-    purchase_no: number;
-    reason: string;
-    note: string;
-    created_at: string;
-}
+import { formatDateTime } from "../lib/format";
+import type { NumberLockEntry } from "../lib/types";
+import {
+    CalendarDays,
+    Check,
+    FileLock2,
+    Lock,
+    PlusCircle,
+    Trash2,
+    X,
+} from "lucide-vue-next";
 
 const toast = useToast();
 
@@ -32,10 +31,11 @@ const entries = ref<NumberLockEntry[]>([]);
 const loading = ref(false);
 const saving = ref(false);
 const deletingId = ref<string | null>(null);
+const confirmingId = ref<string | null>(null);
 const selectedFiscalYear = ref<number>(currentFiscalYear);
 
 const previewRows = computed(() =>
-    Array.from({ length: Math.max(form.count, 0) }, (_, idx) => {
+    Array.from({ length: Math.max(Math.min(form.count, 20), 0) }, (_, idx) => {
         const requestNo = form.startRequestNo + idx * 2;
         return {
             request_no: requestNo,
@@ -100,6 +100,7 @@ async function removeEntry(id: string) {
     deletingId.value = id;
     try {
         await invoke("delete_number_lock", { id });
+        confirmingId.value = null;
         await loadEntries();
         toast.success("ลบเลขล็อกสำเร็จ", "ระบบนำเลขชุดนี้ออกจากรายการล็อกแล้ว");
     } catch (e) {
@@ -109,75 +110,74 @@ async function removeEntry(id: string) {
     }
 }
 
-function formatDateTime(iso: string): string {
-    try {
-        return new Date(iso).toLocaleString("th-TH", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-        });
-    } catch {
-        return iso;
-    }
-}
-
 onMounted(loadEntries);
 </script>
 
 <template>
 <div class="lock-wrap">
     <div class="page-header">
-        <h2 class="page-title">ล็อกเลข</h2>
-        <p class="page-desc">กันเลขชุดที่ไม่ต้องการใช้งาน เพื่อให้ระบบข้ามก่อนจัดสรรเลขขอซื้อ รายงาน และใบสั่งซื้อ</p>
+        <div class="page-header-text">
+            <h2 class="page-title">ล็อกเลข</h2>
+            <p class="page-desc">
+                กันเลขชุดที่ไม่ต้องการใช้งานออกจากระบบ ระบบจะข้ามเลขเหล่านี้โดยอัตโนมัติ
+                ก่อนจัดสรรเลขขอซื้อ รายงาน และใบสั่งซื้อ
+            </p>
+        </div>
     </div>
 
     <div class="card">
-        <div class="card-title">
-            <Lock :size="17" /> สร้างเลขล็อก
+        <div class="card-head">
+            <div>
+                <div class="card-title"><Lock :size="16" /> สร้างเลขล็อกชุดใหม่</div>
+                <div class="card-desc">
+                    ล็อกเป็นชุด ชุดละ 1 บิล โดยเลขรายงานคำนวณจากเลขขอซื้อ + 1 ให้อัตโนมัติ
+                </div>
+            </div>
         </div>
-        <div class="card-desc">ล็อกเป็นชุดของบิล 1 ชุด โดยรายงานจะคำนวณจากเลขขอซื้อ + 1 ให้อัตโนมัติ</div>
 
         <div class="form-grid">
             <div class="form-group">
-                <label>ปีงบประมาณ</label>
-                <input v-model.number="form.fiscalYear" type="number" min="2500" />
+                <label for="lock-year">ปีงบประมาณ</label>
+                <input id="lock-year" v-model.number="form.fiscalYear" type="number" min="2500" />
             </div>
             <div class="form-group">
-                <label>เลขขอซื้อเริ่มต้น</label>
-                <input v-model.number="form.startRequestNo" type="number" min="1" />
+                <label for="lock-request">เลขขอซื้อเริ่มต้น</label>
+                <input id="lock-request" v-model.number="form.startRequestNo" type="number" min="1" />
             </div>
             <div class="form-group">
-                <label>เลขใบสั่งซื้อเริ่มต้น</label>
-                <input v-model.number="form.startPurchaseNo" type="number" min="1" />
+                <label for="lock-purchase">เลขใบสั่งซื้อเริ่มต้น</label>
+                <input id="lock-purchase" v-model.number="form.startPurchaseNo" type="number" min="1" />
             </div>
             <div class="form-group">
-                <label>จำนวนชุดที่ต้องการล็อก</label>
-                <input v-model.number="form.count" type="number" min="1" />
+                <label for="lock-count">จำนวนชุดที่ต้องการล็อก</label>
+                <input id="lock-count" v-model.number="form.count" type="number" min="1" />
             </div>
             <div class="form-group">
-                <label>เหตุผล</label>
-                <input v-model="form.reason" type="text" placeholder="เช่น กันเลขไว้ใช้หน้างาน" />
+                <label for="lock-reason">เหตุผล (จำเป็น)</label>
+                <input id="lock-reason" v-model="form.reason" type="text"
+                    placeholder="เช่น กันเลขไว้ใช้หน้างาน" />
             </div>
             <div class="form-group">
-                <label>หมายเหตุ</label>
-                <input v-model="form.note" type="text" placeholder="ไม่บังคับ" />
+                <label for="lock-note">หมายเหตุ</label>
+                <input id="lock-note" v-model="form.note" type="text" placeholder="ไม่บังคับ" />
             </div>
         </div>
 
-        <div class="actions">
-            <button class="btn btn-primary btn-lg" :disabled="!canSave || saving" @click="createLocks">
+        <div class="actions actions-row">
+            <button class="btn btn-primary" :disabled="!canSave || saving" @click="createLocks">
                 <span v-if="saving" class="spinner"></span>
-                <PlusCircle v-else :size="16" />
+                <PlusCircle v-else :size="15" />
                 {{ saving ? "กำลังบันทึก..." : "บันทึกเลขล็อก" }}
             </button>
         </div>
     </div>
 
     <div class="card">
-        <div class="card-title">
-            <FileLock2 :size="17" /> ตัวอย่างชุดที่จะถูกล็อก
+        <div class="card-head">
+            <div>
+                <div class="card-title"><FileLock2 :size="16" /> ตัวอย่างชุดที่จะล็อก</div>
+                <div class="card-desc">ตรวจสอบตัวเลขก่อนกดบันทึก (แสดงสูงสุด 20 ชุดแรก)</div>
+            </div>
         </div>
         <div class="table-wrap">
             <table class="data-table">
@@ -202,27 +202,31 @@ onMounted(loadEntries);
     </div>
 
     <div class="card">
-        <div class="card-title">
-            <CalendarDays :size="17" /> รายการเลขที่ล็อกไว้
+        <div class="card-head">
+            <div>
+                <div class="card-title"><CalendarDays :size="16" /> รายการเลขที่ล็อกไว้</div>
+                <div class="card-desc">
+                    ระบบตรวจรายการนี้ทุกครั้งก่อนโหลดเลขจากประวัติ แสดงตัวอย่าง และส่งออกรายงานสรุปรับยา
+                </div>
+            </div>
         </div>
-        <div class="card-desc">ระบบตรวจรายการนี้ทุกครั้งก่อนโหลดเลขจากประวัติ, แสดงตัวอย่าง, และส่งออกรายงานสรุปรับยา</div>
 
-        <div class="filter-row">
+        <div class="toolbar">
             <div class="form-group fiscal-filter">
-                <label>กรองตามปีงบประมาณ</label>
-                <input v-model.number="selectedFiscalYear" type="number" min="2500" />
+                <label for="lock-filter">กรองตามปีงบประมาณ</label>
+                <input id="lock-filter" v-model.number="selectedFiscalYear" type="number" min="2500" />
             </div>
-            <div class="summary-chip">
-                {{ filteredEntries.length }} ชุดในปี {{ selectedFiscalYear }}
-            </div>
+            <span class="badge badge-neutral">{{ filteredEntries.length }} ชุดในปี {{ selectedFiscalYear }}</span>
         </div>
 
-        <div v-if="loading" class="status-msg status-info status-stack">
+        <div v-if="loading" class="status-msg status-info">
             <span class="spinner"></span> กำลังโหลดข้อมูล...
         </div>
 
-        <div v-else-if="filteredEntries.length === 0" class="empty-state">
-            ยังไม่มีเลขล็อกสำหรับปีงบประมาณนี้
+        <div v-else-if="filteredEntries.length === 0" class="empty-state compact">
+            <div class="empty-icon"><FileLock2 :size="30" stroke-width="1.5" /></div>
+            <div class="empty-title">ยังไม่มีเลขล็อกสำหรับปีนี้</div>
+            <p class="empty-desc">สร้างชุดเลขล็อกจากแบบฟอร์มด้านบนได้เลย</p>
         </div>
 
         <div v-else class="table-wrap">
@@ -245,13 +249,22 @@ onMounted(loadEntries);
                         <td class="text-center">{{ entry.purchase_no }}</td>
                         <td>{{ entry.reason }}</td>
                         <td>{{ entry.note || "-" }}</td>
-                        <td>{{ formatDateTime(entry.created_at) }}</td>
+                        <td class="muted">{{ formatDateTime(entry.created_at) }}</td>
                         <td class="text-center">
-                            <button class="btn btn-danger btn-sm" :disabled="deletingId === entry.id"
-                                @click="removeEntry(entry.id)">
-                                <span v-if="deletingId === entry.id" class="spinner"></span>
-                                <Trash2 v-else :size="14" />
-                                ลบ
+                            <template v-if="confirmingId === entry.id">
+                                <span class="confirm-inline">
+                                    <button class="btn btn-danger btn-sm" :disabled="deletingId === entry.id"
+                                        @click="removeEntry(entry.id)">
+                                        <span v-if="deletingId === entry.id" class="spinner"></span>
+                                        <Check v-else :size="13" /> ยืนยัน
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm" @click="confirmingId = null">
+                                        <X :size="13" /> ยกเลิก
+                                    </button>
+                                </span>
+                            </template>
+                            <button v-else class="btn btn-danger btn-sm" @click="confirmingId = entry.id">
+                                <Trash2 :size="13" /> ลบ
                             </button>
                         </td>
                     </tr>
@@ -263,43 +276,15 @@ onMounted(loadEntries);
 </template>
 
 <style scoped>
-.lock-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-}
-
-.filter-row {
-    display: flex;
-    align-items: end;
-    justify-content: space-between;
-    gap: 14px;
-    margin-bottom: 14px;
-}
-
 .fiscal-filter {
-    min-width: 220px;
+    max-width: 220px;
     margin-bottom: 0;
 }
 
-.summary-chip {
+.confirm-inline {
     display: inline-flex;
+    gap: 6px;
     align-items: center;
-    padding: 9px 12px;
-    border-radius: 9999px;
-    background: var(--c-primary-light);
-    color: var(--c-primary);
-    font-size: 12px;
-    font-weight: 600;
-    box-shadow: rgba(200, 16, 46, 0.12) 0px 0px 0px 1px;
-}
-
-.empty-state {
-    text-align: center;
-    padding: 26px 18px;
-    border-radius: var(--radius-lg);
-    background: var(--c-surface-raised);
-    color: var(--c-text-light);
-    box-shadow: var(--shadow-ring);
+    white-space: nowrap;
 }
 </style>
