@@ -31,7 +31,7 @@ const SUMMARY_H: f64 = ROW_H + 4.0 + 15.5;
 const SIGNATURES: [&str; 3] = ["ผู้รับ", "ผู้ส่ง", "ผู้ส่ง"];
 
 /// Column widths (mm), summing to the printable width of 267 mm.
-const COL_W: [f64; 9] = [12.0, 24.0, 30.0, 18.0, 12.0, 24.0, 70.0, 28.0, 49.0];
+const COL_W: [f64; 9] = [12.0, 24.0, 30.0, 18.0, 12.0, 24.0, 92.0, 28.0, 27.0];
 
 /// Left edge (mm) of every column, including both outer table edges.
 fn col_x() -> Vec<f64> {
