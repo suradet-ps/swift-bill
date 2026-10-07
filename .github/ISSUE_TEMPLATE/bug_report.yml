@@ -1,0 +1,108 @@
+name: Bug report
+description: Something is not working as it should
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping make Swift Bill better. Please fill in the fields below.
+
+        Numeric accuracy is the core promise of this app. A wrong baht, a wrong
+        register (เลขทะเบียนคุม) or PO number, or a dropped invoice row is an
+        audit event. If that is what you hit, say so up front.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: A short, clear description of the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Fetch data for ...
+        3. Preview / export ...
+        4. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the error message shown in the app, if any.
+    validations:
+      required: true
+  - type: dropdown
+    id: screen
+    attributes:
+      label: Where in the app?
+      options:
+        - ตั้งค่าฐานข้อมูล (database settings)
+        - ดึงข้อมูล (fetch data)
+        - ส่งหนี้เบิกยา (invoice submission)
+        - สรุปรับยา (receiving summary)
+        - เบิกยาปะหน้า (cover letters)
+        - ล็อกเลข (number locks)
+        - ประวัติรอบ (round history)
+        - ภาพรวม (overview)
+        - Not sure / something else
+    validations:
+      required: true
+  - type: dropdown
+    id: numeric_impact
+    attributes:
+      label: Does it affect the numbers?
+      description: This decides how urgent the report is.
+      options:
+        - Wrong total amount
+        - Wrong register number or running slot
+        - Wrong request / report / purchase number
+        - Missing or duplicated invoice row
+        - Display only, numbers are correct
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Swift Bill version
+      description: From the GitHub release or installer you used.
+      placeholder: "e.g. 0.3.7"
+    validations:
+      required: true
+  - type: input
+    id: invs
+    attributes:
+      label: SQL Server / INVS version
+      description: If known - the INVS schema and server version can differ between sites.
+      placeholder: "e.g. SQL Server 2016, INVS"
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or extra context
+      description: Paste the error text or screenshots. Never paste database passwords or connection strings - Swift Bill stores them encrypted and does not need them in a report.
+      render: text
+    validations:
+      required: false
