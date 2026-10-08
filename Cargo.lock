@@ -4349,7 +4349,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "swift-bill"
-version = "0.3.7"
+version = "0.3.8"
 dependencies = [
  "chrono",
  "encryptman 0.5.0",
@@ -4369,7 +4369,7 @@ dependencies = [
 
 [[package]]
 name = "swift-bill-core"
-version = "0.3.7"
+version = "0.3.8"
 dependencies = [
  "chrono",
  "serde",
@@ -4378,7 +4378,7 @@ dependencies = [
 
 [[package]]
 name = "swift-bill-db"
-version = "0.3.7"
+version = "0.3.8"
 dependencies = [
  "chrono",
  "swift-bill-core",
@@ -4390,7 +4390,7 @@ dependencies = [
 
 [[package]]
 name = "swift-bill-excel"
-version = "0.3.7"
+version = "0.3.8"
 dependencies = [
  "rust_xlsxwriter",
  "swift-bill-core",
@@ -4399,7 +4399,7 @@ dependencies = [
 
 [[package]]
 name = "swift-bill-pdf"
-version = "0.3.7"
+version = "0.3.8"
 dependencies = [
  "lopdf 0.45.0",
  "printpdf",
