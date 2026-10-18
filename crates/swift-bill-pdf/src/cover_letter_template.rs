@@ -801,12 +801,18 @@ mod tests {
   // test helpers
 
   fn tempdir() -> std::path::PathBuf {
+    // The nanos stamp alone can collide when tests start in parallel and then
+    // overwrite each other's output; the counter keeps every dir unique.
+    use std::sync::atomic::{AtomicU32, Ordering};
+    static COUNTER: AtomicU32 = AtomicU32::new(0);
+    let unique = COUNTER.fetch_add(1, Ordering::Relaxed);
     let dir = std::env::temp_dir().join(format!(
-      "swift_bill_pdf_test_{}",
+      "swift_bill_pdf_test_{}_{}",
       std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
-        .subsec_nanos()
+        .subsec_nanos(),
+      unique
     ));
     fs::create_dir_all(&dir).unwrap();
     dir

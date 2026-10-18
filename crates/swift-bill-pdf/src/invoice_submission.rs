@@ -8,7 +8,7 @@
 #![allow(clippy::too_many_arguments)]
 
 use printpdf::{FontId, Op, PdfDocument};
-use swift_bill_core::InvoiceSubmissionRow;
+use swift_bill_core::{InvoiceSubmissionRow, money::round_satang};
 
 use crate::shared::{
   A4_LAND_W, COLOR_ACCENT, COLOR_BORDER, COLOR_INK, COLOR_TINT, COLOR_ZEBRA, MARGIN, PageCtx,
@@ -132,7 +132,7 @@ pub fn generate_invoice_submission_pdf(
   let table_right = xs[9];
   let table_w = table_right - xs[0];
 
-  let grand_total: f64 = rows.iter().map(|r| r.total_amount).sum();
+  let grand_total = round_satang(rows.iter().map(|r| r.total_amount).sum());
   let chunks: Vec<&[InvoiceSubmissionRow]> = rows.chunks(ROWS_PER_PAGE).collect();
   let data_pages = chunks.len().max(1);
 

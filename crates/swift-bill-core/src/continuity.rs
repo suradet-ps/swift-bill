@@ -6,6 +6,7 @@
 //! last recorded round and flags any mismatch before generation.
 
 use crate::models::RoundHistory;
+use crate::money::{satang_eq, to_satang};
 use serde::{Deserialize, Serialize};
 
 /// Result of [`validate_budget_carry_forward`].
@@ -17,10 +18,8 @@ pub struct BudgetValidation {
   /// The `previous_balance` the user entered for the new round.
   pub entered_previous_balance: f64,
   /// `true` when an expected value exists and differs from the entered value
-  /// beyond `tolerance`.
+  /// at satang precision.
   pub mismatch: bool,
-  /// Absolute tolerance used for the comparison (baht).
-  pub tolerance: f64,
 }
 
 /// Return the `remaining_balance` recorded by the most recent prior round for
@@ -33,14 +32,18 @@ pub fn last_remaining_balance(fiscal_year: i32, month: u32, history: &RoundHisto
     .entries
     .iter()
     .filter(|e| {
-      e.fiscal_year == fiscal_year && e.month == month && e.remaining_balance.abs() > 0.01
+      e.fiscal_year == fiscal_year && e.month == month && to_satang(e.remaining_balance) != 0
     })
     .max_by_key(|e| (e.round, e.created_at.clone()))
     .map(|e| e.remaining_balance)
 }
 
 /// Compare the user-entered `previous_balance` against the value implied by the
-/// last recorded round. When no prior round exists the validation is neutral
+/// last recorded round.
+///
+/// The comparison is exact at satang precision: float noise recorded by older
+/// rounds cannot trigger a false mismatch, while a genuine one-satang
+/// difference is flagged. When no prior round exists the validation is neutral
 /// (no expected value, no mismatch) -- first rounds have nothing to check
 /// against.
 #[must_use]
@@ -49,17 +52,13 @@ pub fn validate_budget_carry_forward(
   month: u32,
   entered_previous_balance: f64,
   history: &RoundHistory,
-  tolerance: f64,
 ) -> BudgetValidation {
   let expected = last_remaining_balance(fiscal_year, month, history);
-  let mismatch = expected.map_or(false, |exp| {
-    (exp - entered_previous_balance).abs() > tolerance
-  });
+  let mismatch = expected.map_or(false, |exp| !satang_eq(exp, entered_previous_balance));
   BudgetValidation {
     expected_previous_balance: expected,
     entered_previous_balance,
     mismatch,
-    tolerance,
   }
 }
 
@@ -108,7 +107,7 @@ mod tests {
   #[test]
   fn no_prior_round_is_neutral() {
     let history = RoundHistory { entries: vec![] };
-    let v = validate_budget_carry_forward(2569, 1, 1_000_000.0, &history, 0.01);
+    let v = validate_budget_carry_forward(2569, 1, 1_000_000.0, &history);
     assert!(v.expected_previous_balance.is_none());
     assert!(!v.mismatch);
   }
@@ -118,7 +117,7 @@ mod tests {
     let history = RoundHistory {
       entries: vec![entry(1, 3_850_000.0, "2026-01-10T00:00:00Z")],
     };
-    let v = validate_budget_carry_forward(2569, 1, 3_850_000.0, &history, 0.01);
+    let v = validate_budget_carry_forward(2569, 1, 3_850_000.0, &history);
     assert_eq!(v.expected_previous_balance, Some(3_850_000.0));
     assert!(!v.mismatch);
   }
@@ -128,18 +127,29 @@ mod tests {
     let history = RoundHistory {
       entries: vec![entry(1, 3_850_000.0, "2026-01-10T00:00:00Z")],
     };
-    let v = validate_budget_carry_forward(2569, 1, 3_800_000.0, &history, 0.01);
+    let v = validate_budget_carry_forward(2569, 1, 3_800_000.0, &history);
     assert_eq!(v.expected_previous_balance, Some(3_850_000.0));
     assert!(v.mismatch);
   }
 
   #[test]
-  fn within_tolerance_is_not_a_mismatch() {
+  fn sub_satang_noise_is_not_a_mismatch() {
+    // Older rounds stored raw f64 arithmetic; noise below one satang must
+    // not flag the carry-forward.
+    let history = RoundHistory {
+      entries: vec![entry(1, 3_850_000.004, "2026-01-10T00:00:00Z")],
+    };
+    let v = validate_budget_carry_forward(2569, 1, 3_850_000.0, &history);
+    assert!(!v.mismatch);
+  }
+
+  #[test]
+  fn one_satang_difference_is_a_mismatch() {
     let history = RoundHistory {
       entries: vec![entry(1, 3_850_000.0, "2026-01-10T00:00:00Z")],
     };
-    let v = validate_budget_carry_forward(2569, 1, 3_850_000.5, &history, 1.0);
-    assert!(!v.mismatch);
+    let v = validate_budget_carry_forward(2569, 1, 3_850_000.01, &history);
+    assert!(v.mismatch);
   }
 
   #[test]
@@ -147,7 +157,7 @@ mod tests {
     let mut e = entry(1, 3_850_000.0, "2026-01-10T00:00:00Z");
     e.fiscal_year = 2568;
     let history = RoundHistory { entries: vec![e] };
-    let v = validate_budget_carry_forward(2569, 1, 0.0, &history, 0.01);
+    let v = validate_budget_carry_forward(2569, 1, 0.0, &history);
     assert!(v.expected_previous_balance.is_none());
   }
 
@@ -159,7 +169,7 @@ mod tests {
         entry(2, 3_724_569.5, "2026-01-20T00:00:00Z"),
       ],
     };
-    let v = validate_budget_carry_forward(2569, 1, 3_724_569.5, &history, 0.01);
+    let v = validate_budget_carry_forward(2569, 1, 3_724_569.5, &history);
     assert_eq!(v.expected_previous_balance, Some(3_724_569.5));
     assert!(!v.mismatch);
   }
@@ -176,8 +186,32 @@ mod tests {
     let history = RoundHistory {
       entries: vec![zero, real],
     };
-    let v = validate_budget_carry_forward(2569, 1, 3_850_000.0, &history, 0.01);
+    let v = validate_budget_carry_forward(2569, 1, 3_850_000.0, &history);
     assert_eq!(v.expected_previous_balance, Some(3_850_000.0));
+  }
+
+  #[test]
+  fn treats_sub_satang_balances_as_zero() {
+    // Legacy float noise around zero is a display-zero balance and must be
+    // filtered like an exact 0.00 entry.
+    let noise = entry(1, 0.004, "2026-01-10T00:00:00Z");
+    let history = RoundHistory {
+      entries: vec![noise],
+    };
+    let v = validate_budget_carry_forward(2569, 1, 3_850_000.0, &history);
+    assert!(v.expected_previous_balance.is_none());
+  }
+
+  #[test]
+  fn keeps_small_non_zero_balances() {
+    // A one-satang balance is a real balance, not a zero entry.
+    let cent = entry(1, 0.01, "2026-01-10T00:00:00Z");
+    let history = RoundHistory {
+      entries: vec![cent],
+    };
+    let v = validate_budget_carry_forward(2569, 1, 0.01, &history);
+    assert_eq!(v.expected_previous_balance, Some(0.01));
+    assert!(!v.mismatch);
   }
 
   #[test]

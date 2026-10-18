@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use rust_xlsxwriter::{Workbook, Worksheet};
-use swift_bill_core::InvoiceSubmissionRow;
+use swift_bill_core::{InvoiceSubmissionRow, money::round_satang};
 
 use crate::{map_xlsx_err, thai_month};
 
@@ -69,14 +69,16 @@ pub fn generate_invoice_submission_excel(
       .map_err(map_xlsx_err)?;
     ws.write(r, 7, row.category.as_str())
       .map_err(map_xlsx_err)?;
-    ws.write(r, 8, row.total_amount).map_err(map_xlsx_err)?;
-    grand_total += row.total_amount;
+    ws.write(r, 8, round_satang(row.total_amount))
+      .map_err(map_xlsx_err)?;
+    grand_total += round_satang(row.total_amount);
   }
 
   // Total row
   let total_r = (rows.len() as u32) + 2;
   ws.write(total_r, 7, "รวมทั้งสิ้น").map_err(map_xlsx_err)?;
-  ws.write(total_r, 8, grand_total).map_err(map_xlsx_err)?;
+  ws.write(total_r, 8, round_satang(grand_total))
+    .map_err(map_xlsx_err)?;
 
   // Save
   let filename = format!("ส่งหนี้เบิกยา_{year}_เดือน{month}_รอบ{round}.xlsx");
