@@ -57,8 +57,9 @@ const VALUE_Y: f64 = 583.48;
 const BODY_X: f64 = 114.62;
 /// Baseline Y of the body paragraph row (matches the template's original line).
 const BODY_Y: f64 = 668.48;
-/// Maximum width the body paragraph may occupy, up to the right margin.
-const BODY_MAX_W: f64 = 405.0;
+/// Maximum width the body paragraph may occupy: from [`BODY_X`] to the 72 pt
+/// right margin of the form (595.3 - 72 - 114.62, rounded down).
+const BODY_MAX_W: f64 = 408.5;
 
 /// Right-edge of each budget column (minus a 3 pt internal margin).
 const COL_RIGHTS: [f64; 5] = [168.0, 260.2, 353.7, 436.8, 519.9];
@@ -85,17 +86,17 @@ fn body_text(category: &str, fiscal_year: &str) -> String {
   )
 }
 
-/// Largest font size from the ladder at which the longest body paragraph
-/// variant fits [`BODY_MAX_W`]. Fitting against the longest variant keeps
-/// every page at the same size regardless of the invoice category.
-fn body_font_size(face: &Face) -> f64 {
-  const LADDER: [f64; 7] = [14.0, 13.5, 13.0, 12.5, 12.0, 11.5, 11.0];
-  let longest = body_text("วัสดุเภสัชกรรม", "2569");
-  LADDER
-    .iter()
-    .copied()
-    .find(|&size| text_width_pt(&longest, face, size) <= BODY_MAX_W)
-    .unwrap_or(11.0)
+/// Largest font size (quarter-point steps) at which the body paragraph fits
+/// [`BODY_MAX_W`], capped at the template's own body size of 14 pt.
+fn body_font_size(text: &str, face: &Face) -> f64 {
+  const MAX_PT: f64 = 14.0;
+  const MIN_PT: f64 = 11.0;
+  let at_max = text_width_pt(text, face, MAX_PT);
+  if at_max <= BODY_MAX_W {
+    return MAX_PT;
+  }
+  let fitted = (MAX_PT * BODY_MAX_W / at_max * 4.0).floor() / 4.0;
+  fitted.max(MIN_PT)
 }
 
 // Number formatting
@@ -238,15 +239,9 @@ fn build_overlay(page: &CoverLetterPage, face: &Face) -> Vec<u8> {
   // 8. Body paragraph - the invoice category and fiscal year are dynamic.
   {
     let text = body_text(&page.category, &page.fiscal_year);
+    let size = body_font_size(&text, face);
     let gids = text_to_gid_bytes(&text, face);
-    write_text_block(
-      &mut buf,
-      FONT_RESOURCE,
-      body_font_size(face),
-      BODY_X,
-      BODY_Y,
-      &gids,
-    );
+    write_text_block(&mut buf, FONT_RESOURCE, size, BODY_X, BODY_Y, &gids);
   }
 
   buf
@@ -783,14 +778,17 @@ mod tests {
   }
 
   #[test]
-  fn test_body_font_size_fits_longest_variant() {
+  fn test_body_font_size_fits_text() {
     let face = Face::parse(FONT_BYTES, 0).expect("parse font");
-    let size = body_font_size(&face);
-    let longest = body_text("วัสดุเภสัชกรรม", "2569");
-    assert!(
-      text_width_pt(&longest, &face, size) <= BODY_MAX_W,
-      "body paragraph must stay inside the text width budget at size {size}"
-    );
+    for category in ["ยา", "วัสดุเภสัชกรรม"] {
+      let text = body_text(category, "2569");
+      let size = body_font_size(&text, &face);
+      assert!((11.0..=14.0).contains(&size), "size {size} out of range");
+      assert!(
+        text_width_pt(&text, &face, size) <= BODY_MAX_W,
+        "body paragraph must stay inside the text width budget at size {size}"
+      );
+    }
   }
 
   // full generate() tests
