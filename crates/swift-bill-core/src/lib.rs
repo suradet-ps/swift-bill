@@ -6,6 +6,7 @@
 //! * Domain data structures ([`models`])
 //! * Report processing algorithms ([`reports`])
 //! * Receiving-number allocation with lock support ([`numbering`])
+//! * Satang rounding helpers ([`money`])
 //! * Thai date and register-number helpers ([`date`], [`register`])
 
 #![warn(clippy::pedantic)]
@@ -14,6 +15,7 @@
 pub mod continuity;
 pub mod date;
 pub mod models;
+pub mod money;
 pub mod numbering;
 pub mod register;
 pub mod reports;

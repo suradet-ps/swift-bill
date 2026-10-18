@@ -9,6 +9,7 @@ use crate::models::{
   CoverLetterPage, CoverLettersParams, InvoiceRow, InvoiceSubmissionParams, InvoiceSubmissionRow,
   ReceivingNumberAssignment, ReceivingSummaryParams, ReceivingSummaryRow,
 };
+use crate::money::round_satang;
 use crate::register::{compute_reg_for_item, format_reg_no, parse_reg_no};
 
 // 1. Invoice Submission List (ส่งหนี้เบิกยา)
@@ -41,7 +42,7 @@ pub fn process_invoice_submission(
       invoice_date: invoice_date_str,
       company_name: inv.company_name.clone(),
       category: inv.category.clone(),
-      total_amount: inv.total_cost,
+      total_amount: round_satang(inv.total_cost),
     });
   }
 
@@ -126,7 +127,7 @@ pub fn process_receiving_summary_with_numbers(
       po_date: approval_date_str,
       receive_date: receive_date_str,
       company_code: inv.company_keyword.clone(),
-      total_amount: inv.total_cost,
+      total_amount: round_satang(inv.total_cost),
       receiving_code,
       reg_no,
       running_in_reg: running,
@@ -202,6 +203,10 @@ pub fn next_purchase_no(rows: &[ReceivingSummaryRow], allocated_next: u32) -> u3
 
 /// Build one [`CoverLetterPage`] per invoice, carrying the running budget
 /// balance and cumulative spent amount.
+///
+/// Every step of the balance chain is rounded to satang, so the printed
+/// figures always agree exactly with the value carried into the next round
+/// and a balance that should be 0.00 is exactly 0.00.
 #[must_use]
 pub fn process_cover_letters(
   invoices: &[InvoiceRow],
@@ -221,14 +226,14 @@ pub fn process_cover_letters(
 
   let mut pages: Vec<CoverLetterPage> = Vec::with_capacity(invoices.len());
 
-  let mut running_balance = params.previous_balance;
-  let total_budget = params.budget_total;
-  let mut cumulative_spent = total_budget - params.previous_balance;
+  let total_budget = round_satang(params.budget_total);
+  let mut running_balance = round_satang(params.previous_balance);
+  let mut cumulative_spent = round_satang(total_budget - running_balance);
 
   for inv in invoices.iter() {
     let previous_balance = running_balance;
-    let current_amount = inv.total_cost;
-    let remaining_balance = previous_balance - current_amount;
+    let current_amount = round_satang(inv.total_cost);
+    let remaining_balance = round_satang(previous_balance - current_amount);
 
     pages.push(CoverLetterPage {
       company_name: inv.company_name.clone(),
@@ -243,7 +248,7 @@ pub fn process_cover_letters(
     });
 
     running_balance = remaining_balance;
-    cumulative_spent += current_amount;
+    cumulative_spent = round_satang(cumulative_spent + current_amount);
   }
 
   pages
@@ -451,6 +456,68 @@ mod tests {
     let pages = process_cover_letters(&invoices, &params);
     // year = 2569 (Buddhist, passed directly)
     assert_eq!(pages[0].fiscal_year, "2569");
+  }
+
+  fn invoice_with_amount(amount: f64) -> InvoiceRow {
+    InvoiceRow {
+      invoice_no: "INV".to_string(),
+      vendor_code: "V".to_string(),
+      company_name: "บริษัท ทดสอบ".to_string(),
+      company_keyword: "T".to_string(),
+      total_cost: amount,
+      receive_date: NaiveDate::from_ymd_opt(2026, 1, 5).unwrap(),
+      category: "ยา".to_string(),
+      po_ref_no: None,
+      req_app_date: None,
+    }
+  }
+
+  /// A round that spends the balance down to zero must land on exactly 0.00,
+  /// not on binary float noise, so the next round's carry-forward is exact.
+  #[test]
+  // Exact float equality is the point: the chain must land on the same f64.
+  #[allow(clippy::float_cmp)]
+  fn cover_letter_chain_is_exact_satang() {
+    let invoices = vec![
+      invoice_with_amount(3.33),
+      invoice_with_amount(3.33),
+      invoice_with_amount(3.34),
+    ];
+    let mut params = sample_cover_params();
+    params.budget_total = 10.0;
+    params.previous_balance = 10.0;
+
+    let pages = process_cover_letters(&invoices, &params);
+
+    assert_eq!(pages[0].previous_balance, 10.0);
+    assert_eq!(pages[0].current_amount, 3.33);
+    assert_eq!(pages[0].remaining_balance, 6.67);
+    assert_eq!(pages[1].remaining_balance, 3.34);
+    assert_eq!(pages[2].remaining_balance, 0.0);
+    // Spent before the last page is 3.33 + 3.33; the last page spends the
+    // final 3.34 and lands on exactly 0.00.
+    assert_eq!(pages[2].previous_spent, 6.66);
+    assert_eq!(pages[2].previous_balance, 3.34);
+  }
+
+  /// Raw database amounts with more than two decimals are rounded to satang
+  /// at every boundary.
+  #[test]
+  // Exact float equality is the point: the amounts must land on exact satang.
+  #[allow(clippy::float_cmp)]
+  fn cover_letter_rounds_raw_amounts_to_satang() {
+    let invoices = vec![invoice_with_amount(100.014), invoice_with_amount(0.004)];
+    let mut params = sample_cover_params();
+    params.budget_total = 100.01;
+    params.previous_balance = 100.01;
+
+    let pages = process_cover_letters(&invoices, &params);
+
+    assert_eq!(pages[0].current_amount, 100.01);
+    assert_eq!(pages[0].remaining_balance, 0.0);
+    assert_eq!(pages[1].current_amount, 0.0);
+    assert_eq!(pages[1].remaining_balance, 0.0);
+    assert_eq!(pages[1].previous_spent, 100.01);
   }
 
   #[test]

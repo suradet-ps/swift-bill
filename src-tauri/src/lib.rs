@@ -16,6 +16,7 @@ mod number_locks;
 mod settings;
 mod vault;
 
+use swift_bill_core::money::round_satang;
 use swift_bill_core::reports::po_sequence_number;
 use swift_bill_core::{
   CarryForward, CoverLettersParams, DbConfig, GenerateResult, InvoiceSubmissionExcelParams,
@@ -84,7 +85,7 @@ async fn fetch_preview(
   let invoices = fetch_invoices(&config, &date_from, &date_to)
     .await
     .map_err(|e| e.to_string())?;
-  let total_amount: f64 = invoices.iter().map(|i| i.total_cost).sum();
+  let total_amount = round_satang(invoices.iter().map(|i| i.total_cost).sum());
   let row_count = invoices.len();
   Ok(PreviewData {
     invoices,
@@ -112,7 +113,7 @@ async fn preview_invoice_submission(
 
   let rows = swift_bill_core::reports::process_invoice_submission(&invoices, &params);
   swift_bill_core::continuity::reconcile_row_count(invoices.len(), rows.len())?;
-  let total_amount: f64 = invoices.iter().map(|i| i.total_cost).sum();
+  let total_amount = round_satang(invoices.iter().map(|i| i.total_cost).sum());
 
   Ok(InvoiceSubmissionPreview {
     rows,
@@ -130,13 +131,17 @@ async fn preview_invoice_submission(
 
 #[tauri::command]
 async fn export_invoice_submission_excel(
-  params: InvoiceSubmissionExcelParams,
+  mut params: InvoiceSubmissionExcelParams,
 ) -> Result<GenerateResult, String> {
+  // Editable rows can carry sub-satang values; normalize before any use.
+  for row in &mut params.rows {
+    row.total_amount = round_satang(row.total_amount);
+  }
   let n = params.rows.len() as u32;
   let (next_reg_no, next_running) =
     swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
 
-  let total_amount: f64 = params.rows.iter().map(|r| r.total_amount).sum();
+  let total_amount = round_satang(params.rows.iter().map(|r| r.total_amount).sum());
   let total_rows = params.rows.len();
 
   let output_dir = prepare_output_dir(&params.output_dir)?;
@@ -164,13 +169,17 @@ async fn export_invoice_submission_excel(
 
 #[tauri::command]
 async fn export_invoice_submission_pdf(
-  params: InvoiceSubmissionExcelParams,
+  mut params: InvoiceSubmissionExcelParams,
 ) -> Result<GenerateResult, String> {
+  // Editable rows can carry sub-satang values; normalize before any use.
+  for row in &mut params.rows {
+    row.total_amount = round_satang(row.total_amount);
+  }
   let n = params.rows.len() as u32;
   let (next_reg_no, next_running) =
     swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
 
-  let total_amount: f64 = params.rows.iter().map(|r| r.total_amount).sum();
+  let total_amount = round_satang(params.rows.iter().map(|r| r.total_amount).sum());
   let total_rows = params.rows.len();
 
   let output_dir = prepare_output_dir(&params.output_dir)?;
@@ -233,7 +242,7 @@ async fn preview_receiving_summary(
     &allocation.assignments,
   );
   swift_bill_core::continuity::reconcile_row_count(invoices.len(), rows.len())?;
-  let total_amount: f64 = invoices.iter().map(|i| i.total_cost).sum();
+  let total_amount = round_satang(invoices.iter().map(|i| i.total_cost).sum());
   // The saved carry-forward must be beyond every issued purchase-order
   // number, including sequences taken from linked MS_PO references.
   let next_purchase_no =
@@ -257,8 +266,12 @@ async fn preview_receiving_summary(
 #[tauri::command]
 async fn export_receiving_summary_excel(
   app: tauri::AppHandle,
-  params: ReceivingSummaryExcelParams,
+  mut params: ReceivingSummaryExcelParams,
 ) -> Result<ReceivingSummaryGenerateResult, String> {
+  // Editable rows can carry sub-satang values; normalize before any use.
+  for row in &mut params.rows {
+    row.total_amount = round_satang(row.total_amount);
+  }
   let n = params.rows.len() as u32;
   let (next_reg_no, next_running) =
     swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
@@ -276,7 +289,7 @@ async fn export_receiving_summary_excel(
     &locks,
   );
 
-  let total_amount: f64 = params.rows.iter().map(|r| r.total_amount).sum();
+  let total_amount = round_satang(params.rows.iter().map(|r| r.total_amount).sum());
   let total_rows = params.rows.len();
 
   let output_dir = prepare_output_dir(&params.output_dir)?;
@@ -309,8 +322,12 @@ async fn export_receiving_summary_excel(
 #[tauri::command]
 async fn export_receiving_summary_pdf(
   app: tauri::AppHandle,
-  params: ReceivingSummaryExcelParams,
+  mut params: ReceivingSummaryExcelParams,
 ) -> Result<ReceivingSummaryGenerateResult, String> {
+  // Editable rows can carry sub-satang values; normalize before any use.
+  for row in &mut params.rows {
+    row.total_amount = round_satang(row.total_amount);
+  }
   let n = params.rows.len() as u32;
   let (next_reg_no, next_running) =
     swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
@@ -328,7 +345,7 @@ async fn export_receiving_summary_pdf(
     &locks,
   );
 
-  let total_amount: f64 = params.rows.iter().map(|r| r.total_amount).sum();
+  let total_amount = round_satang(params.rows.iter().map(|r| r.total_amount).sum());
   let total_rows = params.rows.len();
 
   let output_dir = prepare_output_dir(&params.output_dir)?;
@@ -374,8 +391,8 @@ async fn generate_cover_letters(params: CoverLettersParams) -> Result<GenerateRe
   let remaining_balance = pages
     .last()
     .map(|p| p.remaining_balance)
-    .unwrap_or(params.previous_balance);
-  let total_amount: f64 = invoices.iter().map(|i| i.total_cost).sum();
+    .unwrap_or_else(|| round_satang(params.previous_balance));
+  let total_amount = round_satang(invoices.iter().map(|i| i.total_cost).sum());
 
   let output_dir = prepare_output_dir(&params.output_dir)?;
   let params_out = CoverLettersParams {
@@ -439,7 +456,6 @@ async fn validate_round_params(
     params.month,
     params.previous_balance,
     &history_store,
-    0.01,
   );
 
   // Projected next values for the continuity preview card.
@@ -454,7 +470,7 @@ async fn validate_round_params(
     next_running,
     next_po_no: receiving_allocation.next_po_no,
     next_purchase_no: receiving_allocation.next_purchase_no,
-    remaining_balance: params.previous_balance,
+    remaining_balance: round_satang(params.previous_balance),
   };
 
   Ok(RoundValidation {

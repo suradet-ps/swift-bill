@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use rust_xlsxwriter::{Workbook, Worksheet};
-use swift_bill_core::ReceivingSummaryRow;
+use swift_bill_core::{ReceivingSummaryRow, money::round_satang};
 
 use crate::{map_xlsx_err, thai_month};
 
@@ -69,7 +69,8 @@ pub fn generate_receiving_summary_excel(
       .map_err(map_xlsx_err)?;
     ws.write(r, 3, row.company_code.as_str())
       .map_err(map_xlsx_err)?;
-    ws.write(r, 4, row.total_amount).map_err(map_xlsx_err)?;
+    ws.write(r, 4, round_satang(row.total_amount))
+      .map_err(map_xlsx_err)?;
     ws.write(r, 5, row.receiving_code as f64)
       .map_err(map_xlsx_err)?;
     ws.write(r, 6, row.reg_no.as_str()).map_err(map_xlsx_err)?;
@@ -82,13 +83,14 @@ pub fn generate_receiving_summary_excel(
     ws.write(r, 10, row.report_no as f64)
       .map_err(map_xlsx_err)?;
     ws.write(r, 11, row.po_no.as_str()).map_err(map_xlsx_err)?;
-    grand_total += row.total_amount;
+    grand_total += round_satang(row.total_amount);
   }
 
   // Total row
   let total_r = (rows.len() as u32) + 2;
   ws.write(total_r, 3, "รวมทั้งสิ้น").map_err(map_xlsx_err)?;
-  ws.write(total_r, 4, grand_total).map_err(map_xlsx_err)?;
+  ws.write(total_r, 4, round_satang(grand_total))
+    .map_err(map_xlsx_err)?;
 
   // Save
   let filename = format!("สรุปรับยา_{year}_เดือน{month}_รอบ{round}.xlsx");

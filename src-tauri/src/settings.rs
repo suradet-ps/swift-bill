@@ -82,8 +82,8 @@ mod tests {
       host: "localhost".into(),
       port: 1433,
       database: "INVS".into(),
-      username: "sa".into(),
-      password: String::new(),
+      username: "svc_swiftbill_reader".into(),
+      password: "Sup3r-Secret-Passphrase-2026".into(),
     }
   }
 
@@ -94,10 +94,13 @@ mod tests {
     let key = encryptman::generate_master_key().unwrap();
     let blob = crate::vault::encrypt_with_key(&key, &plaintext).unwrap();
 
-    // None of the stored values may appear in the ciphertext blob.
+    // None of the stored values may appear in the ciphertext blob. The
+    // needles must be long enough that random base64 output cannot contain
+    // them by chance (a 2-character needle makes the test flaky).
     assert!(!blob.contains("localhost"));
     assert!(!blob.contains("INVS"));
-    assert!(!blob.contains("sa"));
+    assert!(!blob.contains(&cfg.username));
+    assert!(!blob.contains(&cfg.password));
     // The blob is base64 and not valid JSON plaintext.
     assert!(
       blob.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '+' || c == '/' || c == '=')

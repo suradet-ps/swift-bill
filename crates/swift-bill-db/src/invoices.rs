@@ -1,7 +1,7 @@
 //! Invoice fetch and row-normalisation helpers.
 
 use chrono::NaiveDate;
-use swift_bill_core::{DbConfig, InvoiceRow};
+use swift_bill_core::{DbConfig, InvoiceRow, money::round_satang};
 use tiberius::Row;
 
 use crate::connect::{self, DbError};
@@ -60,7 +60,9 @@ pub async fn fetch_invoices(
       let vendor_code = get_string(row, "VENDOR_CODE");
       let company_name = get_string(row, "COMPANY_NAME");
       let company_keyword = get_string(row, "KEY_WORD");
-      let total_cost = get_f64(row, "TOTAL_COST").unwrap_or(0.0);
+      // Money enters the app here: round to satang so every later sum and
+      // balance step works with exact amounts.
+      let total_cost = round_satang(get_f64(row, "TOTAL_COST").unwrap_or(0.0));
       let receive_date_raw = get_string(row, "RECEIVE_DATE");
       let po_ref_no = get_opt_string(row, "REF_NO");
       let req_app_date = get_req_app_date(row, "REQ_APP_DATE");

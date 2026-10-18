@@ -7,7 +7,7 @@
 #![allow(clippy::too_many_arguments)]
 
 use printpdf::{Op, PdfDocument};
-use swift_bill_core::ReceivingSummaryRow;
+use swift_bill_core::{ReceivingSummaryRow, money::round_satang};
 
 use crate::shared::{
   A4_LAND_W, COLOR_ACCENT, COLOR_BORDER, COLOR_INK, COLOR_TINT, COLOR_ZEBRA, MARGIN, PageCtx,
@@ -65,7 +65,7 @@ pub fn generate_receiving_summary_pdf(
   let table_right = xs[12];
   let table_w = table_right - xs[0];
 
-  let grand_total: f64 = rows.iter().map(|r| r.total_amount).sum();
+  let grand_total = round_satang(rows.iter().map(|r| round_satang(r.total_amount)).sum());
   let chunks: Vec<&[ReceivingSummaryRow]> = rows.chunks(ROWS_PER_PAGE).collect();
   let total_pages = chunks.len().max(1);
 
