@@ -340,8 +340,12 @@ function saveToHistory() {
                 </div>
                 <div class="form-group">
                     <label for="r2-purchase">เลขใบสั่งซื้อ</label>
-                    <input id="r2-purchase" type="text" :value="derivedPurchaseNo || '-'" readonly />
-                    <span class="field-hint">ดึงจากฐานข้อมูล MS_PO (REF_NO) อัตโนมัติ</span>
+                    <input v-if="derivedPurchaseNo" id="r2-purchase" type="text"
+                        :value="derivedPurchaseNo" readonly />
+                    <input v-else id="r2-purchase" type="number" min="1" :value="startPurchaseNo"
+                        @input="emit('update:startPurchaseNo', parseInt(($event.target as HTMLInputElement).value) || 1)" />
+                    <span v-if="derivedPurchaseNo" class="field-hint">ดึงจากฐานข้อมูล MS_PO (REF_NO) อัตโนมัติ</span>
+                    <span v-else class="field-hint">ไม่พบใบสั่งซื้อในฐานข้อมูล กรอกเลขเริ่มต้นได้เอง</span>
                 </div>
                 <div class="form-group">
                     <label for="r2-reg">เลขทะเบียนคุมเริ่มต้น</label>

@@ -234,6 +234,10 @@ async fn preview_receiving_summary(
   );
   swift_bill_core::continuity::reconcile_row_count(invoices.len(), rows.len())?;
   let total_amount: f64 = invoices.iter().map(|i| i.total_cost).sum();
+  // The saved carry-forward must be beyond every issued purchase-order
+  // number, including sequences taken from linked MS_PO references.
+  let next_purchase_no =
+    swift_bill_core::reports::next_purchase_no(&rows, allocation.next_purchase_no);
 
   Ok(ReceivingSummaryPreview {
     rows,
@@ -241,7 +245,7 @@ async fn preview_receiving_summary(
       next_reg_no,
       next_running,
       next_po_no: allocation.next_po_no,
-      next_purchase_no: allocation.next_purchase_no,
+      next_purchase_no,
       remaining_balance: 0.0,
     },
     total_rows: invoices.len(),
@@ -292,7 +296,10 @@ async fn export_receiving_summary_excel(
       next_reg_no,
       next_running,
       next_po_no: allocation.next_po_no,
-      next_purchase_no: allocation.next_purchase_no,
+      next_purchase_no: swift_bill_core::reports::next_purchase_no(
+        &params.rows,
+        allocation.next_purchase_no,
+      ),
       remaining_balance: 0.0,
     },
     numbering_info: allocation.numbering_info,
@@ -341,7 +348,10 @@ async fn export_receiving_summary_pdf(
       next_reg_no,
       next_running,
       next_po_no: allocation.next_po_no,
-      next_purchase_no: allocation.next_purchase_no,
+      next_purchase_no: swift_bill_core::reports::next_purchase_no(
+        &params.rows,
+        allocation.next_purchase_no,
+      ),
       remaining_balance: 0.0,
     },
     numbering_info: allocation.numbering_info,

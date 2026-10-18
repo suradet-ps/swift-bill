@@ -93,6 +93,15 @@ pub fn process_receiving_summary_with_numbers(
     .map(|inv| format_thai_date(&inv.receive_date))
     .unwrap_or_default();
 
+  // Purchase-order sequences already reserved by linked MS_PO references.
+  // Fallback counters for unlinked invoices must skip them so no row shows
+  // a purchase-order number twice.
+  let linked_sequences: Vec<u32> = invoices
+    .iter()
+    .filter_map(|inv| inv.po_ref_no.as_deref().and_then(po_sequence_number))
+    .collect();
+  let mut used_fallbacks: Vec<u32> = Vec::with_capacity(invoices.len());
+
   for (i, (inv, assigned)) in invoices.iter().zip(assignments.iter()).enumerate() {
     let (reg_num, running) = compute_reg_for_item(i as u32, params.start_running, reg_start_num);
     let reg_no = format_reg_no(&reg_prefix, reg_num);
@@ -106,7 +115,9 @@ pub fn process_receiving_summary_with_numbers(
       .po_ref_no
       .as_deref()
       .and_then(po_sequence_text)
-      .unwrap_or_else(|| assigned.purchase_no.to_string());
+      .unwrap_or_else(|| {
+        next_free_purchase_no(assigned.purchase_no, &linked_sequences, &mut used_fallbacks)
+      });
 
     let receiving_code = (i as u32) + 1;
 
@@ -127,6 +138,17 @@ pub fn process_receiving_summary_with_numbers(
   }
 
   rows
+}
+
+/// First counter value not reserved by a linked PO reference or used by an
+/// earlier fallback row.
+fn next_free_purchase_no(candidate: u32, linked: &[u32], used: &mut Vec<u32>) -> String {
+  let mut candidate = candidate;
+  while linked.contains(&candidate) || used.contains(&candidate) {
+    candidate += 1;
+  }
+  used.push(candidate);
+  candidate.to_string()
 }
 
 /// Sequence part of a `MS_PO.REF_NO` reference.
@@ -159,6 +181,21 @@ pub fn po_sequence_text(ref_no: &str) -> Option<String> {
 #[must_use]
 pub fn po_sequence_number(ref_no: &str) -> Option<u32> {
   po_sequence_text(ref_no).and_then(|text| text.parse::<u32>().ok())
+}
+
+/// Purchase-order number to save for the next round.
+///
+/// One past the highest sequence already issued in `rows` (linked `MS_PO`
+/// references and fallback counters alike), and never behind `allocated_next`.
+#[must_use]
+pub fn next_purchase_no(rows: &[ReceivingSummaryRow], allocated_next: u32) -> u32 {
+  rows
+    .iter()
+    .filter_map(|row| po_sequence_number(&row.po_no))
+    .max()
+    .map_or(allocated_next, |highest| {
+      highest.saturating_add(1).max(allocated_next)
+    })
 }
 
 // 3. Cover Letters (เบิกยาปะหน้า)
@@ -665,6 +702,58 @@ mod tests {
     assert_eq!(po_sequence_number("253"), Some(253));
     assert_eq!(po_sequence_number("A/2570"), None);
     assert_eq!(po_sequence_number(""), None);
+  }
+
+  /// A fallback counter for an unlinked invoice must skip sequences that a
+  /// linked PO reference already occupies, so no number repeats.
+  #[test]
+  fn po_no_fallback_skips_linked_sequences() {
+    let mut invoices = sample_invoices();
+    invoices[0].po_ref_no = Some("1/2570".to_string());
+    invoices[1].po_ref_no = None;
+    invoices[2].po_ref_no = Some("2/2570".to_string());
+
+    let mut params = sample_summary_params();
+    params.start_purchase_no = 1;
+    let rows = process_receiving_summary(&invoices, &params);
+
+    assert_eq!(rows[0].po_no, "1");
+    assert_eq!(rows[1].po_no, "3", "fallback must skip the linked 1 and 2");
+    assert_eq!(rows[2].po_no, "2");
+    // All purchase numbers in the batch are distinct.
+    let mut numbers: Vec<&str> = rows.iter().map(|r| r.po_no.as_str()).collect();
+    numbers.sort_unstable();
+    numbers.dedup();
+    assert_eq!(numbers, ["1", "2", "3"]);
+  }
+
+  /// The carry-forward must sit past every issued number, not just past the
+  /// allocated counter.
+  #[test]
+  fn next_purchase_no_helper_takes_highest_issued() {
+    let mut invoices = sample_invoices();
+    invoices.truncate(2);
+    invoices[0].po_ref_no = Some("5/2570".to_string());
+    invoices[1].po_ref_no = Some("10/2570".to_string());
+
+    let params = sample_summary_params();
+    let rows = process_receiving_summary(&invoices, &params);
+
+    // The allocated counter says 7, but sequence 10 was already issued.
+    assert_eq!(next_purchase_no(&rows, 7), 11);
+    // An allocation already ahead of the issued numbers wins.
+    assert_eq!(next_purchase_no(&rows, 100), 100);
+  }
+
+  #[test]
+  fn next_purchase_no_helper_falls_back_to_allocation() {
+    let invoices = sample_invoices();
+    let params = sample_summary_params();
+    let rows = process_receiving_summary(&invoices, &params);
+
+    // Fallback counters 253..255 are the highest issued numbers.
+    assert_eq!(next_purchase_no(&rows, 256), 256);
+    assert_eq!(next_purchase_no(&[], 42), 42);
   }
 }
 

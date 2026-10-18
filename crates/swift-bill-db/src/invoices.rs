@@ -125,6 +125,13 @@ fn get_opt_string(row: &Row, col: &str) -> Option<String> {
     .map(ToString::to_string)
 }
 
+/// `tiberius::numeric::Numeric` always renders its fractional part, even at
+/// scale 0 (e.g. `20261019.0`); a date only needs the integer part.
+fn numeric_integral_text(value: &tiberius::numeric::Numeric) -> String {
+  let text = format!("{value}");
+  text.split('.').next().unwrap_or(&text).to_string()
+}
+
 /// `REQ_APP_DATE` is stored as `YYYYMMDD` text (e.g. `20261019`), but the
 /// column may also surface as a numeric or a real datetime on other
 /// installations - accept every shape.
@@ -149,7 +156,7 @@ fn get_req_app_date(row: &Row, col: &str) -> Option<NaiveDate> {
         .try_get::<tiberius::numeric::Numeric, _>(col)
         .ok()
         .flatten()
-        .map(|v| format!("{v}"))
+        .map(|v| numeric_integral_text(&v))
     });
   if let Some(date) = numeric.and_then(|raw| parse_db_date(&raw)) {
     return Some(date);
@@ -207,6 +214,19 @@ mod tests {
   fn parse_db_date_invalid() {
     assert!(parse_db_date("garbage").is_none());
     assert!(parse_db_date("").is_none());
+  }
+
+  #[test]
+  fn numeric_req_app_date_parses_without_fraction() {
+    let scale_zero = tiberius::numeric::Numeric::new_with_scale(20_261_019, 0);
+    assert_eq!(numeric_integral_text(&scale_zero), "20261019");
+    assert_eq!(
+      parse_db_date(&numeric_integral_text(&scale_zero)),
+      NaiveDate::from_ymd_opt(2026, 10, 19)
+    );
+
+    let scaled = tiberius::numeric::Numeric::new_with_scale(202_610_195, 1);
+    assert_eq!(numeric_integral_text(&scaled), "20261019");
   }
 
   #[test]
