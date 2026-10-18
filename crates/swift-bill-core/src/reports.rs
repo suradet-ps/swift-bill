@@ -68,8 +68,6 @@ pub fn process_receiving_summary(
   invoices: &[InvoiceRow],
   params: &ReceivingSummaryParams,
 ) -> Result<Vec<ReceivingSummaryRow>, String> {
-  crate::numbering::validate_receiving_start_numbers(params.start_po_no, params.start_purchase_no)?;
-
   let assignments: Vec<ReceivingNumberAssignment> = invoices
     .iter()
     .enumerate()
@@ -93,13 +91,16 @@ pub fn process_receiving_summary(
 ///
 /// # Errors
 ///
-/// Returns a Thai error message when the register number is malformed or the
-/// starting slot is outside `0..=9`.
+/// Returns a Thai error message when the register number is malformed, the
+/// starting slot is outside `0..=9`, or a start number is 0. Start numbers
+/// are validated here too because callers may bypass the allocator (e.g.
+/// when a linked `MS_PO` supplies the purchase sequence).
 pub fn process_receiving_summary_with_numbers(
   invoices: &[InvoiceRow],
   params: &ReceivingSummaryParams,
   assignments: &[ReceivingNumberAssignment],
 ) -> Result<Vec<ReceivingSummaryRow>, String> {
+  crate::numbering::validate_receiving_start_numbers(params.start_po_no, params.start_purchase_no)?;
   let (reg_prefix, reg_start_num) = parse_reg_no(&params.start_reg_no)?;
   validate_start_running(params.start_running)?;
   let mut rows: Vec<ReceivingSummaryRow> = Vec::with_capacity(invoices.len());
@@ -677,6 +678,23 @@ mod tests {
     assert!(compute_next_reg("69ภ", 0, 1).is_err());
     assert!(compute_next_reg("", 0, 1).is_err());
     assert!(compute_next_reg("69ภ12", 10, 1).is_err());
+  }
+
+  /// A batch where every invoice has a linked `MS_PO` bypasses the
+  /// allocator's purchase start (the reference supplies the sequence), so
+  /// the processing step itself must still reject a zero start number.
+  #[test]
+  fn receiving_summary_rejects_zero_start_even_with_linked_pos() {
+    let mut invoices = sample_invoices();
+    invoices[0].po_ref_no = Some("001/2570".to_string());
+    invoices[1].po_ref_no = Some("002/2570".to_string());
+    invoices[2].po_ref_no = Some("003/2570".to_string());
+
+    let mut params = sample_summary_params();
+    params.start_purchase_no = 0;
+
+    let err = process_receiving_summary(&invoices, &params).unwrap_err();
+    assert!(err.contains("ใบสั่งซื้อ"), "got: {err}");
   }
 
   // Carry-forward tests
