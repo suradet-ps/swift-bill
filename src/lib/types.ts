@@ -14,6 +14,10 @@ export interface InvoiceRow {
     total_cost: number;
     receive_date: string;
     category: string;
+    /** Raw MS_PO.REF_NO of the linked purchase order, e.g. "001/2570". */
+    po_ref_no: string | null;
+    /** MS_PO.REQ_APP_DATE, e.g. "2026-10-19". */
+    req_app_date: string | null;
 }
 
 export interface PreviewData {
@@ -113,7 +117,8 @@ export interface ReceivingSummaryRow {
     invoice_no: string;
     request_no: number;
     report_no: number;
-    po_no: number;
+    /** Sequence part of MS_PO.REF_NO (before the "/"), e.g. "001". */
+    po_no: string;
 }
 
 export interface ReceivingSummaryPreview {

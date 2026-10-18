@@ -81,7 +81,7 @@ pub fn generate_receiving_summary_excel(
       .map_err(map_xlsx_err)?;
     ws.write(r, 10, row.report_no as f64)
       .map_err(map_xlsx_err)?;
-    ws.write(r, 11, row.po_no as f64).map_err(map_xlsx_err)?;
+    ws.write(r, 11, row.po_no.as_str()).map_err(map_xlsx_err)?;
     grand_total += row.total_amount;
   }
 
@@ -119,7 +119,7 @@ mod tests {
       invoice_no: "INV001".to_string(),
       request_no: 253,
       report_no: 254,
-      po_no: 253,
+      po_no: "253".to_string(),
     }]
   }
 

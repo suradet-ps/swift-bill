@@ -22,6 +22,10 @@ pub struct InvoiceRow {
   pub receive_date: NaiveDate,
   /// Must be either "ยา" or "วัสดุเภสัชกรรม"
   pub category: String,
+  /// Raw `MS_PO.REF_NO` of the linked purchase order, e.g. `"001/2570"`.
+  pub po_ref_no: Option<String>,
+  /// `MS_PO.REQ_APP_DATE` - the approval-request date shown on สรุปรับยา.
+  pub req_app_date: Option<NaiveDate>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -108,7 +112,8 @@ pub struct ReceivingSummaryRow {
   pub invoice_no: String,
   pub request_no: u32,
   pub report_no: u32,
-  pub po_no: u32,
+  /// Sequence part of `MS_PO.REF_NO` (the part before `/`), e.g. `"001"`.
+  pub po_no: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -163,11 +168,11 @@ pub struct ReceivingSummaryParams {
   pub round: u32,
   /// Starting number for request and approval reports
   pub start_po_no: u32,
-  /// Starting number for purchase orders (independent counter)
+  /// Fallback for the purchase-order counter; the real sequence is taken
+  /// from `MS_PO.REF_NO` per invoice.
   pub start_purchase_no: u32,
   pub start_reg_no: String,
   pub start_running: u32,
-  pub approval_date: Option<String>,
   pub output_dir: String,
 }
 

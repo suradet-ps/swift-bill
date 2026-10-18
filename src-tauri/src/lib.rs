@@ -16,6 +16,7 @@ mod number_locks;
 mod settings;
 mod vault;
 
+use swift_bill_core::reports::po_sequence_number;
 use swift_bill_core::{
   CarryForward, CoverLettersParams, DbConfig, GenerateResult, InvoiceSubmissionExcelParams,
   InvoiceSubmissionParams, InvoiceSubmissionPreview, NormalizeReceivingStartParams,
@@ -212,11 +213,17 @@ async fn preview_receiving_summary(
   let n = invoices.len() as u32;
   let (next_reg_no, next_running) =
     swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
+  // ใบสั่งซื้อ continues from the reference MS_PO already issued; the
+  // frontend value is only a fallback for invoices without a linked PO.
+  let purchase_start = invoices
+    .iter()
+    .find_map(|invoice| invoice.po_ref_no.as_deref().and_then(po_sequence_number))
+    .unwrap_or(params.start_purchase_no);
   let locks = number_locks::load_number_locks(&app)?;
   let allocation = swift_bill_core::numbering::allocate_receiving_numbers(
     params.year,
     params.start_po_no,
-    params.start_purchase_no,
+    purchase_start,
     n,
     &locks,
   );
@@ -251,11 +258,16 @@ async fn export_receiving_summary_excel(
   let n = params.rows.len() as u32;
   let (next_reg_no, next_running) =
     swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
+  let purchase_start = params
+    .rows
+    .iter()
+    .find_map(|row| po_sequence_number(&row.po_no))
+    .unwrap_or(params.start_purchase_no);
   let locks = number_locks::load_number_locks(&app)?;
   let allocation = swift_bill_core::numbering::allocate_receiving_numbers(
     params.year,
     params.start_po_no,
-    params.start_purchase_no,
+    purchase_start,
     n,
     &locks,
   );
@@ -295,11 +307,16 @@ async fn export_receiving_summary_pdf(
   let n = params.rows.len() as u32;
   let (next_reg_no, next_running) =
     swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
+  let purchase_start = params
+    .rows
+    .iter()
+    .find_map(|row| po_sequence_number(&row.po_no))
+    .unwrap_or(params.start_purchase_no);
   let locks = number_locks::load_number_locks(&app)?;
   let allocation = swift_bill_core::numbering::allocate_receiving_numbers(
     params.year,
     params.start_po_no,
-    params.start_purchase_no,
+    purchase_start,
     n,
     &locks,
   );
