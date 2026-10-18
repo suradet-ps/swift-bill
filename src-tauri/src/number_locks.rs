@@ -30,7 +30,7 @@ pub fn create_number_locks(
 
   // A register lock (เลขทะเบียนคุม) locks one or more individual slots.
   if let (Some(reg_no), Some(running)) = (params.start_reg_no.clone(), params.running) {
-    let (prefix, start_num) = parse_reg_no(&reg_no);
+    let (prefix, start_num) = parse_reg_no(&reg_no)?;
     for offset in 0..params.count {
       let (num, slot) = compute_reg_for_item(offset, running, start_num);
       let rno = format_reg_no(&prefix, num);

@@ -203,13 +203,20 @@ function handleR2Carry(carry: { next_reg_no: string; next_running: number; next_
 }
 
 async function applyHistoryEntry(entry: RoundHistoryEntry) {
+    // Rounds saved from ส่งหนี้เบิกยา / เบิกยาปะหน้า store 0 for the numbers
+    // those tabs do not own. The core rejects 0, so fall back to 1 and tell
+    // the user to verify the numbers before generating.
+    const poStart = entry.next_po_no > 0 ? entry.next_po_no : 1;
+    const purchaseStart = (entry.next_purchase_no ?? 0) > 0 ? (entry.next_purchase_no as number) : 1;
+    const defaultsUsed = poStart !== entry.next_po_no || purchaseStart !== (entry.next_purchase_no ?? 0);
+
     let numberingInfo: ReceivingNumberingInfo;
     try {
         numberingInfo = await invoke<ReceivingNumberingInfo>("normalize_receiving_start", {
             params: {
                 fiscal_year: entry.fiscal_year,
-                start_po_no: entry.next_po_no,
-                start_purchase_no: entry.next_purchase_no ?? 1,
+                start_po_no: poStart,
+                start_purchase_no: purchaseStart,
             },
         });
     } catch (e) {
@@ -241,6 +248,14 @@ async function applyHistoryEntry(entry: RoundHistoryEntry) {
 
     // Switch to query tab so user can pick the new date range
     activeTab.value = "query";
+
+    if (defaultsUsed) {
+        toast.info(
+            "โหลดประวัติสำเร็จ",
+            "ประวัตินี้ไม่ได้บันทึกเลขขอซื้อ/ใบสั่งซื้อไว้ ระบบตั้งค่าเริ่มต้นเป็น 1 กรุณาตรวจสอบเลขก่อนสร้างรายงาน"
+        );
+        return;
+    }
 
     if (numberingInfo.skipped_locked_sets.length > 0) {
         toast.info(
