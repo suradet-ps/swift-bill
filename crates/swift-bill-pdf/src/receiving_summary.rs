@@ -65,7 +65,7 @@ pub fn generate_receiving_summary_pdf(
   let table_right = xs[12];
   let table_w = table_right - xs[0];
 
-  let grand_total = round_satang(rows.iter().map(|r| r.total_amount).sum());
+  let grand_total = round_satang(rows.iter().map(|r| round_satang(r.total_amount)).sum());
   let chunks: Vec<&[ReceivingSummaryRow]> = rows.chunks(ROWS_PER_PAGE).collect();
   let total_pages = chunks.len().max(1);
 

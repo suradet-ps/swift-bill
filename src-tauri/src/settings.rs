@@ -82,8 +82,8 @@ mod tests {
       host: "localhost".into(),
       port: 1433,
       database: "INVS".into(),
-      username: "sa".into(),
-      password: String::new(),
+      username: "svc_swiftbill_reader".into(),
+      password: "Sup3r-Secret-Passphrase-2026".into(),
     }
   }
 
@@ -99,8 +99,8 @@ mod tests {
     // them by chance (a 2-character needle makes the test flaky).
     assert!(!blob.contains("localhost"));
     assert!(!blob.contains("INVS"));
-    assert!(!blob.contains("username"));
-    assert!(!blob.contains("password"));
+    assert!(!blob.contains(&cfg.username));
+    assert!(!blob.contains(&cfg.password));
     // The blob is base64 and not valid JSON plaintext.
     assert!(
       blob.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '+' || c == '/' || c == '=')

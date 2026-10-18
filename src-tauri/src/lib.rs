@@ -131,8 +131,12 @@ async fn preview_invoice_submission(
 
 #[tauri::command]
 async fn export_invoice_submission_excel(
-  params: InvoiceSubmissionExcelParams,
+  mut params: InvoiceSubmissionExcelParams,
 ) -> Result<GenerateResult, String> {
+  // Editable rows can carry sub-satang values; normalize before any use.
+  for row in &mut params.rows {
+    row.total_amount = round_satang(row.total_amount);
+  }
   let n = params.rows.len() as u32;
   let (next_reg_no, next_running) =
     swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
@@ -165,8 +169,12 @@ async fn export_invoice_submission_excel(
 
 #[tauri::command]
 async fn export_invoice_submission_pdf(
-  params: InvoiceSubmissionExcelParams,
+  mut params: InvoiceSubmissionExcelParams,
 ) -> Result<GenerateResult, String> {
+  // Editable rows can carry sub-satang values; normalize before any use.
+  for row in &mut params.rows {
+    row.total_amount = round_satang(row.total_amount);
+  }
   let n = params.rows.len() as u32;
   let (next_reg_no, next_running) =
     swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
@@ -258,8 +266,12 @@ async fn preview_receiving_summary(
 #[tauri::command]
 async fn export_receiving_summary_excel(
   app: tauri::AppHandle,
-  params: ReceivingSummaryExcelParams,
+  mut params: ReceivingSummaryExcelParams,
 ) -> Result<ReceivingSummaryGenerateResult, String> {
+  // Editable rows can carry sub-satang values; normalize before any use.
+  for row in &mut params.rows {
+    row.total_amount = round_satang(row.total_amount);
+  }
   let n = params.rows.len() as u32;
   let (next_reg_no, next_running) =
     swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
@@ -310,8 +322,12 @@ async fn export_receiving_summary_excel(
 #[tauri::command]
 async fn export_receiving_summary_pdf(
   app: tauri::AppHandle,
-  params: ReceivingSummaryExcelParams,
+  mut params: ReceivingSummaryExcelParams,
 ) -> Result<ReceivingSummaryGenerateResult, String> {
+  // Editable rows can carry sub-satang values; normalize before any use.
+  for row in &mut params.rows {
+    row.total_amount = round_satang(row.total_amount);
+  }
   let n = params.rows.len() as u32;
   let (next_reg_no, next_running) =
     swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);

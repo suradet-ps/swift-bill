@@ -132,7 +132,7 @@ pub fn generate_invoice_submission_pdf(
   let table_right = xs[9];
   let table_w = table_right - xs[0];
 
-  let grand_total = round_satang(rows.iter().map(|r| r.total_amount).sum());
+  let grand_total = round_satang(rows.iter().map(|r| round_satang(r.total_amount)).sum());
   let chunks: Vec<&[InvoiceSubmissionRow]> = rows.chunks(ROWS_PER_PAGE).collect();
   let data_pages = chunks.len().max(1);
 

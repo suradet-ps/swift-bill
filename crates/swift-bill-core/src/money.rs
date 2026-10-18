@@ -8,18 +8,40 @@
 
 /// Convert baht to satang, rounding half away from zero.
 ///
-/// The input is a raw amount from the database or the UI; binary float noise
-/// a few orders of magnitude below one satang is absorbed by the rounding.
-/// Non-finite input is treated as zero.
-// Saturation on absurdly large values is intended; realistic amounts round exactly.
-#[allow(clippy::cast_possible_truncation)]
+/// The conversion runs on the shortest decimal representation of the value
+/// (`1.005` stays `1.005`), so decimal inputs round exactly as written
+/// instead of through their binary approximation (`1.005 * 100.0` is
+/// `100.4999...`, which would round down). Non-finite input is treated as
+/// zero, and absurdly large values saturate.
 #[must_use]
 pub fn to_satang(value: f64) -> i64 {
-  if value.is_finite() {
-    (value * 100.0).round() as i64
-  } else {
-    0
+  if !value.is_finite() {
+    return 0;
   }
+  let text = format!("{value}");
+  let (sign, digits) = text
+    .strip_prefix('-')
+    .map_or((1_i128, text.as_str()), |rest| (-1_i128, rest));
+  let (int_text, frac_text) = digits.split_once('.').unwrap_or((digits, ""));
+
+  let Ok(int_part) = int_text.parse::<i128>() else {
+    return if sign < 0 { i64::MIN } else { i64::MAX };
+  };
+  let mut satang = int_part.saturating_mul(100);
+
+  let frac = frac_text.as_bytes();
+  let tenths = frac.first().map_or(0, |b| i128::from(b - b'0'));
+  let hundredths = frac.get(1).map_or(0, |b| i128::from(b - b'0'));
+  satang = satang.saturating_add(tenths * 10 + hundredths);
+
+  // Half away from zero: the first dropped decimal digit decides, since any
+  // value from x.xx5 up is at least half a satang and anything below is less.
+  if frac.get(2).is_some_and(|digit| *digit >= b'5') {
+    satang = satang.saturating_add(1);
+  }
+
+  let signed = satang.saturating_mul(sign);
+  i64::try_from(signed).unwrap_or(if sign < 0 { i64::MIN } else { i64::MAX })
 }
 
 /// Convert satang back to baht.
@@ -66,6 +88,25 @@ mod tests {
     assert_eq!(round_satang(-0.004), -0.0);
   }
 
+  /// Decimal ties round half away from zero even though the binary value is
+  /// slightly below the exact half (1.005 * 100.0 = 100.4999...).
+  #[test]
+  fn decimal_ties_round_half_away_from_zero() {
+    assert_eq!(to_satang(1.005), 101);
+    assert_eq!(to_satang(-1.005), -101);
+    assert_eq!(to_satang(2.675), 268);
+    assert_eq!(round_satang(1.005), 1.01);
+    assert_eq!(round_satang(-1.005), -1.01);
+    assert_eq!(round_satang(0.005), 0.01);
+  }
+
+  #[test]
+  fn decimals_below_and_above_the_tie_round_to_nearest() {
+    assert_eq!(to_satang(1.004), 100);
+    assert_eq!(to_satang(1.006), 101);
+    assert_eq!(to_satang(0.004), 0);
+  }
+
   #[test]
   fn satang_round_trip() {
     assert_eq!(to_satang(1234.56), 123_456);
@@ -78,6 +119,14 @@ mod tests {
     assert_eq!(to_satang(f64::NAN), 0);
     assert_eq!(to_satang(f64::INFINITY), 0);
     assert_eq!(to_satang(f64::NEG_INFINITY), 0);
+  }
+
+  #[test]
+  fn extreme_values_saturate_or_zero() {
+    assert_eq!(to_satang(1e300), i64::MAX);
+    assert_eq!(to_satang(-1e300), i64::MIN);
+    assert_eq!(to_satang(1e-7), 0);
+    assert_eq!(to_satang(-0.0), 0);
   }
 
   #[test]
