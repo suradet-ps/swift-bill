@@ -8,7 +8,9 @@
 //!    composite font resource named `OVL_F` - distinct from the template's
 //!    subset fonts F1-F4.
 //! 3. For each invoice page, build a small overlay content stream that writes
-//!    only the seven dynamic fields at their exact template coordinates.
+//!    the dynamic fields (date, company, body paragraph with the invoice
+//!    category and fiscal year, and the five budget numbers) at their exact
+//!    template coordinates.
 //! 4. Combine template content + overlay, create pages, save one PDF.
 //!
 //! Coordinate system: PDF points (pt), origin = bottom-left of page.
@@ -51,6 +53,14 @@ const COMPANY_Y: f64 = 633.18;
 /// Baseline Y of the budget-table value row.
 const VALUE_Y: f64 = 583.48;
 
+/// X where the body paragraph begins (below the เรียน row).
+const BODY_X: f64 = 114.62;
+/// Baseline Y of the body paragraph row (matches the template's original line).
+const BODY_Y: f64 = 668.48;
+/// Maximum width the body paragraph may occupy: from [`BODY_X`] to the 72 pt
+/// right margin of the form (595.3 - 72 - 114.62, rounded down).
+const BODY_MAX_W: f64 = 408.5;
+
 /// Right-edge of each budget column (minus a 3 pt internal margin).
 const COL_RIGHTS: [f64; 5] = [168.0, 260.2, 353.7, 436.8, 519.9];
 
@@ -65,6 +75,29 @@ const NUM_PT: f64 = 11.5;
 
 /// PDF resource name for our overlay font - must not clash with F1/F2/F3/F4.
 const FONT_RESOURCE: &str = "OVL_F";
+
+// Text helpers
+
+/// The body paragraph of the letter. The template ships without it: the
+/// invoice category (ยา / วัสดุเภสัชกรรม) and the fiscal year are dynamic.
+fn body_text(category: &str, fiscal_year: &str) -> String {
+  format!(
+    "กลุ่มงานเภสัชกรรมและคุ้มครองผู้บริโภคมีความประสงค์จะขอเบิกเงินค่า{category} โดยขอใช้งบประมาณประจำปี {fiscal_year}"
+  )
+}
+
+/// Largest font size (quarter-point steps) at which the body paragraph fits
+/// [`BODY_MAX_W`], capped at the template's own body size of 14 pt.
+fn body_font_size(text: &str, face: &Face) -> f64 {
+  const MAX_PT: f64 = 14.0;
+  const MIN_PT: f64 = 11.0;
+  let at_max = text_width_pt(text, face, MAX_PT);
+  if at_max <= BODY_MAX_W {
+    return MAX_PT;
+  }
+  let fitted = (MAX_PT * BODY_MAX_W / at_max * 4.0).floor() / 4.0;
+  fitted.max(MIN_PT)
+}
 
 // Number formatting
 
@@ -201,6 +234,14 @@ fn build_overlay(page: &CoverLetterPage, face: &Face) -> Vec<u8> {
       VALUE_Y + VERTICAL_SHIFT,
       &gids,
     );
+  }
+
+  // 8. Body paragraph - the invoice category and fiscal year are dynamic.
+  {
+    let text = body_text(&page.category, &page.fiscal_year);
+    let size = body_font_size(&text, face);
+    let gids = text_to_gid_bytes(&text, face);
+    write_text_block(&mut buf, FONT_RESOURCE, size, BODY_X, BODY_Y, &gids);
   }
 
   buf
@@ -709,7 +750,45 @@ mod tests {
       "overlay must reference /{FONT_RESOURCE}"
     );
     let bt_count = s.matches("BT\n").count();
-    assert_eq!(bt_count, 7, "expected 7 text blocks, got {bt_count}");
+    assert_eq!(bt_count, 8, "expected 8 text blocks, got {bt_count}");
+  }
+
+  #[test]
+  fn test_overlay_draws_dynamic_body_sentence() {
+    use std::fmt::Write as _;
+
+    let face = Face::parse(FONT_BYTES, 0).expect("parse font");
+    let mut page = sample_cover_page();
+    page.category = "วัสดุเภสัชกรรม".into();
+    page.fiscal_year = "2570".into();
+
+    let overlay = build_overlay(&page, &face);
+    let expected = body_text("วัสดุเภสัชกรรม", "2570");
+
+    let mut hex = String::new();
+    for b in text_to_gid_bytes(&expected, &face) {
+      write!(hex, "{b:02X}").unwrap();
+    }
+
+    let s = String::from_utf8_lossy(&overlay);
+    assert!(
+      s.contains(&hex),
+      "overlay must draw the body sentence with the invoice category and fiscal year"
+    );
+  }
+
+  #[test]
+  fn test_body_font_size_fits_text() {
+    let face = Face::parse(FONT_BYTES, 0).expect("parse font");
+    for category in ["ยา", "วัสดุเภสัชกรรม"] {
+      let text = body_text(category, "2569");
+      let size = body_font_size(&text, &face);
+      assert!((11.0..=14.0).contains(&size), "size {size} out of range");
+      assert!(
+        text_width_pt(&text, &face, size) <= BODY_MAX_W,
+        "body paragraph must stay inside the text width budget at size {size}"
+      );
+    }
   }
 
   // full generate() tests
