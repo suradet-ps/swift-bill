@@ -422,14 +422,7 @@ pub fn generate_receiving_summary_pdf(
         &row.report_no.to_string(),
       );
       op_text_center(
-        &mut ops,
-        &ctx,
-        &font_id,
-        14.0,
-        xs[11],
-        COL_W[11],
-        ty,
-        &row.po_no.to_string(),
+        &mut ops, &ctx, &font_id, 14.0, xs[11], COL_W[11], ty, &row.po_no,
       );
       op_hline_colored(
         &mut ops,
@@ -526,7 +519,7 @@ mod tests {
         invoice_no: format!("INV-{:04}", i + 1),
         request_no: 100 + (i as u32) * 2,
         report_no: 101 + (i as u32) * 2,
-        po_no: 100 + i as u32,
+        po_no: format!("{:03}", 100 + i),
       })
       .collect()
   }

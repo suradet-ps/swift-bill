@@ -2,7 +2,7 @@
 import { ref, computed, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useToast } from "../composables/useToast";
-import { fileName, formatMoney, toThaiShortDate, THAI_MONTHS, THAI_MONTHS_SHORT } from "../lib/format";
+import { fileName, formatMoney, THAI_MONTHS, THAI_MONTHS_SHORT } from "../lib/format";
 import type {
     CarryForward,
     DbConfig,
@@ -28,7 +28,6 @@ import {
     Package,
     Pencil,
     Save,
-    X,
     XCircle,
 } from "lucide-vue-next";
 
@@ -45,7 +44,6 @@ const props = defineProps<{
     startPurchaseNo: number;
     startRegNo: string;
     startRunning: number;
-    approvalDate: string;
 }>();
 
 const emit = defineEmits<{
@@ -54,7 +52,6 @@ const emit = defineEmits<{
     (e: "update:startPurchaseNo", v: number): void;
     (e: "update:startRegNo", v: string): void;
     (e: "update:startRunning", v: number): void;
-    (e: "update:approvalDate", v: string): void;
     (e: "saveHistory", entry: RoundHistoryEntry): void;
     (e: "carryResult", carry: { next_reg_no: string; next_running: number; next_po_no: number; next_purchase_no: number }): void;
     (e: "navigate", tab: TabId): void;
@@ -79,7 +76,7 @@ const pdfLoading = ref(false);
 const exportedPdfFile = ref<string | null>(null);
 
 watch(
-    () => [props.year, props.month, props.round, props.dateFrom, props.dateTo, props.startPoNo, props.startPurchaseNo, props.startRegNo, props.startRunning, props.approvalDate],
+    () => [props.year, props.month, props.round, props.dateFrom, props.dateTo, props.startPoNo, props.startPurchaseNo, props.startRegNo, props.startRunning],
     () => {
         editableRows.value = [];
         carryForward.value = null;
@@ -90,13 +87,16 @@ watch(
     }
 );
 
-// Holds the native <input type="date"> value (YYYY-MM-DD) and converts
-// it to the Thai short format expected by the PDF.
-const approvalDatePicker = ref("");
-
-function onApprovalDatePick() {
-    emit("update:approvalDate", toThaiShortDate(approvalDatePicker.value));
-}
+// เลขใบสั่งซื้อ comes from MS_PO.REF_NO (linked per invoice via PO_NO);
+// only the part before "/" is shown, e.g. "001/2570" -> "001".
+const derivedPurchaseNo = computed(() => {
+    const refNo = props.previewData?.invoices.find((inv) => inv.po_ref_no?.trim())?.po_ref_no;
+    if (!refNo) return "";
+    const trimmed = refNo.trim();
+    if (trimmed.includes("/")) return trimmed.split("/")[0].trim();
+    const dash = trimmed.lastIndexOf("-");
+    return dash >= 0 ? trimmed.slice(dash + 1).trim() : trimmed;
+});
 
 const periodText = computed(() => {
     if (!props.year || !props.month) return "ยังไม่ได้เลือกช่วงวันที่";
@@ -144,7 +144,6 @@ async function previewReport() {
                 start_purchase_no: props.startPurchaseNo,
                 start_reg_no: props.startRegNo,
                 start_running: props.startRunning,
-                approval_date: props.approvalDate.trim() || null,
                 output_dir: props.outputDir,
             },
         });
@@ -340,9 +339,13 @@ function saveToHistory() {
                     <span class="field-hint">รายงาน = ขอซื้อ + 1</span>
                 </div>
                 <div class="form-group">
-                    <label for="r2-purchase">เลขใบสั่งซื้อ เริ่มต้น</label>
-                    <input id="r2-purchase" type="number" min="1" :value="startPurchaseNo"
+                    <label for="r2-purchase">เลขใบสั่งซื้อ</label>
+                    <input v-if="derivedPurchaseNo" id="r2-purchase" type="text"
+                        :value="derivedPurchaseNo" readonly />
+                    <input v-else id="r2-purchase" type="number" min="1" :value="startPurchaseNo"
                         @input="emit('update:startPurchaseNo', parseInt(($event.target as HTMLInputElement).value) || 1)" />
+                    <span v-if="derivedPurchaseNo" class="field-hint">ดึงจากฐานข้อมูล MS_PO (REF_NO) อัตโนมัติ</span>
+                    <span v-else class="field-hint">ไม่พบใบสั่งซื้อในฐานข้อมูล กรอกเลขเริ่มต้นได้เอง</span>
                 </div>
                 <div class="form-group">
                     <label for="r2-reg">เลขทะเบียนคุมเริ่มต้น</label>
@@ -354,22 +357,6 @@ function saveToHistory() {
                     <label for="r2-running">ลำดับเริ่มต้นในสมุด (0-9)</label>
                     <input id="r2-running" type="number" min="0" max="9" :value="startRunning"
                         @input="emit('update:startRunning', parseInt(($event.target as HTMLInputElement).value) || 0)" />
-                </div>
-                <div class="form-group">
-                    <label for="r2-approval">วันที่ขออนุมัติ (แสดงบนเอกสาร)</label>
-                    <div class="input-group">
-                        <input id="r2-approval" type="date" v-model="approvalDatePicker"
-                            @change="onApprovalDatePick" />
-                        <button v-if="approvalDate || approvalDatePicker" type="button"
-                            class="btn btn-secondary btn-icon" aria-label="ล้างวันที่"
-                            @click="approvalDatePicker = ''; emit('update:approvalDate', '')">
-                            <X :size="15" />
-                        </button>
-                    </div>
-                    <span v-if="approvalDate" class="field-hint approval-preview">
-                        <CalendarDays :size="12" /> {{ approvalDate }}
-                    </span>
-                    <span v-else class="field-hint">ปล่อยว่าง = ใช้วันที่รับของจากบิลแรก</span>
                 </div>
             </div>
 
@@ -570,14 +557,6 @@ function saveToHistory() {
 </template>
 
 <style scoped>
-.approval-preview {
-    color: var(--c-primary);
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-}
-
 .edit-table {
     min-width: 1080px;
 }

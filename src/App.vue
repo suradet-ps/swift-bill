@@ -76,7 +76,6 @@ const r2Form = reactive({
     startPurchaseNo: 1,
     startRegNo: "69ภ1",
     startRunning: 0,
-    approvalDate: "",
 });
 const r3Form = reactive({
     budgetTotal: 5843812.6,
@@ -112,7 +111,7 @@ watch(
     () => { generated.report1 = false; }
 );
 watch(
-    () => [r2Form.startPoNo, r2Form.startPurchaseNo, r2Form.startRegNo, r2Form.startRunning, r2Form.approvalDate],
+    () => [r2Form.startPoNo, r2Form.startPurchaseNo, r2Form.startRegNo, r2Form.startRunning],
     () => { generated.report2 = false; }
 );
 watch(
@@ -408,7 +407,6 @@ async function applyHistoryEntry(entry: RoundHistoryEntry) {
             v-model:start-purchase-no="r2Form.startPurchaseNo"
             v-model:start-reg-no="r2Form.startRegNo"
             v-model:start-running="r2Form.startRunning"
-            v-model:approval-date="r2Form.approvalDate"
             @save-history="saveEntry" @carry-result="handleR2Carry"
             @navigate="activeTab = $event"
             @generated="generated.report2 = true" />

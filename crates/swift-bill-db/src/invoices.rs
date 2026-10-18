@@ -9,8 +9,10 @@ use crate::connect::{self, DbError};
 /// Fetch every invoice in `MS_IVO` whose `RECEIVE_DATE` falls within
 /// `date_from..=date_to` (inclusive on both ends, `YYYYMMDD` strings).
 ///
-/// Joins `COMPANY` for vendor metadata. Rows whose `RECEIVE_DATE` cannot
-/// be parsed are silently skipped (they cannot participate in the reports).
+/// Joins `COMPANY` for vendor metadata and `MS_PO` (via
+/// `MS_IVO.PO_NO = MS_PO.REF_NO`) for the purchase-order reference and the
+/// approval-request date. Rows whose `RECEIVE_DATE` cannot be parsed are
+/// silently skipped (they cannot participate in the reports).
 ///
 /// # Errors
 ///
@@ -29,9 +31,12 @@ pub async fn fetch_invoices(
             c.COMPANY_NAME,
             c.KEY_WORD,
             i.TOTAL_COST,
-            i.RECEIVE_DATE
+            i.RECEIVE_DATE,
+            p.REF_NO,
+            p.REQ_APP_DATE
         FROM MS_IVO i
         LEFT JOIN COMPANY c ON i.VENDOR_CODE = c.COMPANY_CODE
+        LEFT JOIN MS_PO p ON i.PO_NO = p.REF_NO
         WHERE i.RECEIVE_DATE >= @P1
           AND i.RECEIVE_DATE <= @P2
         ORDER BY i.PO_NO ASC, i.RECEIVE_DATE, i.VENDOR_CODE
@@ -57,8 +62,10 @@ pub async fn fetch_invoices(
       let company_keyword = get_string(row, "KEY_WORD");
       let total_cost = get_f64(row, "TOTAL_COST").unwrap_or(0.0);
       let receive_date_raw = get_string(row, "RECEIVE_DATE");
+      let po_ref_no = get_opt_string(row, "REF_NO");
+      let req_app_date = get_req_app_date(row, "REQ_APP_DATE");
 
-      let Some(receive_date) = parse_receive_date(&receive_date_raw) else {
+      let Some(receive_date) = parse_db_date(&receive_date_raw) else {
         // Skip rows with unparseable dates
         continue;
       };
@@ -73,6 +80,8 @@ pub async fn fetch_invoices(
         total_cost,
         receive_date,
         category,
+        po_ref_no,
+        req_app_date,
       });
     }
   }
@@ -105,7 +114,62 @@ fn get_string(row: &Row, col: &str) -> String {
     .to_string()
 }
 
-fn parse_receive_date(raw: &str) -> Option<NaiveDate> {
+/// Optional string column: `None` when NULL, empty, or whitespace-only.
+fn get_opt_string(row: &Row, col: &str) -> Option<String> {
+  row
+    .try_get::<&str, _>(col)
+    .ok()
+    .flatten()
+    .map(str::trim)
+    .filter(|s| !s.is_empty())
+    .map(ToString::to_string)
+}
+
+/// `tiberius::numeric::Numeric` always renders its fractional part, even at
+/// scale 0 (e.g. `20261019.0`); a date only needs the integer part.
+fn numeric_integral_text(value: &tiberius::numeric::Numeric) -> String {
+  let text = format!("{value}");
+  text.split('.').next().unwrap_or(&text).to_string()
+}
+
+/// `REQ_APP_DATE` is stored as `YYYYMMDD` text (e.g. `20261019`), but the
+/// column may also surface as a numeric or a real datetime on other
+/// installations - accept every shape.
+fn get_req_app_date(row: &Row, col: &str) -> Option<NaiveDate> {
+  if let Some(date) = get_opt_string(row, col).and_then(|raw| parse_db_date(&raw)) {
+    return Some(date);
+  }
+  let numeric = row
+    .try_get::<i32, _>(col)
+    .ok()
+    .flatten()
+    .map(|v| v.to_string())
+    .or_else(|| {
+      row
+        .try_get::<i64, _>(col)
+        .ok()
+        .flatten()
+        .map(|v| v.to_string())
+    })
+    .or_else(|| {
+      row
+        .try_get::<tiberius::numeric::Numeric, _>(col)
+        .ok()
+        .flatten()
+        .map(|v| numeric_integral_text(&v))
+    });
+  if let Some(date) = numeric.and_then(|raw| parse_db_date(&raw)) {
+    return Some(date);
+  }
+  row
+    .try_get::<chrono::NaiveDateTime, _>(col)
+    .ok()
+    .flatten()
+    .map(|v| v.date())
+}
+
+/// Parse a legacy INVS date: either `YYYYMMDD` or `YYYY-MM-DD`.
+fn parse_db_date(raw: &str) -> Option<NaiveDate> {
   let trimmed = raw.trim();
   if trimmed.len() == 8 {
     NaiveDate::parse_from_str(trimmed, "%Y%m%d").ok()
@@ -131,25 +195,38 @@ mod tests {
   use super::*;
 
   #[test]
-  fn parse_receive_date_yyyymmdd() {
+  fn parse_db_date_yyyymmdd() {
     assert_eq!(
-      parse_receive_date("20260105"),
+      parse_db_date("20260105"),
       NaiveDate::from_ymd_opt(2026, 1, 5)
     );
   }
 
   #[test]
-  fn parse_receive_date_iso() {
+  fn parse_db_date_iso() {
     assert_eq!(
-      parse_receive_date("2026-01-05"),
+      parse_db_date("2026-01-05"),
       NaiveDate::from_ymd_opt(2026, 1, 5)
     );
   }
 
   #[test]
-  fn parse_receive_date_invalid() {
-    assert!(parse_receive_date("garbage").is_none());
-    assert!(parse_receive_date("").is_none());
+  fn parse_db_date_invalid() {
+    assert!(parse_db_date("garbage").is_none());
+    assert!(parse_db_date("").is_none());
+  }
+
+  #[test]
+  fn numeric_req_app_date_parses_without_fraction() {
+    let scale_zero = tiberius::numeric::Numeric::new_with_scale(20_261_019, 0);
+    assert_eq!(numeric_integral_text(&scale_zero), "20261019");
+    assert_eq!(
+      parse_db_date(&numeric_integral_text(&scale_zero)),
+      NaiveDate::from_ymd_opt(2026, 10, 19)
+    );
+
+    let scaled = tiberius::numeric::Numeric::new_with_scale(202_610_195, 1);
+    assert_eq!(numeric_integral_text(&scaled), "20261019");
   }
 
   #[test]
