@@ -10,7 +10,7 @@ use crate::models::{
   ReceivingNumberAssignment, ReceivingSummaryParams, ReceivingSummaryRow,
 };
 use crate::money::round_satang;
-use crate::register::{compute_reg_for_item, format_reg_no, parse_reg_no};
+use crate::register::{compute_reg_for_item, format_reg_no, parse_reg_no, validate_start_running};
 
 // 1. Invoice Submission List (ส่งหนี้เบิกยา)
 
@@ -18,11 +18,17 @@ use crate::register::{compute_reg_for_item, format_reg_no, parse_reg_no};
 ///
 /// Each row is assigned a sequential register number (`start_reg_no` plus
 /// the per-batch offset) and a running slot within the register (0–9).
+///
+/// # Errors
+///
+/// Returns a Thai error message when the register number is malformed or the
+/// starting slot is outside `0..=9`.
 pub fn process_invoice_submission(
   invoices: &[InvoiceRow],
   params: &InvoiceSubmissionParams,
-) -> Vec<InvoiceSubmissionRow> {
-  let (reg_prefix, reg_start_num) = parse_reg_no(&params.start_reg_no);
+) -> Result<Vec<InvoiceSubmissionRow>, String> {
+  let (reg_prefix, reg_start_num) = parse_reg_no(&params.start_reg_no)?;
+  validate_start_running(params.start_running)?;
   let mut rows: Vec<InvoiceSubmissionRow> = Vec::with_capacity(invoices.len());
 
   for (i, inv) in invoices.iter().enumerate() {
@@ -46,18 +52,24 @@ pub fn process_invoice_submission(
     });
   }
 
-  rows
+  Ok(rows)
 }
 
 // 2. Receiving Summary (สรุปรับยา)
 
 /// Build the Receiving Summary rows for a batch of invoices using a
 /// deterministic per-row number assignment.
-#[must_use]
+///
+/// # Errors
+///
+/// Returns a Thai error message when the register number is malformed, the
+/// starting slot is outside `0..=9`, or a start number is 0.
 pub fn process_receiving_summary(
   invoices: &[InvoiceRow],
   params: &ReceivingSummaryParams,
-) -> Vec<ReceivingSummaryRow> {
+) -> Result<Vec<ReceivingSummaryRow>, String> {
+  crate::numbering::validate_receiving_start_numbers(params.start_po_no, params.start_purchase_no)?;
+
   let assignments: Vec<ReceivingNumberAssignment> = invoices
     .iter()
     .enumerate()
@@ -78,13 +90,18 @@ pub fn process_receiving_summary(
 /// The approval date and the purchase-order number come from `MS_PO`
 /// (`REQ_APP_DATE` and `REF_NO`) via the linked [`InvoiceRow`]; the assigned
 /// numbers are only a fallback for invoices without a linked purchase order.
-#[must_use]
+///
+/// # Errors
+///
+/// Returns a Thai error message when the register number is malformed or the
+/// starting slot is outside `0..=9`.
 pub fn process_receiving_summary_with_numbers(
   invoices: &[InvoiceRow],
   params: &ReceivingSummaryParams,
   assignments: &[ReceivingNumberAssignment],
-) -> Vec<ReceivingSummaryRow> {
-  let (reg_prefix, reg_start_num) = parse_reg_no(&params.start_reg_no);
+) -> Result<Vec<ReceivingSummaryRow>, String> {
+  let (reg_prefix, reg_start_num) = parse_reg_no(&params.start_reg_no)?;
+  validate_start_running(params.start_running)?;
   let mut rows: Vec<ReceivingSummaryRow> = Vec::with_capacity(invoices.len());
 
   // Safety net when MS_PO carries no REQ_APP_DATE: reuse the first invoice's
@@ -138,7 +155,7 @@ pub fn process_receiving_summary_with_numbers(
     });
   }
 
-  rows
+  Ok(rows)
 }
 
 /// First counter value not reserved by a linked PO reference or used by an
@@ -258,14 +275,23 @@ pub fn process_cover_letters(
 
 /// Returns `(next_reg_no_string, next_running_slot)` - the register number
 /// and position that the *next* batch should start from.
-#[must_use]
-pub fn compute_next_reg(start_reg_no: &str, start_running: u32, count: u32) -> (String, u32) {
-  let (prefix, start_num) = parse_reg_no(start_reg_no);
+///
+/// # Errors
+///
+/// Returns a Thai error message when the register number is malformed or the
+/// starting slot is outside `0..=9`.
+pub fn compute_next_reg(
+  start_reg_no: &str,
+  start_running: u32,
+  count: u32,
+) -> Result<(String, u32), String> {
+  validate_start_running(start_running)?;
+  let (prefix, start_num) = parse_reg_no(start_reg_no)?;
   let next_absolute = start_running + count;
   let reg_offset = next_absolute / 10;
   let next_running = next_absolute % 10;
   let next_reg_no = format_reg_no(&prefix, start_num + reg_offset);
-  (next_reg_no, next_running)
+  Ok((next_reg_no, next_running))
 }
 
 #[cfg(test)]
@@ -379,7 +405,7 @@ mod tests {
   fn invoice_submission_assigns_register_and_running() {
     let invoices = sample_invoices();
     let params = sample_submission_params();
-    let rows = process_invoice_submission(&invoices, &params);
+    let rows = process_invoice_submission(&invoices, &params).unwrap();
 
     assert_eq!(rows.len(), 3);
     assert_eq!(rows[0].seq, 1);
@@ -395,7 +421,7 @@ mod tests {
   fn receiving_summary_counters() {
     let invoices = sample_invoices();
     let params = sample_summary_params();
-    let rows = process_receiving_summary(&invoices, &params);
+    let rows = process_receiving_summary(&invoices, &params).unwrap();
 
     assert_eq!(rows.len(), 3);
     // request_no: 253, 255, 257
@@ -541,7 +567,7 @@ mod tests {
     params.start_running = 8;
     params.start_reg_no = "69ภ12".to_string();
 
-    let rows = process_invoice_submission(&invoices, &params);
+    let rows = process_invoice_submission(&invoices, &params).unwrap();
     // Item 0: reg 12 pos 8
     assert_eq!(rows[0].reg_no, "69ภ12");
     assert_eq!(rows[0].running_in_reg, 8);
@@ -568,7 +594,7 @@ mod tests {
     params.start_purchase_no = 256;
     params.start_running = 3;
 
-    let rows = process_receiving_summary(&invoices, &params);
+    let rows = process_receiving_summary(&invoices, &params).unwrap();
     assert_eq!(rows[0].po_no, "256");
     assert_eq!(rows[0].request_no, 256);
     assert_eq!(rows[0].report_no, 257);
@@ -579,7 +605,7 @@ mod tests {
   #[test]
   fn compute_next_reg_no_overflow() {
     // 3 items starting at pos 3 in reg 12 → next is pos 6 in reg 12
-    let (next_reg, next_run) = compute_next_reg("69ภ12", 3, 3);
+    let (next_reg, next_run) = compute_next_reg("69ภ12", 3, 3).unwrap();
     assert_eq!(next_reg, "69ภ12");
     assert_eq!(next_run, 6);
   }
@@ -587,7 +613,7 @@ mod tests {
   #[test]
   fn compute_next_reg_with_overflow() {
     // 5 items starting at pos 8 in reg 12 → last at pos 2 in reg 13, next is pos 3
-    let (next_reg, next_run) = compute_next_reg("69ภ12", 8, 5);
+    let (next_reg, next_run) = compute_next_reg("69ภ12", 8, 5).unwrap();
     assert_eq!(next_reg, "69ภ13");
     assert_eq!(next_run, 3);
   }
@@ -595,9 +621,62 @@ mod tests {
   #[test]
   fn compute_next_reg_exact_boundary() {
     // 2 items starting at pos 8 → fills pos 8,9 → next is pos 0 in reg 13
-    let (next_reg, next_run) = compute_next_reg("69ภ12", 8, 2);
+    let (next_reg, next_run) = compute_next_reg("69ภ12", 8, 2).unwrap();
     assert_eq!(next_reg, "69ภ13");
     assert_eq!(next_run, 0);
+  }
+
+  // Input validation: malformed registers, out-of-range slots, and zero
+  // start numbers must be rejected before any report is produced.
+
+  #[test]
+  fn invoice_submission_rejects_malformed_register() {
+    let invoices = sample_invoices();
+    let mut params = sample_submission_params();
+    params.start_reg_no = "69ภ".to_string();
+
+    let err = process_invoice_submission(&invoices, &params).unwrap_err();
+    assert!(err.contains("69ภ"), "got: {err}");
+  }
+
+  #[test]
+  fn invoice_submission_rejects_running_above_nine() {
+    let invoices = sample_invoices();
+    let mut params = sample_submission_params();
+    params.start_running = 12;
+
+    let err = process_invoice_submission(&invoices, &params).unwrap_err();
+    assert!(err.contains("0-9"), "got: {err}");
+  }
+
+  #[test]
+  fn receiving_summary_rejects_bad_numbering_inputs() {
+    let invoices = sample_invoices();
+
+    let mut params = sample_summary_params();
+    params.start_reg_no = "69ภ".to_string();
+    assert!(process_receiving_summary(&invoices, &params).is_err());
+
+    let mut params = sample_summary_params();
+    params.start_running = 10;
+    assert!(process_receiving_summary(&invoices, &params).is_err());
+
+    let mut params = sample_summary_params();
+    params.start_po_no = 0;
+    let err = process_receiving_summary(&invoices, &params).unwrap_err();
+    assert!(err.contains("ขอซื้อ"), "got: {err}");
+
+    let mut params = sample_summary_params();
+    params.start_purchase_no = 0;
+    let err = process_receiving_summary(&invoices, &params).unwrap_err();
+    assert!(err.contains("ใบสั่งซื้อ"), "got: {err}");
+  }
+
+  #[test]
+  fn compute_next_reg_rejects_bad_inputs() {
+    assert!(compute_next_reg("69ภ", 0, 1).is_err());
+    assert!(compute_next_reg("", 0, 1).is_err());
+    assert!(compute_next_reg("69ภ12", 10, 1).is_err());
   }
 
   // Carry-forward tests
@@ -609,7 +688,7 @@ mod tests {
   fn next_po_no_carry_forward_correct() {
     let invoices = sample_invoices(); // 3 invoices
     let params = sample_summary_params(); // start_po_no = 253
-    let rows = process_receiving_summary(&invoices, &params);
+    let rows = process_receiving_summary(&invoices, &params).unwrap();
 
     assert_eq!(rows.len(), 3);
 
@@ -647,7 +726,7 @@ mod tests {
     params.start_purchase_no = params.start_purchase_no + n; // 256
     params.round = 2;
 
-    let rows2 = process_receiving_summary(&invoices, &params);
+    let rows2 = process_receiving_summary(&invoices, &params).unwrap();
 
     // Round 2 request numbers: 259, 261, 263
     assert_eq!(rows2[0].request_no, 259);
@@ -677,7 +756,7 @@ mod tests {
     invoices[2].req_app_date = NaiveDate::from_ymd_opt(2026, 1, 20);
 
     let params = sample_summary_params();
-    let rows = process_receiving_summary(&invoices, &params);
+    let rows = process_receiving_summary(&invoices, &params).unwrap();
 
     assert_eq!(rows[0].approval_date, "12 ม.ค. 69");
     assert_eq!(rows[1].approval_date, "15 ม.ค. 69");
@@ -693,7 +772,7 @@ mod tests {
     let invoices = sample_invoices();
     let params = sample_summary_params();
 
-    let rows = process_receiving_summary(&invoices, &params);
+    let rows = process_receiving_summary(&invoices, &params).unwrap();
 
     // First invoice receive_date is 2026-01-05 -> Thai "5 ม.ค. 69"
     let expected = "5 ม.ค. 69";
@@ -716,7 +795,7 @@ mod tests {
     invoices[2].po_ref_no = Some("004/2570".to_string());
 
     let params = sample_summary_params();
-    let rows = process_receiving_summary(&invoices, &params);
+    let rows = process_receiving_summary(&invoices, &params).unwrap();
 
     assert_eq!(rows[0].po_no, "001");
     assert_eq!(rows[1].po_no, "002");
@@ -732,7 +811,7 @@ mod tests {
     invoices[2].po_ref_no = Some("2569-0003".to_string());
 
     let params = sample_summary_params();
-    let rows = process_receiving_summary(&invoices, &params);
+    let rows = process_receiving_summary(&invoices, &params).unwrap();
 
     assert_eq!(rows[0].po_no, "0001");
     assert_eq!(rows[1].po_no, "0002");
@@ -744,7 +823,7 @@ mod tests {
   fn po_no_falls_back_to_assigned_counter() {
     let invoices = sample_invoices();
     let params = sample_summary_params();
-    let rows = process_receiving_summary(&invoices, &params);
+    let rows = process_receiving_summary(&invoices, &params).unwrap();
 
     assert_eq!(rows[0].po_no, "253");
     assert_eq!(rows[1].po_no, "254");
@@ -782,7 +861,7 @@ mod tests {
 
     let mut params = sample_summary_params();
     params.start_purchase_no = 1;
-    let rows = process_receiving_summary(&invoices, &params);
+    let rows = process_receiving_summary(&invoices, &params).unwrap();
 
     assert_eq!(rows[0].po_no, "1");
     assert_eq!(rows[1].po_no, "3", "fallback must skip the linked 1 and 2");
@@ -804,7 +883,7 @@ mod tests {
     invoices[1].po_ref_no = Some("10/2570".to_string());
 
     let params = sample_summary_params();
-    let rows = process_receiving_summary(&invoices, &params);
+    let rows = process_receiving_summary(&invoices, &params).unwrap();
 
     // The allocated counter says 7, but sequence 10 was already issued.
     assert_eq!(next_purchase_no(&rows, 7), 11);
@@ -816,7 +895,7 @@ mod tests {
   fn next_purchase_no_helper_falls_back_to_allocation() {
     let invoices = sample_invoices();
     let params = sample_summary_params();
-    let rows = process_receiving_summary(&invoices, &params);
+    let rows = process_receiving_summary(&invoices, &params).unwrap();
 
     // Fallback counters 253..255 are the highest issued numbers.
     assert_eq!(next_purchase_no(&rows, 256), 256);
@@ -898,7 +977,7 @@ mod golden_tests {
       start_running: 0,
       output_dir: "/tmp".into(),
     };
-    let rows = process_invoice_submission(&invoices, &params);
+    let rows = process_invoice_submission(&invoices, &params).unwrap();
 
     assert_eq!(rows.len(), 3);
     let total: f64 = rows.iter().map(|r| r.total_amount).sum();
@@ -930,7 +1009,7 @@ mod golden_tests {
       start_running: 0,
       output_dir: "/tmp".into(),
     };
-    let rows = process_receiving_summary(&invoices, &params);
+    let rows = process_receiving_summary(&invoices, &params).unwrap();
 
     assert_eq!(rows.len(), 3);
     let total: f64 = rows.iter().map(|r| r.total_amount).sum();
@@ -1006,13 +1085,13 @@ mod golden_tests {
       output_dir: "/tmp".into(),
     };
     // Preview renders these rows; generate persists the same rows.
-    let preview_rows = process_invoice_submission(&invoices, &params);
+    let preview_rows = process_invoice_submission(&invoices, &params).unwrap();
     // Generate computes its carry-forward via compute_next_reg (preview does too).
     let (next_reg_no, next_running) =
-      compute_next_reg(&params.start_reg_no, params.start_running, n);
+      compute_next_reg(&params.start_reg_no, params.start_running, n).unwrap();
 
     let last = preview_rows.last().unwrap();
-    let (last_prefix, last_num) = parse_reg_no(&last.reg_no);
+    let (last_prefix, last_num) = parse_reg_no(&last.reg_no).unwrap();
     let expected_num = last_num + (last.running_in_reg + 1) / 10;
     let expected_running = (last.running_in_reg + 1) % 10;
     assert_eq!(next_reg_no, format_reg_no(&last_prefix, expected_num));
@@ -1037,8 +1116,10 @@ mod golden_tests {
       output_dir: "/tmp".into(),
     };
     let allocation =
-      allocate_receiving_numbers(2569, params.start_po_no, params.start_purchase_no, n, &[]);
-    let rows = process_receiving_summary_with_numbers(&invoices, &params, &allocation.assignments);
+      allocate_receiving_numbers(2569, params.start_po_no, params.start_purchase_no, n, &[])
+        .unwrap();
+    let rows =
+      process_receiving_summary_with_numbers(&invoices, &params, &allocation.assignments).unwrap();
 
     // Preview and generate both derive these next values identically.
     assert_eq!(allocation.next_po_no, params.start_po_no + n * 2);

@@ -109,9 +109,9 @@ async fn preview_invoice_submission(
 
   let n = invoices.len() as u32;
   let (next_reg_no, next_running) =
-    swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
+    swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n)?;
 
-  let rows = swift_bill_core::reports::process_invoice_submission(&invoices, &params);
+  let rows = swift_bill_core::reports::process_invoice_submission(&invoices, &params)?;
   swift_bill_core::continuity::reconcile_row_count(invoices.len(), rows.len())?;
   let total_amount = round_satang(invoices.iter().map(|i| i.total_cost).sum());
 
@@ -139,7 +139,7 @@ async fn export_invoice_submission_excel(
   }
   let n = params.rows.len() as u32;
   let (next_reg_no, next_running) =
-    swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
+    swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n)?;
 
   let total_amount = round_satang(params.rows.iter().map(|r| r.total_amount).sum());
   let total_rows = params.rows.len();
@@ -177,7 +177,7 @@ async fn export_invoice_submission_pdf(
   }
   let n = params.rows.len() as u32;
   let (next_reg_no, next_running) =
-    swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
+    swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n)?;
 
   let total_amount = round_satang(params.rows.iter().map(|r| r.total_amount).sum());
   let total_rows = params.rows.len();
@@ -221,7 +221,7 @@ async fn preview_receiving_summary(
 
   let n = invoices.len() as u32;
   let (next_reg_no, next_running) =
-    swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
+    swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n)?;
   // ใบสั่งซื้อ continues from the reference MS_PO already issued; the
   // frontend value is only a fallback for invoices without a linked PO.
   let purchase_start = invoices
@@ -235,12 +235,12 @@ async fn preview_receiving_summary(
     purchase_start,
     n,
     &locks,
-  );
+  )?;
   let rows = swift_bill_core::reports::process_receiving_summary_with_numbers(
     &invoices,
     &params,
     &allocation.assignments,
-  );
+  )?;
   swift_bill_core::continuity::reconcile_row_count(invoices.len(), rows.len())?;
   let total_amount = round_satang(invoices.iter().map(|i| i.total_cost).sum());
   // The saved carry-forward must be beyond every issued purchase-order
@@ -274,7 +274,7 @@ async fn export_receiving_summary_excel(
   }
   let n = params.rows.len() as u32;
   let (next_reg_no, next_running) =
-    swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
+    swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n)?;
   let purchase_start = params
     .rows
     .iter()
@@ -287,7 +287,7 @@ async fn export_receiving_summary_excel(
     purchase_start,
     n,
     &locks,
-  );
+  )?;
 
   let total_amount = round_satang(params.rows.iter().map(|r| r.total_amount).sum());
   let total_rows = params.rows.len();
@@ -330,7 +330,7 @@ async fn export_receiving_summary_pdf(
   }
   let n = params.rows.len() as u32;
   let (next_reg_no, next_running) =
-    swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n);
+    swift_bill_core::reports::compute_next_reg(&params.start_reg_no, params.start_running, n)?;
   let purchase_start = params
     .rows
     .iter()
@@ -343,7 +343,7 @@ async fn export_receiving_summary_pdf(
     purchase_start,
     n,
     &locks,
-  );
+  )?;
 
   let total_amount = round_satang(params.rows.iter().map(|r| r.total_amount).sum());
   let total_rows = params.rows.len();
@@ -433,13 +433,13 @@ async fn validate_round_params(
     params.start_running,
     params.invoice_count,
     &locks,
-  );
+  )?;
   let register_numbering_info = swift_bill_core::numbering::normalize_register_start_numbers(
     params.fiscal_year,
     &params.start_reg_no,
     params.start_running,
     &locks,
-  );
+  )?;
 
   // Receiving-number (request/report/purchase) allocation, honouring locks.
   let receiving_allocation = swift_bill_core::numbering::allocate_receiving_numbers(
@@ -448,7 +448,7 @@ async fn validate_round_params(
     params.start_purchase_no,
     params.invoice_count,
     &locks,
-  );
+  )?;
 
   // Budget carry-forward check against the last recorded round.
   let budget = swift_bill_core::continuity::validate_budget_carry_forward(
@@ -463,7 +463,7 @@ async fn validate_round_params(
     &params.start_reg_no,
     params.start_running,
     params.invoice_count,
-  );
+  )?;
 
   let carry_forward = CarryForward {
     next_reg_no,
@@ -523,13 +523,11 @@ async fn normalize_receiving_start(
   params: NormalizeReceivingStartParams,
 ) -> Result<swift_bill_core::ReceivingNumberingInfo, String> {
   let locks = number_locks::load_number_locks(&app)?;
-  Ok(
-    swift_bill_core::numbering::normalize_receiving_start_numbers(
-      params.fiscal_year,
-      params.start_po_no,
-      params.start_purchase_no,
-      &locks,
-    ),
+  swift_bill_core::numbering::normalize_receiving_start_numbers(
+    params.fiscal_year,
+    params.start_po_no,
+    params.start_purchase_no,
+    &locks,
   )
 }
 

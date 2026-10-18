@@ -18,9 +18,10 @@ use crate::models::{
   NumberLockEntry, ReceivingNumberAssignment, ReceivingNumberingInfo, RegisterConflict,
   RegisterNumberingInfo, SkippedLockedNumberSet,
 };
-use crate::register::{compute_reg_for_item, format_reg_no, parse_reg_no};
+use crate::register::{compute_reg_for_item, format_reg_no, parse_reg_no, validate_start_running};
 
 /// Result of [`allocate_receiving_numbers`].
+#[derive(Debug)]
 pub struct ReceivingNumberAllocation {
   /// One assignment per invoice in the batch.
   pub assignments: Vec<ReceivingNumberAssignment>,
@@ -32,16 +33,41 @@ pub struct ReceivingNumberAllocation {
   pub next_purchase_no: u32,
 }
 
+/// Validate the starting request/report and purchase-order numbers.
+///
+/// # Errors
+///
+/// Returns a Thai error message when either start number is 0: request,
+/// report, and purchase numbers all start at 1, and a 0 would falsely match
+/// the zeroed number fields of register-only locks.
+pub fn validate_receiving_start_numbers(
+  start_po_no: u32,
+  start_purchase_no: u32,
+) -> Result<(), String> {
+  if start_po_no == 0 {
+    return Err("เลขขอซื้อ/รายงาน เริ่มต้นต้องมากกว่า 0".to_string());
+  }
+  if start_purchase_no == 0 {
+    return Err("เลขใบสั่งซื้อ เริ่มต้นต้องมากกว่า 0".to_string());
+  }
+  Ok(())
+}
+
 /// Walk `start_po_no` and `start_purchase_no` forward until they point at
 /// the first non-locked set. Returns the normalized starting numbers and
 /// the set of locked sets that were skipped.
-#[must_use]
+///
+/// # Errors
+///
+/// Returns a Thai error message when either start number is 0.
 pub fn normalize_receiving_start_numbers(
   fiscal_year: i32,
   start_po_no: u32,
   start_purchase_no: u32,
   locks: &[NumberLockEntry],
-) -> ReceivingNumberingInfo {
+) -> Result<ReceivingNumberingInfo, String> {
+  validate_receiving_start_numbers(start_po_no, start_purchase_no)?;
+
   let mut current_po_no = start_po_no;
   let mut current_purchase_no = start_purchase_no;
   let mut skipped_locked_sets = Vec::new();
@@ -53,24 +79,28 @@ pub fn normalize_receiving_start_numbers(
     current_purchase_no += 1;
   }
 
-  ReceivingNumberingInfo {
+  Ok(ReceivingNumberingInfo {
     start_po_no: current_po_no,
     start_purchase_no: current_purchase_no,
     skipped_locked_sets,
-  }
+  })
 }
 
 /// Allocate `count` receiving number assignments, skipping any locked sets.
-#[must_use]
+///
+/// # Errors
+///
+/// Returns a Thai error message when a start number is 0 (see
+/// [`normalize_receiving_start_numbers`]).
 pub fn allocate_receiving_numbers(
   fiscal_year: i32,
   start_po_no: u32,
   start_purchase_no: u32,
   count: u32,
   locks: &[NumberLockEntry],
-) -> ReceivingNumberAllocation {
+) -> Result<ReceivingNumberAllocation, String> {
   let normalized =
-    normalize_receiving_start_numbers(fiscal_year, start_po_no, start_purchase_no, locks);
+    normalize_receiving_start_numbers(fiscal_year, start_po_no, start_purchase_no, locks)?;
   let mut current_po_no = normalized.start_po_no;
   let mut current_purchase_no = normalized.start_purchase_no;
   let mut skipped_locked_sets = normalized.skipped_locked_sets;
@@ -93,7 +123,7 @@ pub fn allocate_receiving_numbers(
     current_purchase_no += 1;
   }
 
-  ReceivingNumberAllocation {
+  Ok(ReceivingNumberAllocation {
     assignments,
     numbering_info: ReceivingNumberingInfo {
       start_po_no: normalized.start_po_no,
@@ -102,7 +132,7 @@ pub fn allocate_receiving_numbers(
     },
     next_po_no: current_po_no,
     next_purchase_no: current_purchase_no,
-  }
+  })
 }
 
 fn find_matching_lock(
@@ -142,6 +172,7 @@ pub struct RegisterAssignment {
 }
 
 /// Result of [`allocate_register_numbers`].
+#[derive(Debug)]
 pub struct RegisterNumberAllocation {
   pub assignments: Vec<RegisterAssignment>,
   pub numbering_info: RegisterNumberingInfo,
@@ -169,43 +200,55 @@ fn find_matching_register_lock<'a>(
 /// The batch plans `count` invoices starting at `(start_reg_no,
 /// start_running)`, using the standard 10-slot-per-register layout. Any slot
 /// that matches a locked register entry in the same fiscal year is returned.
-#[must_use]
+///
+/// # Errors
+///
+/// Returns a Thai error message when the register number is malformed or the
+/// starting slot is outside `0..=9`.
 pub fn find_register_conflicts(
   fiscal_year: i32,
   start_reg_no: &str,
   start_running: u32,
   count: u32,
   locks: &[NumberLockEntry],
-) -> Vec<RegisterConflict> {
-  let (prefix, start_num) = parse_reg_no(start_reg_no);
-  (0..count)
-    .map(|i| {
-      let (num, running) = compute_reg_for_item(i, start_running, start_num);
-      (format_reg_no(&prefix, num), running)
-    })
-    .filter_map(|(reg_no, running)| {
-      find_matching_register_lock(fiscal_year, &reg_no, running, locks).map(|lock| {
-        RegisterConflict {
-          reg_no,
-          running_in_reg: running,
-          reason: lock.reason.clone(),
-        }
+) -> Result<Vec<RegisterConflict>, String> {
+  validate_start_running(start_running)?;
+  let (prefix, start_num) = parse_reg_no(start_reg_no)?;
+  Ok(
+    (0..count)
+      .map(|i| {
+        let (num, running) = compute_reg_for_item(i, start_running, start_num);
+        (format_reg_no(&prefix, num), running)
       })
-    })
-    .collect()
+      .filter_map(|(reg_no, running)| {
+        find_matching_register_lock(fiscal_year, &reg_no, running, locks).map(|lock| {
+          RegisterConflict {
+            reg_no,
+            running_in_reg: running,
+            reason: lock.reason.clone(),
+          }
+        })
+      })
+      .collect(),
+  )
 }
 
 /// Walk `(start_reg_no, start_running)` forward until the first slot that does
 /// not collide with a locked register entry. Returns the normalized start plus
 /// every skipped conflict.
-#[must_use]
+///
+/// # Errors
+///
+/// Returns a Thai error message when the register number is malformed or the
+/// starting slot is outside `0..=9`.
 pub fn normalize_register_start_numbers(
   fiscal_year: i32,
   start_reg_no: &str,
   start_running: u32,
   locks: &[NumberLockEntry],
-) -> RegisterNumberingInfo {
-  let (prefix, start_num) = parse_reg_no(start_reg_no);
+) -> Result<RegisterNumberingInfo, String> {
+  validate_start_running(start_running)?;
+  let (prefix, start_num) = parse_reg_no(start_reg_no)?;
   let mut current_num = start_num;
   let mut current_running = start_running;
   let mut skipped = Vec::new();
@@ -238,26 +281,30 @@ pub fn normalize_register_start_numbers(
     }
   }
 
-  RegisterNumberingInfo {
+  Ok(RegisterNumberingInfo {
     start_reg_no: format_reg_no(&prefix, current_num),
     start_running: current_running,
     skipped_conflicts: skipped,
-  }
+  })
 }
 
 /// Allocate `count` register assignments, skipping any locked slot (advancing
 /// one position at a time, rolling over to the next register every 10 slots).
-#[must_use]
+///
+/// # Errors
+///
+/// Returns a Thai error message when the register number is malformed or the
+/// starting slot is outside `0..=9`.
 pub fn allocate_register_numbers(
   fiscal_year: i32,
   start_reg_no: &str,
   start_running: u32,
   count: u32,
   locks: &[NumberLockEntry],
-) -> RegisterNumberAllocation {
+) -> Result<RegisterNumberAllocation, String> {
   let normalized =
-    normalize_register_start_numbers(fiscal_year, start_reg_no, start_running, locks);
-  let (prefix, start_num) = parse_reg_no(&normalized.start_reg_no);
+    normalize_register_start_numbers(fiscal_year, start_reg_no, start_running, locks)?;
+  let (prefix, start_num) = parse_reg_no(&normalized.start_reg_no)?;
   let mut current_num = start_num;
   let mut current_running = normalized.start_running;
   let mut skipped = normalized.skipped_conflicts;
@@ -294,7 +341,7 @@ pub fn allocate_register_numbers(
   }
 
   let next_reg_no = format_reg_no(&prefix, current_num);
-  RegisterNumberAllocation {
+  Ok(RegisterNumberAllocation {
     assignments,
     numbering_info: RegisterNumberingInfo {
       start_reg_no: normalized.start_reg_no,
@@ -303,7 +350,7 @@ pub fn allocate_register_numbers(
     },
     next_reg_no,
     next_running: current_running,
-  }
+  })
 }
 
 #[cfg(test)]
@@ -333,7 +380,7 @@ mod tests {
 
   #[test]
   fn allocate_without_locks_matches_legacy_sequence() {
-    let allocation = allocate_receiving_numbers(2569, 253, 253, 3, &[]);
+    let allocation = allocate_receiving_numbers(2569, 253, 253, 3, &[]).unwrap();
     assert_eq!(allocation.assignments.len(), 3);
     assert_eq!(allocation.assignments[0].request_no, 253);
     assert_eq!(allocation.assignments[1].request_no, 255);
@@ -348,7 +395,7 @@ mod tests {
   #[test]
   fn normalize_skips_locked_start_set() {
     let locks = vec![sample_lock(2569, 253, 253, "ใช้ไปแล้ว")];
-    let normalized = normalize_receiving_start_numbers(2569, 253, 253, &locks);
+    let normalized = normalize_receiving_start_numbers(2569, 253, 253, &locks).unwrap();
     assert_eq!(normalized.start_po_no, 255);
     assert_eq!(normalized.start_purchase_no, 254);
     assert_eq!(normalized.skipped_locked_sets.len(), 1);
@@ -358,7 +405,7 @@ mod tests {
   #[test]
   fn allocate_skips_locked_set_in_middle() {
     let locks = vec![sample_lock(2569, 255, 254, "ล็อกกลางชุด")];
-    let allocation = allocate_receiving_numbers(2569, 253, 253, 3, &locks);
+    let allocation = allocate_receiving_numbers(2569, 253, 253, 3, &locks).unwrap();
     assert_eq!(allocation.assignments[0].request_no, 253);
     assert_eq!(allocation.assignments[1].request_no, 257);
     assert_eq!(allocation.assignments[2].request_no, 259);
@@ -377,7 +424,7 @@ mod tests {
   #[test]
   fn normalize_ignores_other_fiscal_years() {
     let locks = vec![sample_lock(2568, 253, 253, "ปีก่อน")];
-    let normalized = normalize_receiving_start_numbers(2569, 253, 253, &locks);
+    let normalized = normalize_receiving_start_numbers(2569, 253, 253, &locks).unwrap();
     assert_eq!(normalized.start_po_no, 253);
     assert_eq!(normalized.start_purchase_no, 253);
     assert!(normalized.skipped_locked_sets.is_empty());
@@ -389,7 +436,7 @@ mod tests {
       sample_lock(2569, 255, 254, "ชุดที่ 2"),
       sample_lock(2569, 259, 256, "ชุดที่ 4"),
     ];
-    let allocation = allocate_receiving_numbers(2569, 253, 253, 3, &locks);
+    let allocation = allocate_receiving_numbers(2569, 253, 253, 3, &locks).unwrap();
     assert_eq!(allocation.assignments[0].request_no, 253);
     assert_eq!(allocation.assignments[1].request_no, 257);
     assert_eq!(allocation.assignments[2].request_no, 261);
@@ -422,7 +469,7 @@ mod tests {
 
   #[test]
   fn no_register_conflicts_without_locks() {
-    let conflicts = find_register_conflicts(2569, "69ภ12", 3, 5, &[]);
+    let conflicts = find_register_conflicts(2569, "69ภ12", 3, 5, &[]).unwrap();
     assert!(conflicts.is_empty());
   }
 
@@ -430,7 +477,7 @@ mod tests {
   fn detects_register_conflict_in_batch() {
     // Batch of 3 starting at pos 3 in reg 12 occupies slots 3,4,5.
     let locks = vec![sample_register_lock(2569, "69ภ12", 4, "ใช้ไปแล้ว")];
-    let conflicts = find_register_conflicts(2569, "69ภ12", 3, 3, &locks);
+    let conflicts = find_register_conflicts(2569, "69ภ12", 3, 3, &locks).unwrap();
     assert_eq!(conflicts.len(), 1);
     assert_eq!(conflicts[0].reg_no, "69ภ12");
     assert_eq!(conflicts[0].running_in_reg, 4);
@@ -445,7 +492,7 @@ mod tests {
       sample_register_lock(2569, "69ภ13", 0, "ช่อง 0"),
     ];
     // Batch of 4 from pos 8: slots 8,9,(13,0),1 → two conflicts.
-    let conflicts = find_register_conflicts(2569, "69ภ12", 8, 4, &locks);
+    let conflicts = find_register_conflicts(2569, "69ภ12", 8, 4, &locks).unwrap();
     assert_eq!(conflicts.len(), 2);
     assert_eq!(conflicts[0].reg_no, "69ภ12");
     assert_eq!(conflicts[0].running_in_reg, 9);
@@ -456,7 +503,7 @@ mod tests {
   #[test]
   fn normalize_register_start_skips_locked_slot() {
     let locks = vec![sample_register_lock(2569, "69ภ12", 3, "ล็อก")];
-    let info = normalize_register_start_numbers(2569, "69ภ12", 3, &locks);
+    let info = normalize_register_start_numbers(2569, "69ภ12", 3, &locks).unwrap();
     assert_eq!(info.start_reg_no, "69ภ12");
     assert_eq!(info.start_running, 4);
     assert_eq!(info.skipped_conflicts.len(), 1);
@@ -469,7 +516,7 @@ mod tests {
       sample_register_lock(2569, "69ภ13", 0, "ช่อง 0"),
     ];
     // 4 assignments from pos 8 should skip 9 and (13,0), yielding 8,(13,1),(13,2),(13,3).
-    let alloc = allocate_register_numbers(2569, "69ภ12", 8, 4, &locks);
+    let alloc = allocate_register_numbers(2569, "69ภ12", 8, 4, &locks).unwrap();
     assert_eq!(alloc.assignments.len(), 4);
     assert_eq!(
       alloc.assignments[0],
@@ -506,7 +553,43 @@ mod tests {
   #[test]
   fn register_conflicts_ignore_other_fiscal_year() {
     let locks = vec![sample_register_lock(2568, "69ภ12", 4, "ปีก่อน")];
-    let conflicts = find_register_conflicts(2569, "69ภ12", 3, 3, &locks);
+    let conflicts = find_register_conflicts(2569, "69ภ12", 3, 3, &locks).unwrap();
     assert!(conflicts.is_empty());
+  }
+
+  // --- Input validation ---
+
+  #[test]
+  fn receiving_allocation_rejects_zero_start_numbers() {
+    let err = allocate_receiving_numbers(2569, 0, 253, 1, &[]).unwrap_err();
+    assert!(err.contains("ขอซื้อ"), "got: {err}");
+    let err = allocate_receiving_numbers(2569, 253, 0, 1, &[]).unwrap_err();
+    assert!(err.contains("ใบสั่งซื้อ"), "got: {err}");
+    assert!(normalize_receiving_start_numbers(2569, 0, 253, &[]).is_err());
+    assert!(normalize_receiving_start_numbers(2569, 253, 0, &[]).is_err());
+  }
+
+  #[test]
+  fn zero_start_numbers_cannot_match_register_locks() {
+    // Register locks store request_no = 0 / purchase_no = 0; a start of 0
+    // used to falsely match them. It must now be rejected outright.
+    let locks = vec![sample_register_lock(2569, "69ภ12", 3, "ล็อกทะเบียน")];
+    assert!(allocate_receiving_numbers(2569, 0, 0, 1, &locks).is_err());
+  }
+
+  #[test]
+  fn register_functions_reject_malformed_register() {
+    let err = find_register_conflicts(2569, "69ภ", 0, 3, &[]).unwrap_err();
+    assert!(err.contains("69ภ"), "got: {err}");
+    assert!(normalize_register_start_numbers(2569, "69ภ", 0, &[]).is_err());
+    assert!(allocate_register_numbers(2569, "69ภ", 0, 3, &[]).is_err());
+  }
+
+  #[test]
+  fn register_functions_reject_running_above_nine() {
+    let err = find_register_conflicts(2569, "69ภ12", 12, 3, &[]).unwrap_err();
+    assert!(err.contains("0-9"), "got: {err}");
+    assert!(normalize_register_start_numbers(2569, "69ภ12", 12, &[]).is_err());
+    assert!(allocate_register_numbers(2569, "69ภ12", 12, 3, &[]).is_err());
   }
 }
